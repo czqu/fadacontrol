@@ -1,0 +1,19 @@
+commands:
+  - name: "test_dir"
+    workdir:  "./"
+    cmd: "cmd"
+    args:
+      - "/C"
+      - "dir"
+
+  - name: "test_env"
+    cmd: "powershell"
+    args:
+      - "-Command"
+      -  "$env:RFU"
+    env:
+      RFU: "123"
+
+  - name: "test_program"
+    cmd: "D:\\repo\\playground\\echo\\echo.exe"
+
