@@ -18,11 +18,12 @@ const (
 
 type EncryptionAlgorithmEnum uint8
 
+const MaxKeyLength = 32
 const (
 	None               EncryptionAlgorithmEnum = iota
-	AESGCM128Algorithm                         // The AES-128GCM1 key is 16 bytes long
-	AESGCM192Algorithm                         // The AES-192GCM1 key is 24 bytes long
-	AESGCM256Algorithm                         // The AES-256GCM1 key is 32 bytes long
+	AESGCM128Algorithm                         // The AES-128GCM key is 16 bytes long
+	AESGCM192Algorithm                         // The AES-192GCM key is 24 bytes long
+	AESGCM256Algorithm                         // The AES-256GCM key is 32 bytes long
 	Unknown            = 0xff
 )
 

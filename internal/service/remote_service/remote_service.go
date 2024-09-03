@@ -1,6 +1,7 @@
 package remote_service
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fadacontrol/internal/base/conf"
@@ -11,6 +12,7 @@ import (
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/remote_service/rml"
 	"fadacontrol/internal/service/unlock"
+	"fadacontrol/pkg/secure"
 	"fadacontrol/pkg/utils"
 	"fmt"
 	RMTT "github.com/czqu/rmtt-go"
@@ -28,7 +30,7 @@ type RemoteService struct {
 	un         *unlock.UnLockService
 	_conf      *conf.Conf
 	db         *gorm.DB
-	config     *entity.RemoteConnectConfig
+	config     entity.RemoteConnectConfig
 	Client     RMTT.Client
 	done       chan struct{}
 	runStatus  bool
@@ -36,7 +38,7 @@ type RemoteService struct {
 }
 
 func NewRemoteService(co *control_pc.ControlPCService, un *unlock.UnLockService, _conf *conf.Conf, db *gorm.DB) *RemoteService {
-	return &RemoteService{co: co, un: un, _conf: _conf, db: db, done: make(chan struct{}), config: &entity.RemoteConnectConfig{}}
+	return &RemoteService{co: co, un: un, _conf: _conf, db: db, done: make(chan struct{}), config: entity.RemoteConnectConfig{}}
 }
 
 const (
@@ -205,46 +207,42 @@ func (r *RemoteService) GetClientId() (string, error) {
 
 	return result.Data, nil
 }
-func (r *RemoteService) UpdateData(_c remote_schema.RemoteConfigDTO) error {
-	if err := r.db.First(r.config).Error; err != nil {
+func (r *RemoteService) UpdateData(_c remote_schema.RemoteConfigReqDTO) error {
+	c := r.config
+	if err := r.db.First(&c).Error; err != nil {
 		logger.Errorf("failed to find database: %v", err)
 		return err
 	}
-	if r.config.ClientId != "" {
-		r.config.ClientId = _c.ClientId
+	if _c.MsgServerUrl != "" {
+		c.MsgServerUrl = _c.MsgServerUrl
 	}
-
-	if r.config.Secret != "" {
-
-		r.config.Secret = _c.Secret
+	if _c.ApiServerUrl != "" {
+		c.ApiServerUrl = _c.ApiServerUrl
 	}
-
+	if _c.Secret != "" {
+		salt, err := secure.GenerateSalt(remote_schema.MaxKeyLength)
+		if err != nil {
+			return err
+		}
+		key, err := secure.GenerateArgon2IDKeyOneTime64MB4Threads(_c.Secret, salt, 5, remote_schema.MaxKeyLength)
+		if err != nil {
+			return err
+		}
+		c.Key = base64.StdEncoding.EncodeToString(key)
+	}
+	if _c.ClientId != "" {
+		c.ClientId = _c.ClientId
+	}
 	r.config.Enable = _c.Enabled
-	r.config.Url = _c.Url
-
 	r.db.Save(&r.config)
 	return nil
 }
-func (r *RemoteService) GetData() (*remote_schema.RemoteConfigDTO, error) {
+func (r *RemoteService) GetData() (*remote_schema.RemoteConfigRespDTO, error) {
 	if err := r.db.First(&r.config).Error; err != nil {
 		logger.Errorf("failed to find database: %v", err)
 		return nil, err
 	}
-	if r.config.ClientId == "" {
-		clientId, err := r.GetClientId()
-		if err == nil {
-			r.config.ClientId = clientId
-		}
-	}
-
-	if r.config.Secret == "" {
-		secret := utils.GenRandString(8)
-
-		r.config.Secret = secret
-
-	}
-	r.db.Save(&r.config)
-	return &remote_schema.RemoteConfigDTO{Enabled: r.config.Enable, ClientId: r.config.ClientId, Secret: r.config.Secret, Url: r.config.Url}, nil
+	return &remote_schema.RemoteConfigRespDTO{Enabled: r.config.Enable, ClientId: r.config.ClientId, Key: r.config.Key, ApiServerUrl: r.config.ApiServerUrl, MsgServerUrl: r.config.MsgServerUrl}, nil
 }
 func (r *RemoteService) RestartService() error {
 	r.StopService()
@@ -293,7 +291,7 @@ func (r *RemoteService) TestServerDelay() int64 {
 	if err != nil {
 		return ret
 	}
-	opts.SetServer(r.config.Url)
+	opts.SetServer(r.config.MsgServerUrl)
 	opts.SetClientID("test-client-id")
 	client := RMTT.NewClient(opts)
 	client.AddPayloadHandlerLast(nil)
@@ -328,7 +326,7 @@ func (r *RemoteService) StartService() {
 	RMTT.WARN = logger.GetLogger()
 
 	opts := RMTT.NewClientOptions()
-	opts.SetServer(r.config.Url)
+	opts.SetServer(r.config.MsgServerUrl)
 
 	opts.SetClientID(r.config.ClientId)
 	logger.Debug("your client id is ", r.config.ClientId)

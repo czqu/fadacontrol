@@ -58,7 +58,11 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 
 	}
 	dbFile := workDir + "/data/config.db"
-
+	dbFile, err = filepath.Localize(dbFile)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	dbFile, err = filepath.Abs(dbFile)
 	if err != nil {
 		fmt.Println(err)

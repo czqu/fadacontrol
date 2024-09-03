@@ -20,7 +20,7 @@ func NewRemoteController(db *gorm.DB, rcs *remote_service.RemoteService) *Remote
 }
 
 func (o *RemoteController) SetRemoteConfig(c *gin.Context) {
-	reqData := remote_schema.RemoteConfigDTO{}
+	reqData := remote_schema.RemoteConfigReqDTO{}
 
 	if err := c.Bind(&reqData); err != nil {
 		c.Error(exception.ErrParameterError)
