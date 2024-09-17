@@ -2,21 +2,21 @@ package unlock
 
 import (
 	"bytes"
-	"encoding/binary"
+
 	"encoding/json"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/entity"
-	"fadacontrol/pkg/sys"
-
+	"fadacontrol/internal/service/credential_provider_service"
 	"net"
 )
 
 type UnLockService struct {
+	cp *credential_provider_service.CredentialProviderService
 }
 
-func NewUnLockService() *UnLockService {
-	return &UnLockService{}
+func NewUnLockService(cp *credential_provider_service.CredentialProviderService) *UnLockService {
+	return &UnLockService{cp: cp}
 }
 
 func (u *UnLockService) HandleUnlockConnection(conn net.Conn) {
@@ -53,48 +53,14 @@ func (u *UnLockService) HandleUnlockConnection(conn net.Conn) {
 	u.UnlockPc(username, password)
 }
 
-var resp = make(chan entity.UnLockResponse)
-
-const (
-	pipePrefix    = `\\.\pipe\fc.pipe.`
-	pipeCacheSize = 4 * 1024
-)
-const UnlockPipeName = pipePrefix + "v1.unlock"
-
 func (u *UnLockService) UnlockPc(username string, password string) *exception.Exception {
+	data := []byte("\x01" + "\x00" + username + "\x00" + password + "\x00")
+	var packet = entity.PipePacket{}
+	packet.Tpe = entity.UnlockReq
+	packet.Size = uint32(len(data))
+	packet.Data = data
 
-	go func() {
-		err := sys.SendToNamedPipeWithHandler(UnlockPipeName, []byte("\x01"+"\x00"+username+"\x00"+password+"\x00"), u.unlockHandler)
-		if err != nil {
-			logger.Errorf("send data err,while unlock pc，more: %v", err)
-			resp <- entity.UnLockResponse{Err: exception.ErrSystemUnknownException}
-		}
-
-	}()
-
-	res := <-resp
-
-	logger.Infof("unlock status  :%d %s", res.Err.Code, res.Err.Msg)
-	return res.Err
-
-}
-func (u *UnLockService) unlockHandler(conn net.Conn) {
-	data := make([]byte, pipeCacheSize)
-	data = data[:4]
-	_, err := conn.Read(data)
-	if err != nil {
-		resp <- entity.UnLockResponse{exception.ErrSystemUnknownException}
-		return
-	}
-
-	code := int(binary.LittleEndian.Uint32(data))
-	logger.Debug("unlock code:", code)
-	if len(data) > binary.Size(code) {
-		resp <- entity.UnLockResponse{exception.GetErrorByCode(code)}
-	} else {
-		logger.Error("Received data too small to contain an int64")
-		resp <- entity.UnLockResponse{exception.ErrSystemUnknownException}
-		return
-	}
+	ret := u.cp.SendData(&packet)
+	return ret
 
 }

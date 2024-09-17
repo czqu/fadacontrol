@@ -25,8 +25,8 @@ type LegacyBootstrap struct {
 	l             *control_pc.LegacyControlService
 }
 
-func NewLegacyBootstrap(db *gorm.DB, l *control_pc.LegacyControlService) *LegacyBootstrap {
-	return &LegacyBootstrap{db: db, signalChanMap: make(map[string]chan interface{}), l: l}
+func NewLegacyBootstrap(u *unlock.UnLockService, db *gorm.DB, l *control_pc.LegacyControlService) *LegacyBootstrap {
+	return &LegacyBootstrap{db: db, signalChanMap: make(map[string]chan interface{}), l: l, u: u}
 
 }
 

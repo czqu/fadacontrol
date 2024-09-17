@@ -4,6 +4,7 @@ import (
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/data"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/internal/service/credential_provider_service"
 	"fadacontrol/pkg/sys"
 )
 
@@ -19,10 +20,11 @@ type DesktopServiceBootstrap struct {
 	it       *InternalServiceBootstrap
 	done     chan interface{}
 	rcb      *RemoteConnectBootstrap
+	cp       *credential_provider_service.CredentialProviderService
 }
 
-func NewRootBootstrap(rcb *RemoteConnectBootstrap, it *InternalServiceBootstrap, _daemon *DaemonBootstrap, _conf *conf.Conf, _db *data.Data, lo *logger.Logger, ble *BleUnlockBootstrap, d *DiscoverBootstrap, http_ *HttpBootstrap, legacy *LegacyBootstrap) *DesktopServiceBootstrap {
-	return &DesktopServiceBootstrap{rcb: rcb, done: make(chan interface{}), it: it, _daemon: _daemon, _conf: _conf, _db: _db, lo: lo, ble: ble, discover: d, http_: http_, legacy_: legacy}
+func NewRootBootstrap(cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, it *InternalServiceBootstrap, _daemon *DaemonBootstrap, _conf *conf.Conf, _db *data.Data, lo *logger.Logger, ble *BleUnlockBootstrap, d *DiscoverBootstrap, http_ *HttpBootstrap, legacy *LegacyBootstrap) *DesktopServiceBootstrap {
+	return &DesktopServiceBootstrap{cp: cp, rcb: rcb, done: make(chan interface{}), it: it, _daemon: _daemon, _conf: _conf, _db: _db, lo: lo, ble: ble, discover: d, http_: http_, legacy_: legacy}
 }
 func (r *DesktopServiceBootstrap) Start() {
 
@@ -37,6 +39,7 @@ func (r *DesktopServiceBootstrap) Start() {
 	r.legacy_.Start()
 	r.ble.Start()
 	r.rcb.Start()
+	go r.cp.Connect()
 	//go func() {
 	//	signalCh := make(chan os.Signal, 1)
 	//	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)

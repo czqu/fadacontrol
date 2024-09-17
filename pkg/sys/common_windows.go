@@ -113,21 +113,45 @@ func ReceiveFromNamedPipe(pipeName string, pipeCacheSize int) ([]byte, error) {
 	return data, nil
 }
 
-func SendToNamedPipeWithHandler(pipeName string, data []byte, handler func(conn net.Conn)) error {
+func ListenNamedPipeWithHandler(pipeName string, handler func(conn net.Conn)) error {
+	config := &winio.PipeConfig{
+		SecurityDescriptor: "", // 默认安全描述符
+		MessageMode:        false,
+		InputBufferSize:    4096,
+		OutputBufferSize:   4096,
+	}
+	pipeHandle, err := winio.ListenPipe(pipeName, config)
 
-	pipeHandle, err := winio.DialPipe(pipeName, nil)
 	if err != nil {
 		return fmt.Errorf("failed to connect to named pipe: %v", err)
 	}
-	defer pipeHandle.Close()
+	for {
+		conn, err := pipeHandle.Accept()
+		if err != nil {
+			return fmt.Errorf("failed to accept connection on named pipe: %v", err)
+		}
 
-	if _, err := pipeHandle.Write(data); err != nil {
-		return fmt.Errorf("error writing JSON data to pipe: %v", err)
+		logger.Debugf("new pipe accepted")
+		handler(conn)
 	}
-	handler(pipeHandle)
 
-	return nil
 }
+
+// func WriteNamedPipeWithHandler(pipeName string, data []byte, handler func(conn net.Conn)) error {
+//
+//		pipeHandle, err := winio.DialPipe(pipeName, nil)
+//		if err != nil {
+//			return fmt.Errorf("failed to connect to named pipe: %v", err)
+//		}
+//		defer pipeHandle.Close()
+//
+//		if _, err := pipeHandle.Write(data); err != nil {
+//			return fmt.Errorf("error writing JSON data to pipe: %v", err)
+//		}
+//		handler(pipeHandle)
+//
+//		return nil
+//	}
 func SetPowerSavingMode(enable bool) bool {
 	var cEnable C.bool
 	if enable {

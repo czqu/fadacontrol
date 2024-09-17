@@ -12,6 +12,7 @@ import (
 	"fadacontrol/internal/router"
 	"fadacontrol/internal/service/common_service"
 	"fadacontrol/internal/service/control_pc"
+	"fadacontrol/internal/service/credential_provider_service"
 	"fadacontrol/internal/service/custom_command_service"
 	"fadacontrol/internal/service/remote_service"
 	"fadacontrol/internal/service/unlock"
@@ -24,7 +25,7 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 		control_pc.NewLegacyControlService, control_pc.NewControlPCService, data.NewData, controller.NewControlPCController, controller.NewUnlockController,
 		conf.NewChanGroup, bootstrap.NewDaemonBootstrap, bootstrap.NewInternalServiceBootstrap, common_service.NewInternalService, controller.NewCustomCommandController,
 		custom_command_service.NewCustomCommandService, remote_service.NewRemoteService,
-		controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, controller.NewDiscoverController,
+		controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, controller.NewDiscoverController, credential_provider_service.NewCredentialProviderService,
 	)
 	return &DesktopServiceApp{_conf: _conf, db: db}, nil
 }

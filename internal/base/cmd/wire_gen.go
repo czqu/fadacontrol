@@ -15,6 +15,7 @@ import (
 	"fadacontrol/internal/router"
 	"fadacontrol/internal/service/common_service"
 	"fadacontrol/internal/service/control_pc"
+	"fadacontrol/internal/service/credential_provider_service"
 	"fadacontrol/internal/service/custom_command_service"
 	"fadacontrol/internal/service/remote_service"
 	"fadacontrol/internal/service/unlock"
@@ -24,13 +25,14 @@ import (
 
 func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopServiceApp, error) {
 	loggerLogger := logger.NewLogger(_conf)
+	credentialProviderService := credential_provider_service.NewCredentialProviderService()
 	gormDB, err := data.NewDB(db)
 	if err != nil {
 		return nil, err
 	}
 	chanGroup := conf.NewChanGroup()
 	controlPCService := control_pc.NewControlPCService(chanGroup)
-	unLockService := unlock.NewUnLockService()
+	unLockService := unlock.NewUnLockService(credentialProviderService)
 	remoteService := remote_service.NewRemoteService(controlPCService, unLockService, _conf, gormDB)
 	remoteConnectBootstrap := bootstrap.NewRemoteConnectBootstrap(_conf, gormDB, remoteService)
 	customCommandService := custom_command_service.NewCustomCommandService(_conf)
@@ -49,8 +51,8 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	commonRouter := router.NewCommonRouter(customCommandController, unlockController, controlPCController)
 	httpBootstrap := bootstrap.NewHttpBootstrap(_conf, gormDB, adminRouter, commonRouter)
 	legacyControlService := control_pc.NewLegacyControlService(controlPCService, unLockService)
-	legacyBootstrap := bootstrap.NewLegacyBootstrap(gormDB, legacyControlService)
-	desktopServiceBootstrap := bootstrap.NewRootBootstrap(remoteConnectBootstrap, internalServiceBootstrap, daemonBootstrap, _conf, dataData, loggerLogger, bleUnlockBootstrap, discoverBootstrap, httpBootstrap, legacyBootstrap)
+	legacyBootstrap := bootstrap.NewLegacyBootstrap(unLockService, gormDB, legacyControlService)
+	desktopServiceBootstrap := bootstrap.NewRootBootstrap(credentialProviderService, remoteConnectBootstrap, internalServiceBootstrap, daemonBootstrap, _conf, dataData, loggerLogger, bleUnlockBootstrap, discoverBootstrap, httpBootstrap, legacyBootstrap)
 	desktopServiceApp := NewDesktopServiceApp(loggerLogger, _conf, db, desktopServiceBootstrap)
 	return desktopServiceApp, nil
 }
