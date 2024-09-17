@@ -35,6 +35,7 @@ func (o *RemoteController) SetRemoteConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, schema.ResponseData{
 		Code: exception.ErrSuccess.Code,
 		Msg:  exception.ErrSuccess.Msg,
+		Data: "",
 	})
 	o.rcs.RestartService()
 }

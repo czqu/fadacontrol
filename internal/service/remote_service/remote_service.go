@@ -17,6 +17,7 @@ import (
 	"fmt"
 	RMTT "github.com/czqu/rmtt-go"
 	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 	"io"
 	"math"
 	"net/http"
@@ -213,11 +214,21 @@ func (r *RemoteService) UpdateData(_c remote_schema.RemoteConfigReqDTO) error {
 		logger.Errorf("failed to find database: %v", err)
 		return err
 	}
-	if _c.MsgServerUrl != "" {
-		c.MsgServerUrl = _c.MsgServerUrl
+	var servers []entity.RemoteServer
+
+	for _, server := range _c.Server {
+		if server.MsgServerUrl == "" || server.ApiServerUrl == "" {
+			continue
+		}
+		s := entity.RemoteServer{MsgServerUrl: server.MsgServerUrl, ApiServerUrl: server.ApiServerUrl}
+		servers = append(servers, s)
+
 	}
-	if _c.ApiServerUrl != "" {
-		c.ApiServerUrl = _c.ApiServerUrl
+	err := r.db.Clauses(clause.OnConflict{
+		DoNothing: true,
+	}).Create(&servers).Error
+	if err != nil {
+		logger.Errorf("failed to update database: %v", err)
 	}
 	if _c.Secret != "" {
 		salt, err := secure.GenerateSalt(remote_schema.MaxKeyLength)
@@ -228,13 +239,14 @@ func (r *RemoteService) UpdateData(_c remote_schema.RemoteConfigReqDTO) error {
 		if err != nil {
 			return err
 		}
+		c.Salt = base64.StdEncoding.EncodeToString(salt)
 		c.Key = base64.StdEncoding.EncodeToString(key)
 	}
 	if _c.ClientId != "" {
 		c.ClientId = _c.ClientId
 	}
-	r.config.Enable = _c.Enabled
-	r.db.Save(&r.config)
+	c.Enable = _c.Enabled
+	r.db.Save(&c)
 	return nil
 }
 func (r *RemoteService) GetData() (*remote_schema.RemoteConfigRespDTO, error) {
@@ -242,7 +254,17 @@ func (r *RemoteService) GetData() (*remote_schema.RemoteConfigRespDTO, error) {
 		logger.Errorf("failed to find database: %v", err)
 		return nil, err
 	}
-	return &remote_schema.RemoteConfigRespDTO{Enabled: r.config.Enable, ClientId: r.config.ClientId, Key: r.config.Key, ApiServerUrl: r.config.ApiServerUrl, MsgServerUrl: r.config.MsgServerUrl}, nil
+	var servers []entity.RemoteServer
+	err := r.db.Limit(10).Find(&servers).Error
+	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
+		return nil, fmt.Errorf("failed to find database: %v", err)
+	}
+	var rs []remote_schema.RemoteServer
+	for _, s := range servers {
+		e := remote_schema.RemoteServer{MsgServerUrl: s.MsgServerUrl, ApiServerUrl: s.ApiServerUrl}
+		rs = append(rs, e)
+	}
+	return &remote_schema.RemoteConfigRespDTO{Enabled: r.config.Enable, ClientId: r.config.ClientId, Key: r.config.Key, Server: rs}, nil
 }
 func (r *RemoteService) RestartService() error {
 	r.StopService()
@@ -270,7 +292,11 @@ func (r *RemoteService) CreatConfig() {
 	err := r.db.AutoMigrate(&entity.RemoteConnectConfig{})
 	if err != nil {
 		logger.Errorf("failed to migrate database")
-		return
+
+	}
+	err = r.db.AutoMigrate(&entity.RemoteServer{})
+	if err != nil {
+		logger.Errorf("failed to migrate database")
 	}
 	var count int64
 	r.db.Model(&entity.RemoteConnectConfig{}).Count(&count)
@@ -282,6 +308,7 @@ func (r *RemoteService) CreatConfig() {
 		}
 		r.db.Create(&remoteConfig)
 	}
+
 }
 func (r *RemoteService) TestServerDelay() int64 {
 	var ret int64
@@ -291,7 +318,15 @@ func (r *RemoteService) TestServerDelay() int64 {
 	if err != nil {
 		return ret
 	}
-	opts.SetServer(r.config.MsgServerUrl)
+	server := entity.RemoteServer{}
+	err = r.db.First(&server).Error
+	if err != nil {
+		return ret
+	}
+	if server.MsgServerUrl == "" {
+		return ret
+	}
+	opts.AddServer(server.MsgServerUrl)
 	opts.SetClientID("test-client-id")
 	client := RMTT.NewClient(opts)
 	client.AddPayloadHandlerLast(nil)
@@ -326,7 +361,12 @@ func (r *RemoteService) StartService() {
 	RMTT.WARN = logger.GetLogger()
 
 	opts := RMTT.NewClientOptions()
-	opts.SetServer(r.config.MsgServerUrl)
+	server := entity.RemoteServer{}
+	r.db.First(&server)
+	if server.MsgServerUrl == "" {
+		return
+	}
+	opts.AddServer(server.MsgServerUrl)
 
 	opts.SetClientID(r.config.ClientId)
 	logger.Debug("your client id is ", r.config.ClientId)

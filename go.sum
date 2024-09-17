@@ -19,6 +19,8 @@ github.com/cncf/udpa/go v0.0.0-20191209042840-269d4d468f6f/go.mod h1:M8M6+tZqaGX
 github.com/cpuguy83/go-md2man/v2 v2.0.4/go.mod h1:tgQtvFlXSQOSOSIRvRPT7W67SCa46tRHOmNcaadrF8o=
 github.com/czqu/rmtt-go v0.0.0-20240830185404-09a3bc422c7f h1:786RJbJ/RYjyk67lI/tTKXU6vcnNYAT8xpM/o8WQ3QM=
 github.com/czqu/rmtt-go v0.0.0-20240830185404-09a3bc422c7f/go.mod h1:SyRJ+NWJdbcB/NHVnUO6s/36uxzM+VsavUIN8AEyCa8=
+github.com/czqu/rmtt-go v0.0.2-beta h1:L+XT6SsYy4YSWExqN4YV5dkMZRom7ZZoJC5qmMXPVaM=
+github.com/czqu/rmtt-go v0.0.2-beta/go.mod h1:L4FCZbnd3FJu/Io+K6DajfKbbpiHT/jvs4RqwaHlD2s=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

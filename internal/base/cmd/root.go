@@ -23,10 +23,12 @@ var rootCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 
 		if serviceMode {
-			StartService()
 			if debugMode {
 				DesktopServiceMain(debugMode, conf.ServiceMode, workDir)
+			} else {
+				StartService()
 			}
+
 			return
 		}
 		if installServiceMode {

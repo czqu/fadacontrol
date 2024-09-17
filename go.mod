@@ -4,7 +4,7 @@ go 1.23
 
 require (
 	github.com/Microsoft/go-winio v0.6.2
-	github.com/czqu/rmtt-go v0.0.0-20240830185404-09a3bc422c7f
+	github.com/czqu/rmtt-go v0.0.2-beta
 	github.com/gin-gonic/gin v1.10.0
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
