@@ -22,7 +22,7 @@ func (control *ControlPCService) Standby() *exception.Exception {
 
 }
 func (control *ControlPCService) Shutdown() *exception.Exception {
-	return sys.Shutdown()
+	return sys.Shutdown(sys.S_E_FORCE_SHUTDOWN)
 }
 func (control *ControlPCService) LockWindows(useAgent bool) *exception.Exception {
 	//
