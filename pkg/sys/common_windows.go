@@ -113,12 +113,12 @@ func ReceiveFromNamedPipe(pipeName string, pipeCacheSize int) ([]byte, error) {
 	return data, nil
 }
 
-func ListenNamedPipeWithHandler(pipeName string, handler func(conn net.Conn)) error {
+func ListenNamedPipeWithHandler(pipeName string, handler func(conn net.Conn), inputBufferSize, outputBufferSize int32) error {
 	config := &winio.PipeConfig{
-		SecurityDescriptor: "", // 默认安全描述符
+		SecurityDescriptor: "D:(A;;GA;;;S-1-5-32-544)(A;;GA;;;S-1-5-18)", // Only administrators and system accounts have full control
 		MessageMode:        false,
-		InputBufferSize:    4096,
-		OutputBufferSize:   4096,
+		InputBufferSize:    inputBufferSize,
+		OutputBufferSize:   outputBufferSize,
 	}
 	pipeHandle, err := winio.ListenPipe(pipeName, config)
 

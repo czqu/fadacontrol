@@ -2,6 +2,7 @@ package credential_provider_service
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/entity"
@@ -9,18 +10,22 @@ import (
 	"github.com/skip2/go-qrcode"
 	"golang.org/x/image/bmp"
 	"golang.org/x/image/draw"
+	"gorm.io/gorm"
 	"image"
 	"image/color"
 	"io"
 	"net"
+	"os"
+	"time"
 )
 
 type CredentialProviderService struct {
 	pipe net.Conn
+	db   *gorm.DB
 }
 
-func NewCredentialProviderService() *CredentialProviderService {
-	return &CredentialProviderService{}
+func NewCredentialProviderService(db *gorm.DB) *CredentialProviderService {
+	return &CredentialProviderService{db: db}
 }
 
 const (
@@ -66,7 +71,7 @@ func (p *CredentialProviderService) SetQrCode(contents string, size, borderSize 
 }
 func (p *CredentialProviderService) Connect() {
 	go func() {
-		err := sys.ListenNamedPipeWithHandler(DataPipeName, p.PipeHandler)
+		err := sys.ListenNamedPipeWithHandler(DataPipeName, p.PipeHandler, pipeCacheSize, pipeCacheSize)
 		if err != nil {
 			logger.Error(err.Error())
 		}
@@ -112,11 +117,11 @@ func (p *CredentialProviderService) SendData(packet *entity.PipePacket) *excepti
 	}
 
 	logger.Debugf("write data")
+
 	if _, err := p.pipe.Write(packetData); err != nil {
 		logger.Error("write data err")
 		return exception.ErrSystemUnknownException
 	}
-
 	logger.Debugf("write data %d ", len(packetData))
 	ret := p.getResp()
 	logger.Debug("get resp ok")
@@ -164,19 +169,43 @@ func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
 		switch packet.Tpe {
 		case entity.Resp:
 			logger.Debugf("recv resp")
-			if len(packet.Data) != 1 {
+			if len(packet.Data) != 4 {
 				logger.Debug("read err")
-				resp <- pipeSendStatus{exception.ErrSystemUnknownException, nil}
+				select {
+				case resp <- pipeSendStatus{exception.ErrSystemUnknownException, nil}:
+					break
+				case <-time.After(time.Second * 1):
+					break
+				}
+
 				break
 			}
-			code := packet.Data[0]
+			code := binary.BigEndian.Uint32(packet.Data[0:4])
+			logger.Debug("code is ", code)
 			resp <- pipeSendStatus{exception.GetErrorByCode(int(code)), &packet}
 			logger.Debug("over")
 			break
 		case entity.CommandClicked:
 			logger.Debugf("receive clicked command")
-			text := "{\n    \"hostname\": \"test_my_image\",\n    \"client_id\": \"12345789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz123456789abcdefghijklmnopqrstuvwxyz\"\n}\n"
-			go p.SetQrCode(text, 256, 5)
+			clientId := ""
+			hostname := ""
+			hostname, err := os.Hostname()
+			if err != nil {
+				logger.Error("get hostname err")
+				hostname = ""
+			}
+			rc := entity.RemoteConnectConfig{}
+
+			if err := p.db.First(&rc).Error; err != nil {
+				logger.Errorf("failed to find database: %v", err)
+			} else {
+				clientId = rc.ClientId
+			}
+			text := hostname + ";" + clientId + ";"
+			go func() {
+				p.SetQrCode(text, 256, 5)
+				p.SetCommandLinkText("Click to refresh QR code")
+			}()
 
 			break
 			logger.Debug("over")

@@ -10,23 +10,23 @@ import (
 	"time"
 )
 
-type DaemonBootstrap struct {
+type DaemonConnectBootstrap struct {
 	ChanGroup *conf.ChanGroup
 	_conf     *conf.Conf
 	done      chan interface{}
 }
 
-func NewDaemonBootstrap(g *conf.ChanGroup, _conf *conf.Conf) *DaemonBootstrap {
-	return &DaemonBootstrap{ChanGroup: g, _conf: _conf, done: make(chan interface{})}
+func NewDaemonConnectBootstrap(g *conf.ChanGroup, _conf *conf.Conf) *DaemonConnectBootstrap {
+	return &DaemonConnectBootstrap{ChanGroup: g, _conf: _conf, done: make(chan interface{})}
 }
 
-func (d *DaemonBootstrap) Start() {
+func (d *DaemonConnectBootstrap) Start() {
 	port := 2095
 	host := "127.0.0.1"
 	addr := host + ":" + strconv.Itoa(port)
 	go d.connectToServer(addr)
 }
-func (d *DaemonBootstrap) Stop() {
+func (d *DaemonConnectBootstrap) Stop() {
 	d.done <- struct{}{}
 }
 
@@ -35,7 +35,7 @@ const (
 	maxBackoff     = 16 * time.Second
 )
 
-func (d *DaemonBootstrap) connectToServer(addr string) {
+func (d *DaemonConnectBootstrap) connectToServer(addr string) {
 	backoff := initialBackoff
 
 NewConn:

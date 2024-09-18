@@ -67,13 +67,14 @@ func StartBroadcast() {
 	var err error
 	hostname, err = os.Hostname()
 	if err != nil {
-		hostname = "unknown_host"
 		logger.Warn("Error getting hostname:", err)
+		StopBroadcast()
+		return
 	}
 	go listenAndSend(4085)
 	go func() {
 		logger.Debug("Sending UDP Broadcast ")
-		for true {
+		for {
 
 			if udpStopFlag {
 				return

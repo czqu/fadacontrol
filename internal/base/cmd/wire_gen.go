@@ -25,11 +25,11 @@ import (
 
 func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopServiceApp, error) {
 	loggerLogger := logger.NewLogger(_conf)
-	credentialProviderService := credential_provider_service.NewCredentialProviderService()
 	gormDB, err := data.NewDB(db)
 	if err != nil {
 		return nil, err
 	}
+	credentialProviderService := credential_provider_service.NewCredentialProviderService(gormDB)
 	chanGroup := conf.NewChanGroup()
 	controlPCService := control_pc.NewControlPCService(chanGroup)
 	unLockService := unlock.NewUnLockService(credentialProviderService)
@@ -38,7 +38,7 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	customCommandService := custom_command_service.NewCustomCommandService(_conf)
 	internalService := common_service.NewInternalService(customCommandService)
 	internalServiceBootstrap := bootstrap.NewInternalServiceBootstrap(internalService)
-	daemonBootstrap := bootstrap.NewDaemonBootstrap(chanGroup, _conf)
+	daemonConnectBootstrap := bootstrap.NewDaemonConnectBootstrap(chanGroup, _conf)
 	dataData := data.NewData(gormDB)
 	bleUnlockBootstrap := bootstrap.NewBleUnlockBootstrap(unLockService)
 	discoverBootstrap := bootstrap.NewDiscoverBootstrap(gormDB)
@@ -52,7 +52,7 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	httpBootstrap := bootstrap.NewHttpBootstrap(_conf, gormDB, adminRouter, commonRouter)
 	legacyControlService := control_pc.NewLegacyControlService(controlPCService, unLockService)
 	legacyBootstrap := bootstrap.NewLegacyBootstrap(unLockService, gormDB, legacyControlService)
-	desktopServiceBootstrap := bootstrap.NewRootBootstrap(credentialProviderService, remoteConnectBootstrap, internalServiceBootstrap, daemonBootstrap, _conf, dataData, loggerLogger, bleUnlockBootstrap, discoverBootstrap, httpBootstrap, legacyBootstrap)
+	desktopServiceBootstrap := bootstrap.NewRootBootstrap(credentialProviderService, remoteConnectBootstrap, internalServiceBootstrap, daemonConnectBootstrap, _conf, dataData, loggerLogger, bleUnlockBootstrap, discoverBootstrap, httpBootstrap, legacyBootstrap)
 	desktopServiceApp := NewDesktopServiceApp(loggerLogger, _conf, db, desktopServiceBootstrap)
 	return desktopServiceApp, nil
 }

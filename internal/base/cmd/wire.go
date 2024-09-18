@@ -23,7 +23,7 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	wire.Build(NewDesktopServiceApp, bootstrap.NewBleUnlockBootstrap, bootstrap.NewHttpBootstrap, bootstrap.NewDiscoverBootstrap,
 		bootstrap.NewLegacyBootstrap, logger.NewLogger, unlock.NewUnLockService, data.NewDB, router.NewCommonRouter, router.NewAdminRouter, bootstrap.NewRootBootstrap,
 		control_pc.NewLegacyControlService, control_pc.NewControlPCService, data.NewData, controller.NewControlPCController, controller.NewUnlockController,
-		conf.NewChanGroup, bootstrap.NewDaemonBootstrap, bootstrap.NewInternalServiceBootstrap, common_service.NewInternalService, controller.NewCustomCommandController,
+		conf.NewChanGroup, bootstrap.NewDaemonConnectBootstrap, bootstrap.NewInternalServiceBootstrap, common_service.NewInternalService, controller.NewCustomCommandController,
 		custom_command_service.NewCustomCommandService, remote_service.NewRemoteService,
 		controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, controller.NewDiscoverController, credential_provider_service.NewCredentialProviderService,
 	)

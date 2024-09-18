@@ -13,7 +13,7 @@ type PipePacket struct {
 	Data []byte
 }
 
-type PipePacketType byte
+type PipePacketType uint8
 
 const (
 	Unknown PipePacketType = iota
@@ -30,22 +30,16 @@ func (p *PipePacket) Pack() ([]byte, error) {
 	buf := new(bytes.Buffer)
 
 	// 写入类型（Tpe） - 1字节
-	err := binary.Write(buf, binary.BigEndian, p.Tpe)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write Tpe: %v", err)
-	}
+	buf.WriteByte(byte(p.Tpe))
 
 	// 写入Size（Size） - 4字节
-	err = binary.Write(buf, binary.BigEndian, p.Size)
+	err := binary.Write(buf, binary.BigEndian, p.Size)
 	if err != nil {
 		return nil, fmt.Errorf("failed to write Size: %v", err)
 	}
 
 	// 写入Data
-	err = binary.Write(buf, binary.BigEndian, p.Data)
-	if err != nil {
-		return nil, fmt.Errorf("failed to write Data: %v", err)
-	}
+	buf.Write(p.Data)
 
 	return buf.Bytes(), nil
 }
@@ -66,9 +60,9 @@ func (p *PipePacket) Unpack(buf io.Reader) error {
 
 	// 读取Data，根据Size读取固定字节
 	p.Data = make([]byte, p.Size)
-	err = binary.Read(buf, binary.BigEndian, &p.Data)
+	_, err = buf.Read(p.Data)
 	if err != nil {
-		return fmt.Errorf("failed to read Data: %v", err)
+		return err
 	}
 
 	return nil
