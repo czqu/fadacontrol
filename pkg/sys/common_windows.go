@@ -34,7 +34,7 @@ const (
 
 )
 
-func convertType(tpe ShutdownType) (uint32, error) {
+func convertType(tpe ShutdownType) (uint32, *exception.Exception) {
 	switch tpe {
 	case S_E_LOGOFF:
 		return EWX_LOGOFF, nil
@@ -70,7 +70,7 @@ func convertType(tpe ShutdownType) (uint32, error) {
 	case S_EWX_HYBRID_SHUTDOWN:
 		return EWX_HYBRID_SHUTDOWN, nil
 	default:
-		return 0, fmt.Errorf("unsupport shutdown type %d", tpe)
+		return 0, exception.ErrParameterError
 
 	}
 }

@@ -4,8 +4,10 @@ import (
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/schema"
 	"fadacontrol/internal/service/control_pc"
+	"fadacontrol/pkg/sys"
 	"fadacontrol/pkg/utils"
 	"fmt"
+	"strconv"
 
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -21,15 +23,16 @@ func NewControlPCController(p *control_pc.ControlPCService) *ControlPCController
 
 // ControlPC Control computer interface
 //
-//	@Summary		Control  computer
-//	@Description	Control the operation of the computer according to the transmitted parameters
-//	@Accept			json
-//	@Produce		json
-//	@Param			action	path		string					true	"The type of operation（shutdown、standby、lock）"	Enums(shutdown, standby, lock)
-//	@Success		200		{object}	schema.ResponseData	"success"
-//	@Failure		400		{object}	schema.ResponseData	"Invalid action type"
-//	@Failure		500		{object}	schema.ResponseData		"The operation failed"
-//	@Router			/control-pc/{action}/ [post]
+//		@Summary		Control  computer
+//		@Description	Control the operation of the computer according to the transmitted parameters
+//		@Accept			json
+//		@Produce		json
+//		@Param			action	path		string					true	"The type of operation（shutdown、standby、lock）"	Enums(shutdown, standby, lock)
+//	 @Query			shutdown_type	path		string	false	"The type of shutdown（0、1、2、3、4、5、6）"	Enums(0, 1, 2, 3, 4, 5, 6)
+//		@Success		200		{object}	schema.ResponseData	"success"
+//		@Failure		400		{object}	schema.ResponseData	"Invalid action type"
+//		@Failure		500		{object}	schema.ResponseData		"The operation failed"
+//		@Router			/control-pc/{action}/ [post]
 func (o *ControlPCController) ControlPC(c *gin.Context) {
 	action := c.Param("action")
 
@@ -38,7 +41,16 @@ func (o *ControlPCController) ControlPC(c *gin.Context) {
 	switch action {
 	case "shutdown":
 
-		ret = o.p.Shutdown()
+		tpe := c.DefaultQuery("shutdown_type", strconv.Itoa(int(sys.S_E_FORCE_SHUTDOWN)))
+		shutdownType, err := strconv.Atoi(tpe)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"code": exception.ErrParameterError,
+				"msg":  "Invalid shutdown_type specified",
+			})
+			return
+		}
+		ret = o.p.Shutdown(sys.ShutdownType(shutdownType))
 		result = "Shutdown"
 	case "standby":
 		ret = o.p.Standby()

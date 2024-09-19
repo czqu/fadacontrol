@@ -1,6 +1,8 @@
 package sys
 
-type ShutdownType int32
+import "fadacontrol/internal/schema/remote_schema"
+
+type ShutdownType int
 
 const (
 	Unknown ShutdownType = iota
@@ -25,3 +27,40 @@ const (
 	S_EWX_HYBRID_SHUTDOWN_RESTARTAPPS       // 混合关机并重启应用程序 (EWX_HYBRID_SHUTDOWN | EWX_RESTARTAPPS)
 	S_EWX_HYBRID_SHUTDOWN_FORCE_RESTARTAPPS // 混合关机、强制关闭应用程序并重启应用程序 (EWX_HYBRID_SHUTDOWN | EWX_FORCE | EWX_RESTARTAPPS
 )
+
+func ProtoTypeToShutdownType(protoType remote_schema.ShutdownType) ShutdownType {
+	switch protoType {
+	case remote_schema.ShutdownType_E_FORCE_REBOOT:
+		return S_E_FORCE_REBOOT
+	case remote_schema.ShutdownType_E_LOGOFF:
+		return S_E_LOGOFF
+	case remote_schema.ShutdownType_E_FORCE_SHUTDOWN:
+		return S_E_FORCE_SHUTDOWN
+	case remote_schema.ShutdownType_EWX_FORCE_POWEROFF:
+		return S_EWX_FORCE_POWEROFF
+	case remote_schema.ShutdownType_EWX_REBOOT:
+		return S_EWX_REBOOT
+	case remote_schema.ShutdownType_EWX_REBOOT_RESTARTAPPS:
+		return S_EWX_REBOOT_RESTARTAPPS
+	case remote_schema.ShutdownType_EWX_POWEROFF:
+		return S_EWX_POWEROFF
+
+	case remote_schema.ShutdownType_EWX_HYBRID_SHUTDOWN:
+		return S_EWX_HYBRID_SHUTDOWN
+	case remote_schema.ShutdownType_EWX_HYBRID_SHUTDOWN_FORCE:
+		return S_EWX_HYBRID_SHUTDOWN_FORCE
+	case remote_schema.ShutdownType_EWX_HYBRID_SHUTDOWN_RESTARTAPPS:
+		return S_EWX_HYBRID_SHUTDOWN_RESTARTAPPS
+	case remote_schema.ShutdownType_EWX_HYBRID_SHUTDOWN_FORCE_RESTARTAPPS:
+		return S_EWX_HYBRID_SHUTDOWN_FORCE_RESTARTAPPS
+	case remote_schema.ShutdownType_EWX_SHUTDOWN_RESTARTAPPS:
+		return S_EWX_SHUTDOWN_RESTARTAPPS
+	case remote_schema.ShutdownType_EWX_SHUTDOWN:
+		return S_EWX_SHUTDOWN
+	case remote_schema.ShutdownType_EWX_FORCE_REBOOT_RESTARTAPPS:
+		return S_EWX_FORCE_REBOOT_RESTARTAPPS
+
+	default:
+		return Unknown
+	}
+}

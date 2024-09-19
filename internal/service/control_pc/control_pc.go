@@ -21,8 +21,8 @@ func (control *ControlPCService) Standby() *exception.Exception {
 	return sys.Standby()
 
 }
-func (control *ControlPCService) Shutdown() *exception.Exception {
-	return sys.Shutdown(sys.S_E_FORCE_SHUTDOWN)
+func (control *ControlPCService) Shutdown(tpe sys.ShutdownType) *exception.Exception {
+	return sys.Shutdown(tpe)
 }
 func (control *ControlPCService) LockWindows(useAgent bool) *exception.Exception {
 	//

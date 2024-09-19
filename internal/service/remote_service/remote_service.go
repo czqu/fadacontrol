@@ -1,7 +1,9 @@
 package remote_service
 
 import (
+	"bytes"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fadacontrol/internal/base/conf"
@@ -10,18 +12,19 @@ import (
 	"fadacontrol/internal/entity"
 	"fadacontrol/internal/schema/remote_schema"
 	"fadacontrol/internal/service/control_pc"
-	"fadacontrol/internal/service/remote_service/rml"
 	"fadacontrol/internal/service/unlock"
 	"fadacontrol/pkg/secure"
+	"fadacontrol/pkg/sys"
 	"fadacontrol/pkg/utils"
 	"fmt"
 	RMTT "github.com/czqu/rmtt-go"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/timestamppb"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 	"io"
 	"math"
 	"net/http"
-	"runtime"
 	"sync"
 	"time"
 )
@@ -54,6 +57,54 @@ const (
 	END
 )
 
+func (r *RemoteService) ProtoHandler(client RMTT.Client, data, requestId *[]byte) {
+
+	var msg = &remote_schema.RemoteMsg{}
+	err := proto.Unmarshal(*data, msg)
+	if err != nil {
+		logger.Warn(err)
+		r.PushProtoRet(client, true, exception.ErrDeserializationError, requestId)
+	}
+	switch msg.Type {
+	case remote_schema.MsgType_Unknown:
+		r.PushProtoRet(client, true, exception.ErrParameterError, requestId)
+	case remote_schema.MsgType_Unlock:
+		{
+			unlockMsg := msg.GetUnlockMsg()
+			if unlockMsg == nil {
+				r.PushProtoRet(client, true, exception.ErrParameterError, requestId)
+				return
+			}
+			ret := r.un.UnlockPc(unlockMsg.Username, unlockMsg.Password)
+			r.PushProtoRet(client, true, ret, requestId)
+		}
+	case remote_schema.MsgType_LockScreen:
+		{
+			ret := r.co.LockWindows(true)
+			r.PushProtoRet(client, true, ret, requestId)
+		}
+	case remote_schema.MsgType_Shutdown:
+		{
+			shutdownMsg := msg.GetShutdownMsg()
+			if shutdownMsg == nil {
+				r.PushProtoRet(client, true, exception.ErrParameterError, requestId)
+				return
+			}
+			shutdownTpe := sys.ProtoTypeToShutdownType(shutdownMsg.Type)
+			ret := r.co.Shutdown(shutdownTpe)
+			r.PushProtoRet(client, true, ret, requestId)
+		}
+	case remote_schema.MsgType_Standby:
+		{
+			ret := r.co.Standby()
+			r.PushProtoRet(client, true, ret, requestId)
+		}
+
+	}
+
+	return
+}
+
 func (r *RemoteService) RRFPMsgHandler(client RMTT.Client, msg RMTT.Message) {
 	r.Client = client
 	dataSlice := msg.Payload()
@@ -64,117 +115,119 @@ func (r *RemoteService) RRFPMsgHandler(client RMTT.Client, msg RMTT.Message) {
 	err := packet.Unpack(dataSlice) //DecodeAesPack(r.config.Secret, dataSlice)
 	if err != nil {
 		logger.Warn(err)
-		PushRet(client, 20011)
+		r.PushTextRet(client, exception.ErrControlPacketParseError, packet.RequestId)
 		return
 	}
-	decodeData, err := remote_schema.DecryptData(packet.Data, packet.Salt, r.config.Secret)
 
-	if err != nil || packet.DataType != remote_schema.JsonType {
-		logger.Warn(err)
-		PushRet(client, 20011)
+	var decodeData []byte
+	switch packet.EncryptionAlgorithm {
+	case remote_schema.None:
+		break
+	case remote_schema.AESGCM128Algorithm:
+		{
+			salt, err := base64.StdEncoding.DecodeString(r.config.Salt)
+			if err != nil {
+				logger.Warn(err)
+				r.PushTextRet(client, exception.ErrDecryptDataError, packet.RequestId)
+				return
+			}
+			decodeData, err = remote_schema.DecryptData(*packet.Data, salt, r.config.Secret)
+
+			if err != nil {
+				logger.Warn(err)
+				r.PushTextRet(client, exception.ErrDecryptDataError, packet.RequestId)
+				return
+			}
+		}
+	default:
+		{
+			r.PushTextRet(client, exception.ErrUnsupportedCryptographicAlgorithm, packet.RequestId)
+		}
+
+	}
+	switch packet.DataType {
+	case remote_schema.ProtoBuf:
+		r.ProtoHandler(client, &decodeData, packet.RequestId)
+	default:
+		r.PushTextRet(client, exception.ErrParameterError, packet.RequestId)
+	}
+
+}
+
+func (r *RemoteService) PushTextRet(client RMTT.Client, ret *exception.Exception, requestId *[]byte) {
+	if len(*requestId) > 0xff {
 		return
 	}
-	runtime.GC()
-	var jsonData map[string]interface{}
-	err = json.Unmarshal(decodeData, &jsonData)
+	requestIdLen := uint8(len(*requestId))
+	buffer := new(bytes.Buffer)
+	err := binary.Write(buffer, binary.BigEndian, ret.Code)
 	if err != nil {
-		//todo
+		logger.Warn(err)
+		return
+	}
+
+	payload := buffer.Bytes()
+	packet := &remote_schema.PayloadPacket{EncryptionAlgorithm: remote_schema.None, DataType: remote_schema.Text,
+		Data: &payload, RequestIdLen: requestIdLen, RequestId: requestId}
+	if client != nil {
+
+		client.Push(packet)
+	}
+}
+
+func (r *RemoteService) PushProtoRet(client RMTT.Client, encryptFlag bool, ex *exception.Exception, requestId *[]byte) {
+	if len(*requestId) > 0xff {
+		return
+	}
+	requestIdLen := uint8(len(*requestId))
+	msg := &remote_schema.RemoteMsg{
+		Type:      remote_schema.MsgType_CommonResponse,
+		Timestamp: timestamppb.New(time.Now()),
+		MsgBody: &remote_schema.RemoteMsg_ResponseMsg{
+			ResponseMsg: &remote_schema.CommonResponseMsg{
+				Code: int32(ex.Code),
+				Msg:  ex.Msg,
+			},
+		},
+	}
+	data, err := proto.Marshal(msg)
+	if err != nil {
 		logger.Error(err)
 		return
 	}
-	typ, ok := jsonData["type"].(float64)
-	if !ok {
-		logger.Warn("Error: unable to read type from JSON")
-	}
-
-	var ret *exception.Exception = exception.ErrUnknownException
-	switch int(typ) {
-	case Unlock:
-		{
-			logger.Debug("recv unlock data")
-			username, password, err := rml.ReadJson(string(decodeData))
-			if err != nil {
-				logger.Warn(err)
-				PushRet(client, 20012)
-				return
-			}
-			if username == "" || password == "" {
-				PushRet(client, 10009)
-				return
-			}
-			ret = r.un.UnlockPc(username, password)
-
+	if !encryptFlag {
+		packet := &remote_schema.PayloadPacket{EncryptionAlgorithm: remote_schema.None, DataType: remote_schema.ProtoBuf, Data: &data}
+		ret, err := packet.Pack()
+		if err != nil {
+			logger.Error(err)
+			return
 		}
-	case Standby:
-		ret = r.co.Standby()
-	case Shutdown:
-		ret = r.co.Shutdown()
-	case LockScreen:
-		ret = r.co.LockWindows(true)
-
-	default:
-		logger.Warnf("not support type: %v", typ)
-
-	}
-	PushRet(client, ret.Code)
-
-	return
-}
-
-type DoPushFun func(msg []byte)
-
-func PushRet(client RMTT.Client, code int) {
-	pushPayload := make([]byte, 1)
-	pushPayload[0] = 0
-	pushData := struct {
-		ErrCode int         `json:"err_code"`
-		Data    interface{} `json:"data"`
-	}{
-		ErrCode: code,
-		Data:    nil,
-	}
-	jsonData, err := json.Marshal(pushData)
-	if err != nil {
+		if client != nil {
+			client.Push(ret)
+		}
 		return
 	}
-	pushPayload = append(pushPayload, jsonData...)
-	doPush(client, pushPayload)
-}
-func doPush(client RMTT.Client, msg []byte) {
+	key, err := base64.StdEncoding.DecodeString(r.config.Key)
+	if err != nil {
+		logger.Error(err)
+		return
+	}
+	encryptData, err := secure.EncryptAESGCM(key, data)
+	if err != nil {
+		logger.Error(err)
+	}
+
+	packet := &remote_schema.PayloadPacket{RequestIdLen: requestIdLen, RequestId: requestId, EncryptionAlgorithm: remote_schema.AESGCM256Algorithm, DataType: remote_schema.ProtoBuf, Data: &encryptData}
+
+	ret, err := packet.Pack()
+	if err != nil {
+		logger.Error(err)
+		return
+	}
 	if client != nil {
 
-		client.Push(msg)
+		client.Push(ret)
 	}
-}
-
-func (r *RemoteService) IdentifyMe() {
-	pushData := struct {
-		ErrCode int `json:"err_code"`
-		Data    struct {
-			Identifier string `json:"identifier"`
-		} `json:"data"`
-	}{
-
-		ErrCode: 0,
-		Data: struct {
-			Identifier string `json:"identifier"`
-		}{
-			Identifier: "unlock",
-		},
-	}
-	_jsonData, err := json.Marshal(pushData)
-	if err != nil {
-		return
-	}
-	r.PushPacketNoSecure(_jsonData)
-}
-func (r *RemoteService) PushPacketNoSecure(data []byte) {
-	pushPayload := make([]byte, 1)
-	pushPayload[0] = 0
-	pushPayload = append(pushPayload, data...)
-
-	doPush(r.Client, pushPayload)
-
 }
 
 type Response struct {
@@ -352,6 +405,9 @@ func (r *RemoteService) StartService() {
 		logger.Errorf("failed to load config: %v", err)
 		return
 	}
+	if r._conf.Debug {
+		r.config.Enable = true
+	}
 	if r.config.Enable == false {
 		return
 	}
@@ -367,6 +423,9 @@ func (r *RemoteService) StartService() {
 		return
 	}
 	opts.AddServer(server.MsgServerUrl)
+	if r._conf.Debug {
+		opts.AddServer("tcp://127.0.0.1:3016")
+	}
 
 	opts.SetClientID(r.config.ClientId)
 	logger.Debug("your client id is ", r.config.ClientId)
@@ -388,7 +447,6 @@ func (r *RemoteService) StartService() {
 			return
 		}
 
-		r.IdentifyMe()
 	}()
 
 	r.statusLock.Lock()

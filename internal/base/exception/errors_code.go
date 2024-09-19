@@ -40,6 +40,27 @@ var (
 		Code: 10001,
 		Msg:  "Logon failure",
 	}
+
+	ErrControlPacketParseError = &Exception{
+		Code: 20012,
+		Msg:  "Control packet parse error",
+	}
+	ErrDecryptDataError = &Exception{
+		Code: 20013,
+		Msg:  "Decrypt data error",
+	}
+	ErrDeserializationError = &Exception{
+		Code: 20014,
+		Msg:  "Deserialization error",
+	}
+	ErrSerializationError = &Exception{
+		Code: 20015,
+		Msg:  "Serialization error",
+	}
+	ErrUnsupportedCryptographicAlgorithm = &Exception{
+		Code: 20016,
+		Msg:  "Encryption & Decryption",
+	}
 	ErrAccountRestriction = &Exception{
 		Code: 10002,
 		Msg:  "Account restriction",
@@ -115,6 +136,11 @@ var errorMap = map[int]*Exception{
 	20002: ErrCredentialProviderError,
 	20003: ErrPluginManagerException,
 	20004: ErrSystemUnknownException,
+	20012: ErrControlPacketParseError,
+	20013: ErrDecryptDataError,
+	20014: ErrDeserializationError,
+	20015: ErrSerializationError,
+	20016: ErrUnsupportedCryptographicAlgorithm,
 	90001: ErrUnknownLoginFailure,
 }
 
