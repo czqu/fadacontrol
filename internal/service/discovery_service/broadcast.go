@@ -1,4 +1,4 @@
-package discovery
+package discovery_service
 
 import (
 	"fadacontrol/internal/base/logger"
@@ -71,7 +71,7 @@ func StartBroadcast() {
 		StopBroadcast()
 		return
 	}
-	go listenAndSend(4085)
+	//go listenAndSend(4085)
 	go func() {
 		logger.Debug("Sending UDP Broadcast ")
 		for {

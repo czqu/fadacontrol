@@ -12,14 +12,16 @@ type DesktopDaemonBootstrap struct {
 	lo    *logger.Logger
 	it    *InternalServiceBootstrap
 	done  chan interface{}
+	di    *DataInitBootstrap
 }
 
-func NewDesktopDaemonBootstrap(_conf *conf.Conf, lo *logger.Logger, it *InternalServiceBootstrap) *DesktopDaemonBootstrap {
-	return &DesktopDaemonBootstrap{_conf: _conf, lo: lo, it: it, done: make(chan interface{})}
+func NewDesktopDaemonBootstrap(di *DataInitBootstrap, _conf *conf.Conf, lo *logger.Logger, it *InternalServiceBootstrap) *DesktopDaemonBootstrap {
+	return &DesktopDaemonBootstrap{di: di, _conf: _conf, lo: lo, it: it, done: make(chan interface{})}
 }
 
 func (r *DesktopDaemonBootstrap) Start() {
 
+	r.di.Start()
 	r.lo.InitLog()
 
 	ret := sys.SetPowerSavingMode(true)

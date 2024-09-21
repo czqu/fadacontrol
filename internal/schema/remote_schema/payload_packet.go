@@ -5,8 +5,6 @@ import (
 	"encoding/base64"
 	"encoding/binary"
 	"fadacontrol/pkg/secure"
-	"fmt"
-	"golang.org/x/crypto/argon2"
 )
 
 type PacketType uint8
@@ -18,17 +16,6 @@ const (
 	Text
 )
 
-type EncryptionAlgorithmEnum uint8
-
-const MaxKeyLength = 32
-const (
-	None               EncryptionAlgorithmEnum = iota
-	AESGCM128Algorithm                         // The AES-128GCM key is 16 bytes long
-	AESGCM192Algorithm                         // The AES-192GCM key is 24 bytes long
-	AESGCM256Algorithm                         // The AES-256GCM key is 32 bytes long
-	Unknown            = 0xff
-)
-
 type KeyGenAlgorithm uint8
 
 const (
@@ -36,20 +23,12 @@ const (
 	Arg2iD
 )
 
-var AESGCMAlgorithmKeyLengths = map[EncryptionAlgorithmEnum]int{
-
-	AESGCM128Algorithm: 16, // 128-bit AES-GCM key length
-	AESGCM192Algorithm: 24, // 192-bit AES-GCM key length
-	AESGCM256Algorithm: 32, // 256-bit AES-GCM key length
-
-}
-
 type PayloadPacket struct {
 	RequestIdLen        uint8
-	RequestId           *[]byte
-	EncryptionAlgorithm EncryptionAlgorithmEnum // 1字节 加密算法长度组合 0x00为不加密 0xff 保留
-	DataType            PacketType              //数据包类型:
-	Data                *[]byte                 // 数据部分
+	RequestId           []byte
+	EncryptionAlgorithm secure.EncryptionAlgorithmEnum // 1字节 加密算法长度组合 0x00为不加密 0xff 保留
+	DataType            PacketType                     //数据包类型:
+	Data                []byte                         // 数据部分
 }
 
 // Pack converts a PayloadPacket struct into a byte slice.
@@ -61,7 +40,7 @@ func (p *PayloadPacket) Pack() ([]byte, error) {
 		return nil, err
 	}
 	// Write RequestId
-	if _, err := buf.Write(*p.RequestId); err != nil {
+	if _, err := buf.Write(p.RequestId); err != nil {
 		return nil, err
 	}
 	// Write EncryptionAlgorithm
@@ -75,7 +54,7 @@ func (p *PayloadPacket) Pack() ([]byte, error) {
 	}
 
 	// Write Data
-	if _, err := buf.Write(*p.Data); err != nil {
+	if _, err := buf.Write(p.Data); err != nil {
 		return nil, err
 	}
 
@@ -95,7 +74,7 @@ func (p *PayloadPacket) Unpack(data []byte) error {
 	if _, err := buf.Read(requestId); err != nil {
 		return err
 	}
-	p.RequestId = &requestId
+	p.RequestId = requestId
 	// Read EncryptionAlgorithm
 	if err := binary.Read(buf, binary.BigEndian, &p.EncryptionAlgorithm); err != nil {
 		return err
@@ -111,7 +90,7 @@ func (p *PayloadPacket) Unpack(data []byte) error {
 	if _, err := buf.Read(payload); err != nil {
 		return err
 	}
-	p.Data = &payload
+	p.Data = payload
 
 	return nil
 }
@@ -144,45 +123,4 @@ func Base64ToPacket(base64Str string) (*PayloadPacket, error) {
 	}
 
 	return packet, nil
-}
-func EncryptData(inputSecret string, salt []byte, data []byte) ([]byte, error) {
-	key256, err := DeriveKey(inputSecret, salt, AESGCMAlgorithmKeyLengths[AESGCM128Algorithm])
-	if err != nil {
-		return nil, fmt.Errorf("error deriving key: %v", err)
-	}
-
-	encryptedData, err := secure.EncryptAESGCM(key256, data)
-	if err != nil {
-		return nil, fmt.Errorf("encryption error: %v", err)
-	}
-
-	packet := PayloadPacket{
-		EncryptionAlgorithm: AESGCM128Algorithm,
-		DataType:            JsonType,
-		Data:                &encryptedData,
-	}
-	return packet.Pack()
-}
-func DecryptData(encryptData, salt []byte, inputSecret string) ([]byte, error) {
-
-	// Derive the key using the same method as in the encryption function
-	key, err := DeriveKey(inputSecret, salt, AESGCMAlgorithmKeyLengths[AESGCM128Algorithm])
-	if err != nil {
-		return nil, fmt.Errorf("error deriving key: %v", err)
-	}
-
-	// Decrypt the data using the key and the encrypted data from the packet
-	decryptedData, err := secure.DecryptAESGCM(key, encryptData)
-	if err != nil {
-		return nil, fmt.Errorf("decryption error: %v", err)
-	}
-
-	return decryptedData, nil
-}
-
-// DeriveKey derives an AES key of the specified size from a password using Argon2 KDF.
-func DeriveKey(password string, salt []byte, keySize int) ([]byte, error) {
-
-	key := argon2.IDKey([]byte(password), salt, 1, 64*1024, 4, uint32(keySize))
-	return key, nil
 }

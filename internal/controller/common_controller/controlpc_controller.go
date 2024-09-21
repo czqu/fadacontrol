@@ -1,12 +1,11 @@
-package controller
+package common_controller
 
 import (
 	"fadacontrol/internal/base/exception"
-	"fadacontrol/internal/schema"
+	"fadacontrol/internal/controller"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/pkg/sys"
 	"fadacontrol/pkg/utils"
-	"fmt"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -33,10 +32,12 @@ func NewControlPCController(p *control_pc.ControlPCService) *ControlPCController
 //		@Failure		400		{object}	schema.ResponseData	"Invalid action type"
 //		@Failure		500		{object}	schema.ResponseData		"The operation failed"
 //		@Router			/control-pc/{action}/ [post]
+//
+// @Security ApiKeyAuth
 func (o *ControlPCController) ControlPC(c *gin.Context) {
 	action := c.Param("action")
 
-	var result string
+	//	var result string
 	var ret *exception.Exception
 	switch action {
 	case "shutdown":
@@ -44,40 +45,28 @@ func (o *ControlPCController) ControlPC(c *gin.Context) {
 		tpe := c.DefaultQuery("shutdown_type", strconv.Itoa(int(sys.S_E_FORCE_SHUTDOWN)))
 		shutdownType, err := strconv.Atoi(tpe)
 		if err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{
-				"code": exception.ErrParameterError,
-				"msg":  "Invalid shutdown_type specified",
-			})
+			c.Error(exception.ErrParameterError)
 			return
 		}
 		ret = o.p.Shutdown(sys.ShutdownType(shutdownType))
-		result = "Shutdown"
+	//	result = "Shutdown"
 	case "standby":
 		ret = o.p.Standby()
-		result = "Standby"
+	//	result = "Standby"
 	case "lock":
 		ret = o.p.LockWindows(true)
-		result = "Lock"
+	//	result = "Lock"
 	default:
-		c.JSON(http.StatusBadRequest, gin.H{
-			"code": exception.ErrParameterError,
-			"msg":  "Invalid action specified",
-		})
+		c.Error(exception.ErrParameterError)
 		return
 	}
 
 	if ret != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"code": exception.UnknownError,
-			"msg":  fmt.Sprintf("Failed to %s, error: %s", result, exception.ErrUnauthorizedAccess),
-		})
+		c.Error(ret)
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{
-		"code": http.StatusOK,
-		"msg":  fmt.Sprintf("%s command sent successfully", result),
-	})
+	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 }
 
 // GetInterface Returns a valid network interface
@@ -86,6 +75,7 @@ func (o *ControlPCController) ControlPC(c *gin.Context) {
 // @Tags Network interfaces
 // @Accept json
 // @Produce json
+// @Security ApiKeyAuth
 // @Param type query string false "IP Version Type (4 or 6)" default(4) Enums(4, 6)
 // @Success 200 {object} schema.ResponseData "A list of valid network interfaces is successfully returned"
 // @Failure 400 {object} schema.ResponseData "The request parameter is incorrect"
@@ -104,16 +94,13 @@ func (o *ControlPCController) GetInterface(c *gin.Context) {
 		c.Error(err)
 		return
 	}
-	c.JSON(http.StatusOK,
-		schema.ResponseData{
-			Code: exception.ErrSuccess.Code,
-			Msg:  exception.ErrSuccess.Msg,
-			Data: ifces,
-		})
+	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c, &ifces))
+
 }
 
 // @Summary	Obtain the MAC address based on the IP address
 // @Produce	json
+// @Security ApiKeyAuth
 // @Success	200	{object}	schema.ResponseData			"success"
 // @Failure	400	{object}	schema.ResponseData				"The request is incorrect"
 // @Failure	500	{object}	schema.ResponseData						"Internal errors"
@@ -125,6 +112,7 @@ func (o *ControlPCController) GetInterfaceByIP(c *gin.Context) {
 
 // @Summary	Obtain the interface information based on the IP address
 // @Produce	json
+// @Security ApiKeyAuth
 // @Success	200								"success"
 // @Failure	400				"The request is incorrect"
 // @Failure	500							"Internal errors"
@@ -156,19 +144,10 @@ func (o *ControlPCController) getInterfaceOld(c *gin.Context, all bool) {
 	}
 
 	if all {
-		c.JSON(http.StatusOK, schema.ResponseData{
-			Code: exception.ErrSuccess.Code,
-			Msg:  exception.ErrSuccess.Msg,
-			Data: info,
-		})
+		c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c, &info))
 	} else {
 
-		c.JSON(http.StatusOK,
-			schema.ResponseData{
-				Code: exception.ErrSuccess.Code,
-				Msg:  exception.ErrSuccess.Msg,
-				Data: info.MACAddr,
-			})
+		c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c, &info.MACAddr))
 
 	}
 }

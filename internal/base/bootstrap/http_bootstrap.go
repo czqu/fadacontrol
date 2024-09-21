@@ -2,7 +2,6 @@ package bootstrap
 
 import (
 	"crypto/tls"
-	"encoding/base64"
 	"errors"
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
@@ -30,7 +29,7 @@ func NewHttpBootstrap(_conf *conf.Conf, db *gorm.DB, adr *router.AdminRouter, co
 }
 
 func (s *HttpBootstrap) Start() error {
-	s.CreateConfig()
+
 	return s.StartServer()
 
 }
@@ -39,7 +38,7 @@ func (s *HttpBootstrap) Stop() error {
 
 }
 
-func (s *HttpBootstrap) refreshData() {
+func (s *HttpBootstrap) readConfig() {
 
 	if err := s.db.Find(&s.configs).Error; err != nil {
 		logger.Errorf("failed to find database: %v", err)
@@ -49,7 +48,7 @@ func (s *HttpBootstrap) refreshData() {
 }
 
 func (s *HttpBootstrap) StartServer() error {
-	s.refreshData()
+	s.readConfig()
 
 	if s._conf.Debug {
 		gin.SetMode(gin.DebugMode)
@@ -63,10 +62,10 @@ func (s *HttpBootstrap) StartServer() error {
 		if config.ServiceName == HttpServiceApi {
 			logger.Infof("Starting HTTP server on %s:%d ", config.Host, config.Port)
 			s.common.Register()
-			router := s.common.GetRouter()
+			_router := s.common.GetRouter()
 			sign := make(chan interface{})
 			s.signalChanMap[config.ServiceName] = sign
-			go startHttpServer(config.Host, config.Port, tls.Certificate{}, router, sign)
+			go startHttpServer(config.Host, config.Port, tls.Certificate{}, _router, sign)
 		}
 		if config.ServiceName == HttpsServiceApi {
 			logger.Infof("Starting HTTPS server on %s:%d ", config.Host, config.Port)
@@ -76,19 +75,19 @@ func (s *HttpBootstrap) StartServer() error {
 				continue
 			}
 			s.common.Register()
-			router := s.common.GetRouter()
+			_router := s.common.GetRouter()
 			sign := make(chan interface{})
 			s.signalChanMap[config.ServiceName] = sign
-			go startHttpServer(config.Host, config.Port, cert, router, sign)
+			go startHttpServer(config.Host, config.Port, cert, _router, sign)
 
 		}
 		if config.ServiceName == HttpServiceAdmin {
 			logger.Infof("Starting HTTP server on %s:%d ", config.Host, config.Port)
 			s.adr.Register()
-			router := s.adr.GetRouter()
+			_router := s.adr.GetRouter()
 			sign := make(chan interface{})
 			s.signalChanMap[config.ServiceName] = sign
-			go startHttpServer(config.Host, config.Port, tls.Certificate{}, router, sign)
+			go startHttpServer(config.Host, config.Port, tls.Certificate{}, _router, sign)
 		}
 	}
 	return nil
@@ -156,57 +155,4 @@ func (s *HttpBootstrap) StopAllServer() error {
 		sign <- 0
 	}
 	return nil
-}
-
-const HttpServiceApi = "HTTP_SERVICE_API"
-const HttpsServiceApi = "HTTPS_SERVICE_API"
-const HttpServiceAdmin = "HTTP_SERVICE_ADMIN"
-
-func (s *HttpBootstrap) CreateConfig() {
-
-	err := s.db.AutoMigrate(&entity.HttpConfig{})
-	if err != nil {
-		logger.Errorf("failed to migrate database")
-		return
-	}
-	var httpCount int64
-	s.db.Model(&entity.HttpConfig{}).Count(&httpCount)
-	if httpCount == 0 {
-		cert, key, err := secure.GenerateX509Cert()
-		if err != nil {
-			logger.Errorf("failed to generate x509 cert: %v", err)
-			return
-		}
-		strCert := base64.StdEncoding.EncodeToString(cert)
-		strKey := base64.StdEncoding.EncodeToString(key)
-		httpConfig := entity.HttpConfig{
-			ServiceName: HttpServiceApi,
-			Enable:      true,
-			Host:        "0.0.0.0",
-			Port:        2092,
-			Cer:         "",
-			Key:         "",
-		}
-		s.db.Create(&httpConfig)
-
-		httpsConfig := entity.HttpConfig{
-			ServiceName: HttpsServiceApi,
-			Enable:      true,
-			Host:        "0.0.0.0",
-			Port:        2091,
-			Cer:         strCert,
-			Key:         strKey,
-		}
-		s.db.Create(&httpsConfig)
-
-		httpAdminConfig := entity.HttpConfig{
-			ServiceName: HttpServiceAdmin,
-			Enable:      true,
-			Host:        "127.0.0.1",
-			Port:        2093,
-			Cer:         "",
-			Key:         "",
-		}
-		s.db.Create(&httpAdminConfig)
-	}
 }

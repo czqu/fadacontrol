@@ -3,7 +3,8 @@ package router
 import (
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/middleware"
-	"fadacontrol/internal/controller"
+	"fadacontrol/internal/controller/admin_controller"
+	"fadacontrol/internal/controller/common_controller"
 	"fadacontrol/internal/schema"
 	"github.com/gin-gonic/gin"
 	"net/http"
@@ -12,20 +13,26 @@ import (
 type AdminRouter struct {
 	swagHandler gin.HandlerFunc
 	router      *gin.Engine
-	u           *controller.UnlockController
-	o           *controller.ControlPCController
-	rc          *controller.RemoteController
-	di          *controller.DiscoverController
+	u           *common_controller.UnlockController
+	o           *common_controller.ControlPCController
+	rc          *admin_controller.RemoteController
+	di          *admin_controller.DiscoverController
+	auth        *common_controller.AuthController
+	jwt         *middleware.JwtMiddleware
+	sys         *common_controller.SysInfoController
+	_http       *admin_controller.HttpController
 }
 
-func NewAdminRouter(rc *controller.RemoteController, u *controller.UnlockController, o *controller.ControlPCController, di *controller.DiscoverController) *AdminRouter {
-	return &AdminRouter{router: gin.Default(), u: u, o: o, rc: rc, di: di}
+func NewAdminRouter(_http *admin_controller.HttpController, sys *common_controller.SysInfoController, jwt *middleware.JwtMiddleware, rc *admin_controller.RemoteController, u *common_controller.UnlockController, o *common_controller.ControlPCController, di *admin_controller.DiscoverController, auth *common_controller.AuthController) *AdminRouter {
+	return &AdminRouter{router: gin.Default(), u: u, o: o, rc: rc, di: di, auth: auth, jwt: jwt, sys: sys, _http: _http}
 }
 func (d *AdminRouter) Register() {
 
 	r := gin.Default()
+	r.Use(middleware.Recovery())
 	r.Use(middleware.Cors())
 	r.Use(middleware.ErrorHandler())
+	r.Use(d.jwt.JWTAuthMiddleware())
 	r.HandleMethodNotAllowed = true
 	r.Delims("[[[", "]]]")
 	r.NoRoute(d.get404Page)
@@ -34,19 +41,29 @@ func (d *AdminRouter) Register() {
 	}
 	apiv1 := r.Group("/admin/api/v1")
 	{
-		apiv1.GET("/ping", controller.Ping)
+		apiv1.GET("/ping", common_controller.Ping)
 		apiv1.POST("/control-pc/:action", d.o.ControlPC)
 		apiv1.POST("/unlock", d.u.Unlock)
 		apiv1.GET("/interface/:ip", d.o.GetInterfaceByIP)
 		apiv1.GET("/interface/:ip/all", d.o.GetInterfaceByIPAll)
 		apiv1.GET("/interface/", d.o.GetInterface)
-		apiv1.GET("/remote-config", d.rc.GetRemoteConfig)
-		apiv1.POST("/remote-config", d.rc.SetRemoteConfig)
-		apiv1.GET("/remote-config/delay", d.rc.TestServerDelay)
-		apiv1.POST("/discovery", d.di.SetDiscoverService)
 		apiv1.GET("/discovery", d.di.GetDiscoverServiceConfig)
+		apiv1.GET("/info", d.sys.GetSoftwareInfo)
 		//	apiv1.GET("/internal-cmd/", d.internal.GetInternalCommandEvents)
 
+		//admin
+		apiv1.GET("/discovery/config", d.di.GetDiscoverServiceConfig)
+		apiv1.PATCH("/discovery/config", d.di.PatchDiscoverServiceConfig)
+
+		apiv1.GET("/remote/config", d.rc.GetRemoteConnectConfig)
+		apiv1.PATCH("/remote/config", d.rc.PatchRemoteConnectConfig)
+		apiv1.PUT("/remote/config", d.rc.UpdateRemoteConnectConfig)
+
+		apiv1.GET("/http/config", d._http.GetHttpConfig)
+		apiv1.PATCH("/http/config", d._http.PatchHttpConfig)
+		apiv1.PUT("/http/config", d._http.UpdateHttpConfig)
+
+		apiv1.POST("/login", d.auth.Login)
 	}
 
 	d.router = r

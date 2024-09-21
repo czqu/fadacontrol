@@ -1,8 +1,9 @@
-package controller
+package common_controller
 
 import (
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/internal/controller"
 	"fadacontrol/internal/schema"
 	"fadacontrol/internal/service/unlock"
 	"github.com/gin-gonic/gin"
@@ -46,9 +47,6 @@ func (o *UnlockController) Unlock(c *gin.Context) {
 		c.Error(e)
 		return
 	}
-	c.JSON(http.StatusOK, schema.ResponseData{
-		Code: exception.ErrSuccess.Code,
-		Msg:  exception.ErrSuccess.Msg,
-	})
+	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 
 }

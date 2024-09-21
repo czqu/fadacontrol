@@ -21,14 +21,16 @@ type DesktopServiceBootstrap struct {
 	done     chan interface{}
 	rcb      *RemoteConnectBootstrap
 	cp       *credential_provider_service.CredentialProviderService
+	di       *DataInitBootstrap
 }
 
-func NewRootBootstrap(cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, it *InternalServiceBootstrap, _daemon *DaemonConnectBootstrap, _conf *conf.Conf, _db *data.Data, lo *logger.Logger, ble *BleUnlockBootstrap, d *DiscoverBootstrap, http_ *HttpBootstrap, legacy *LegacyBootstrap) *DesktopServiceBootstrap {
-	return &DesktopServiceBootstrap{cp: cp, rcb: rcb, done: make(chan interface{}), it: it, _daemon: _daemon, _conf: _conf, _db: _db, lo: lo, ble: ble, discover: d, http_: http_, legacy_: legacy}
+func NewRootBootstrap(di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, it *InternalServiceBootstrap, _daemon *DaemonConnectBootstrap, _conf *conf.Conf, _db *data.Data, lo *logger.Logger, ble *BleUnlockBootstrap, d *DiscoverBootstrap, http_ *HttpBootstrap, legacy *LegacyBootstrap) *DesktopServiceBootstrap {
+	return &DesktopServiceBootstrap{di: di, cp: cp, rcb: rcb, done: make(chan interface{}), it: it, _daemon: _daemon, _conf: _conf, _db: _db, lo: lo, ble: ble, discover: d, http_: http_, legacy_: legacy}
 }
 func (r *DesktopServiceBootstrap) Start() {
-
+	r.di.Start()
 	r.lo.InitLog()
+
 	ret := sys.SetPowerSavingMode(true)
 	if ret == true {
 		logger.Debug("set power saving mode")

@@ -19,6 +19,9 @@ import (
 // @BasePath					/admin/api/v1/
 // @externalDocs.description	OpenAPI
 // @externalDocs.url			https://swagger.io/resources/open-api/
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 var adminSwagHandler gin.HandlerFunc
 
 func init() {
@@ -28,4 +31,4 @@ func init() {
 
 }
 
-//swag init   --parseDependency  --instanceName=admin  --generalInfo=internal/router/admin_swagger_router.go  --output docs/admin
+//swag init   -parseDependency=false  --instanceName=admin  --generalInfo=internal/router/admin_swagger_router.go  --output docs/admin

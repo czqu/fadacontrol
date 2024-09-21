@@ -36,7 +36,7 @@ func init() {
 func (windowsSystem) New(h SvcHandler) (Svc, error) {
 	w := &windowsSvc{
 		handler: h,
-		Name:    "FadaControlService",
+		Name:    ServiceName,
 	}
 
 	return w, nil

@@ -1,7 +1,7 @@
 package sys
 
 const (
-	ServiceName = "FadaControl Service"
+	ServiceName = "FadaControlService"
 	Description = "FadaControl Service"
 )
 

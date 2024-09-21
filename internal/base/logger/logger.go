@@ -47,11 +47,12 @@ func (l Loglevel) zapLevel() zapcore.Level {
 }
 
 type Logger struct {
-	logger  *zap.Logger
-	sugar   *zap.SugaredLogger
-	level   Loglevel
-	workdir string
-	r       *conf.Conf
+	logger   *zap.Logger
+	sugar    *zap.SugaredLogger
+	level    Loglevel
+	r        *conf.Conf
+	logPath  string
+	logLevel string
 }
 
 func NewLogger(r *conf.Conf) *Logger {
@@ -60,13 +61,32 @@ func NewLogger(r *conf.Conf) *Logger {
 func (l *Logger) InitLog() {
 	logger = l
 
-	err := l.Init(l.r.GetWorkdir()+"/log/"+l.r.LogName, str2Loglevel(l.r.LogLevel))
+	var err error
+	logger.logLevel = l.r.LogLevel
+	logger.logPath, err = filepath.Abs(l.r.GetWorkdir() + "/log/" + l.r.LogName)
+	if err != nil {
+		logger = nil
+		return
+	}
+	err = l.Init(l.logPath, str2Loglevel(l.logLevel))
 	if err != nil {
 		logger = nil
 		return
 	}
 	return
 
+}
+func GetLogPath() string {
+	if logger == nil {
+		return ""
+	}
+	return logger.logPath
+}
+func GetLogLevel() string {
+	if logger == nil {
+		return ""
+	}
+	return logger.logLevel
 }
 
 func (l *Logger) Init(logPath string, loglevel Loglevel) error {

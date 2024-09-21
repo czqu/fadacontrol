@@ -19,6 +19,9 @@ import (
 // @BasePath					/api/v1
 // @externalDocs.description	OpenAPI
 // @externalDocs.url			https://swagger.io/resources/open-api/
+// @securityDefinitions.apikey ApiKeyAuth
+// @in header
+// @name Authorization
 var commonSwagHandler gin.HandlerFunc
 
 func init() {
@@ -28,4 +31,4 @@ func init() {
 
 }
 
-// swag init   --parseDependency  --instanceName=webapi  --generalInfo=internal/router/common_swagger_router.go  --output docs/webapi
+// swag init   --parseDependency=false  --instanceName=webapi  --generalInfo=internal/router/common_swagger_router.go --exclude internal/controller/admin_controller/  --output docs/webapi
