@@ -53,7 +53,7 @@ func (o *RemoteController) GetRemoteConnectConfig(c *gin.Context) {
 func (o *RemoteController) UpdateRemoteConnectConfig(c *gin.Context) {
 	var request remote_schema.RemoteConnectConfigRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.Error(exception.ErrParameterError)
+		c.Error(exception.ErrUserParameterError)
 		return
 	}
 	o.rcs.UpdateRemoteConnectConfig(&request)
@@ -116,12 +116,12 @@ func (o *RemoteController) RestartRemoteService(c *gin.Context) {
 //	reqData := remote_schema.RemoteConfigReqDTO{}
 //
 //	if err := c.Bind(&reqData); err != nil {
-//		c.Error(exception.ErrParameterError)
+//		c.Error(exception.ErrUserParameterError)
 //		return
 //	}
 //	err := o.rcs.UpdateData(reqData)
 //	if err != nil {
-//		c.Error(exception.ErrParameterError)
+//		c.Error(exception.ErrUserParameterError)
 //		return
 //	}
 //

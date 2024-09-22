@@ -37,7 +37,6 @@ func NewControlPCController(p *control_pc.ControlPCService) *ControlPCController
 func (o *ControlPCController) ControlPC(c *gin.Context) {
 	action := c.Param("action")
 
-	//	var result string
 	var ret *exception.Exception
 	switch action {
 	case "shutdown":
@@ -45,19 +44,19 @@ func (o *ControlPCController) ControlPC(c *gin.Context) {
 		tpe := c.DefaultQuery("shutdown_type", strconv.Itoa(int(sys.S_E_FORCE_SHUTDOWN)))
 		shutdownType, err := strconv.Atoi(tpe)
 		if err != nil {
-			c.Error(exception.ErrParameterError)
+			c.Error(exception.ErrUserParameterError)
 			return
 		}
 		ret = o.p.Shutdown(sys.ShutdownType(shutdownType))
-	//	result = "Shutdown"
+
 	case "standby":
 		ret = o.p.Standby()
-	//	result = "Standby"
+
 	case "lock":
 		ret = o.p.LockWindows(true)
-	//	result = "Lock"
+
 	default:
-		c.Error(exception.ErrParameterError)
+		c.Error(exception.ErrUserParameterError)
 		return
 	}
 
@@ -125,7 +124,7 @@ func (o *ControlPCController) getInterfaceOld(c *gin.Context, all bool) {
 	ip := c.Param("ip")
 	ifces, err := utils.GetValidInterface(utils.UNSET)
 	if err != nil {
-		c.Error(exception.ErrUnknownException)
+		c.Error(err)
 		return
 	}
 	ipMacMap := make(map[string]utils.Interface)
@@ -139,7 +138,7 @@ func (o *ControlPCController) getInterfaceOld(c *gin.Context, all bool) {
 	info, ok := ipMacMap[ip]
 
 	if !ok || info.MACAddr == "" {
-		c.Error(exception.ErrResourceNotFound)
+		c.Error(exception.ErrUserResourceNotFound)
 		return
 	}
 

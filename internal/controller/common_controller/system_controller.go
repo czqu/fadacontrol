@@ -76,14 +76,22 @@ func (s *SystemController) SetPowerSavingMode(c *gin.Context) {
 
 	enable := c.DefaultQuery("enable", "true")
 	if enable == "true" {
-		s._co.SetPowerSavingMode(true)
+		err := s._co.SetPowerSavingMode(true)
+		if err != nil {
+			c.Error(err)
+			return
+		}
 		c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 		return
 	} else if enable == "false" {
-		s._co.SetPowerSavingMode(false)
+		err := s._co.SetPowerSavingMode(false)
+		if err != nil {
+			c.Error(err)
+			return
+		}
 		c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 		return
 	}
-	c.Error(exception.ErrParameterError)
+	c.Error(exception.ErrUserParameterError)
 
 }

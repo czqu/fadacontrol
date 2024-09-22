@@ -83,7 +83,7 @@ func (h *HttpController) UpdateHttpConfig(c *gin.Context) {
 		return
 	}
 
-	c.Error(exception.ErrParameterError)
+	c.Error(exception.ErrUserParameterError)
 
 }
 
@@ -134,7 +134,7 @@ func (h *HttpController) PatchHttpConfig(c *gin.Context) {
 
 	}
 
-	c.Error(exception.ErrParameterError)
+	c.Error(exception.ErrUserParameterError)
 }
 
 // @Summary Restart Service

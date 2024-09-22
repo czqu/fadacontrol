@@ -44,14 +44,14 @@ func (j *JwtMiddleware) JWTAuthMiddleware() gin.HandlerFunc {
 				c.Next()
 				return
 			}
-			c.JSON(http.StatusUnauthorized, controller.GetGinError(c, exception.ErrUnauthorizedAccess))
+			c.JSON(http.StatusUnauthorized, controller.GetGinError(c, exception.ErrUserUnauthorizedAccess))
 			c.Abort()
 			return
 		}
 
 		claims, err := j.jw.ValidateToken(tokenString)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, controller.GetGinError(c, exception.ErrUnauthorizedAccess))
+			c.JSON(http.StatusUnauthorized, controller.GetGinError(c, exception.ErrUserUnauthorizedAccess))
 			c.Abort()
 			return
 		}

@@ -2,6 +2,7 @@ package unlock
 
 import (
 	"bytes"
+	"fadacontrol/pkg/sys"
 
 	"encoding/json"
 	"fadacontrol/internal/base/exception"
@@ -62,6 +63,15 @@ func (u *UnLockService) UnlockPc(username string, password string) *exception.Ex
 
 	//todo
 	ret := u.cp.SendData(&packet)
+	if ret != nil {
+
+		err := sys.TryLogin(username, password, "")
+		if err != nil {
+
+			return err
+		}
+		return exception.ErrUserUnlockNotInLockScreenState
+	}
 	return ret
 
 }

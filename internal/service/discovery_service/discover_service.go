@@ -1,7 +1,6 @@
 package discovery_service
 
 import (
-	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/entity"
 	"fadacontrol/internal/schema"
@@ -25,7 +24,7 @@ func (d *DiscoverService) GetDiscoverConfig() (*schema.DiscoverSchema, error) {
 	var config entity.DiscoverConfig
 	err := d._db.First(&config).Error
 	if err != nil {
-		return nil, exception.ErrUnknownException
+		return nil, err
 	}
 	return &schema.DiscoverSchema{Enabled: config.Enabled}, err
 }
@@ -34,7 +33,7 @@ func (d *DiscoverService) PatchDiscoverServiceConfig(content map[string]interfac
 
 	var config entity.DiscoverConfig
 	if err := d._db.First(&config).Error; err != nil {
-		return exception.ErrResourceNotFound
+		return err
 	}
 	if err := d._db.Model(&config).Updates(content).Error; err != nil {
 		return err

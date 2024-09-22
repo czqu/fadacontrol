@@ -45,16 +45,16 @@ func (control *ControlPCService) LockWindows(useAgent bool) *exception.Exception
 
 }
 
-func (control *ControlPCService) SetPowerSavingMode(enable bool) *exception.Exception {
+func (control *ControlPCService) SetPowerSavingMode(enable bool) error {
 
 	var config entity.SysConfig
 	if err := control._db.First(&config).Error; err != nil {
-		return exception.ErrSystemUnknownException
+		return err
 	}
 	config.PowerSavingMode = enable
 
 	if err := control._db.Save(&config).Error; err != nil {
-		return exception.ErrSystemUnknownException
+		return err
 	}
 
 	ret := false
@@ -65,7 +65,7 @@ func (control *ControlPCService) SetPowerSavingMode(enable bool) *exception.Exce
 		ret = sys.SetPowerSavingMode(false)
 	}
 	if ret == false {
-		return exception.ErrSystemUnknownException
+		return exception.ErrSystemSetPowerSaveModeError
 	}
 
 	return nil

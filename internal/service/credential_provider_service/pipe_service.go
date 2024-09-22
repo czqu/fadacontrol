@@ -82,7 +82,7 @@ func (p *CredentialProviderService) Connect() {
 func (p *CredentialProviderService) SetFieldBitmap(data []byte) *exception.Exception {
 	if len(data) == 0 {
 		logger.Debug("can not be zero")
-		return exception.ErrParameterError
+		return exception.ErrUserParameterError
 	}
 	var packet entity.PipePacket
 	packet.Tpe = entity.SetFieldBitmap
@@ -96,7 +96,7 @@ func (p *CredentialProviderService) SetFieldBitmap(data []byte) *exception.Excep
 }
 func (p *CredentialProviderService) SetCommandLinkText(text string) *exception.Exception {
 	if len(text) == 0 {
-		return exception.ErrParameterError
+		return exception.ErrUserParameterError
 	}
 	var packet entity.PipePacket
 	packet.Tpe = entity.SetCommandClickText

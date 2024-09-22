@@ -11,6 +11,9 @@ import (
 	"fmt"
 	"github.com/Microsoft/go-winio"
 	"net"
+	"strconv"
+	"syscall"
+	"unsafe"
 )
 
 const (
@@ -70,7 +73,7 @@ func convertType(tpe ShutdownType) (uint32, *exception.Exception) {
 	case S_EWX_HYBRID_SHUTDOWN:
 		return EWX_HYBRID_SHUTDOWN, nil
 	default:
-		return 0, exception.ErrParameterError
+		return 0, exception.ErrUserParameterError
 
 	}
 }
@@ -82,7 +85,7 @@ func Shutdown(tpe ShutdownType) *exception.Exception {
 	}
 	t, err := convertType(tpe)
 	if err != nil {
-		return exception.ErrParameterError
+		return exception.ErrUserParameterError
 	}
 	result = C.ShutdownWindows(C.UINT(t))
 	if int(result) != 0 {
@@ -192,21 +195,6 @@ func ListenNamedPipeWithHandler(pipeName string, handler func(conn net.Conn), in
 
 }
 
-// func WriteNamedPipeWithHandler(pipeName string, data []byte, handler func(conn net.Conn)) error {
-//
-//		pipeHandle, err := winio.DialPipe(pipeName, nil)
-//		if err != nil {
-//			return fmt.Errorf("failed to connect to named pipe: %v", err)
-//		}
-//		defer pipeHandle.Close()
-//
-//		if _, err := pipeHandle.Write(data); err != nil {
-//			return fmt.Errorf("error writing JSON data to pipe: %v", err)
-//		}
-//		handler(pipeHandle)
-//
-//		return nil
-//	}
 func SetPowerSavingMode(enable bool) bool {
 	var cEnable C.bool
 	if enable {
@@ -217,4 +205,21 @@ func SetPowerSavingMode(enable bool) bool {
 
 	result := C.SetProcessPowerSavingMode(cEnable)
 	return bool(result)
+}
+func TryLogin(username, password, domain string) *exception.Exception {
+
+	usernamePtr, _ := syscall.UTF16PtrFromString(username)
+	passwordPtr, _ := syscall.UTF16PtrFromString(password)
+	domainPtr, _ := syscall.UTF16PtrFromString(domain)
+
+	result := C.TryLogin((*C.wchar_t)(unsafe.Pointer(usernamePtr)), (*C.wchar_t)(unsafe.Pointer(passwordPtr)), (*C.wchar_t)(unsafe.Pointer(domainPtr)))
+
+	ret := int(result)
+	err := exception.GetErrorByCode(ret)
+	if err != nil {
+		return err
+	}
+
+	logger.Debug("login code :" + strconv.Itoa(ret))
+	return err
 }

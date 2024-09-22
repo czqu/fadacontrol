@@ -37,7 +37,7 @@ func DecryptData(algo EncryptionAlgorithmEnum, encryptedData []byte, key []byte)
 	case None:
 		return encryptedData, nil
 	default:
-		return nil, exception.ErrUnsupportedCryptographicAlgorithm
+		return nil, exception.ErrUserUnsupportedEncryptionType
 	}
 }
 func EncryptData(algo EncryptionAlgorithmEnum, data []byte, key []byte) ([]byte, error) {
@@ -50,6 +50,6 @@ func EncryptData(algo EncryptionAlgorithmEnum, data []byte, key []byte) ([]byte,
 	case None:
 		return data, nil
 	default:
-		return nil, exception.ErrUnsupportedCryptographicAlgorithm
+		return nil, exception.ErrUserUnsupportedEncryptionType
 	}
 }

@@ -62,16 +62,16 @@ func (r *RemoteService) ProtoHandler(client RMTT.Client, data, requestId []byte)
 	err := proto.Unmarshal(data, msg)
 	if err != nil {
 		logger.Warn(err)
-		r.PushProtoRet(client, true, exception.ErrDeserializationError, requestId)
+		r.PushProtoRet(client, true, exception.ErrSystemMessageSerializationFailed, requestId)
 	}
 	switch msg.Type {
 	case remote_schema.MsgType_Unknown:
-		r.PushProtoRet(client, true, exception.ErrParameterError, requestId)
+		r.PushProtoRet(client, true, exception.ErrUserParameterError, requestId)
 	case remote_schema.MsgType_Unlock:
 		{
 			unlockMsg := msg.GetUnlockMsg()
 			if unlockMsg == nil {
-				r.PushProtoRet(client, true, exception.ErrParameterError, requestId)
+				r.PushProtoRet(client, true, exception.ErrUserParameterError, requestId)
 				return
 			}
 			ret := r.un.UnlockPc(unlockMsg.Username, unlockMsg.Password)
@@ -86,7 +86,7 @@ func (r *RemoteService) ProtoHandler(client RMTT.Client, data, requestId []byte)
 		{
 			shutdownMsg := msg.GetShutdownMsg()
 			if shutdownMsg == nil {
-				r.PushProtoRet(client, true, exception.ErrParameterError, requestId)
+				r.PushProtoRet(client, true, exception.ErrUserParameterError, requestId)
 				return
 			}
 			shutdownTpe := sys.ProtoTypeToShutdownType(shutdownMsg.Type)
@@ -114,28 +114,28 @@ func (r *RemoteService) RRFPMsgHandler(client RMTT.Client, msg RMTT.Message) {
 	err := packet.Unpack(dataSlice) //DecodeAesPack(r.config.Secret, dataSlice)
 	if err != nil {
 		logger.Warn(err)
-		r.PushTextRet(client, exception.ErrControlPacketParseError, packet.RequestId)
+		r.PushTextRet(client, exception.ErrUserControlPacketStructureError, packet.RequestId)
 		return
 	}
 
 	key, err := secure.DecodeBase58Key(r.config.SecurityKey)
 	if err != nil {
 		logger.Warn(err)
-		r.PushTextRet(client, exception.ErrDecryptDataError, packet.RequestId)
+		r.PushTextRet(client, exception.ErrSystemSevereConfigurationError, packet.RequestId)
 		return
 
 	}
 	decrpyData, err := secure.DecryptData(packet.EncryptionAlgorithm, packet.Data, key)
 	if err != nil {
 		logger.Warn(err)
-		r.PushTextRet(client, exception.ErrDecryptDataError, packet.RequestId)
+		r.PushTextRet(client, exception.ErrUserMessageDecryptionFailed, packet.RequestId)
 		return
 	}
 	switch packet.DataType {
 	case remote_schema.ProtoBuf:
 		r.ProtoHandler(client, decrpyData, packet.RequestId)
 	default:
-		r.PushTextRet(client, exception.ErrParameterError, packet.RequestId)
+		r.PushTextRet(client, exception.ErrUserParameterError, packet.RequestId)
 	}
 
 }
@@ -331,8 +331,8 @@ func (r *RemoteService) UpdateRemoteConnectConfig(data *remote_schema.RemoteConn
 		var config entity.RemoteConnectConfig
 
 		if err := tx.First(&config).Error; err != nil {
-			//todo
-			return exception.ErrResourceNotFound
+
+			return fmt.Errorf("failed to find database: %v", err)
 		}
 
 		config.Enable = data.Enable
@@ -361,7 +361,7 @@ func (r *RemoteService) PatchRemoteConnectConfig(content map[string]interface{})
 
 	var config entity.RemoteConnectConfig
 	if err := r.db.First(&config).Error; err != nil {
-		return exception.ErrResourceNotFound
+		return exception.ErrUserResourceNotFound
 	}
 
 	if err := r.db.Model(&config).Updates(content).Error; err != nil {
@@ -372,8 +372,14 @@ func (r *RemoteService) PatchRemoteConnectConfig(content map[string]interface{})
 
 }
 func (r *RemoteService) RestartService() error {
-	r.StopService()
-	r.StartService()
+	err := r.StopService()
+	if err != nil {
+		return fmt.Errorf("stop remote service error: %v", err)
+	}
+	err = r.StartService()
+	if err != nil {
+		return fmt.Errorf("start remote service error: %v", err)
+	}
 	logger.Debug("restarting service")
 	return nil
 }
@@ -429,8 +435,8 @@ func (r *RemoteService) TestServerDelay() int64 {
 	//return ret
 }
 
-func (r *RemoteService) StartService() {
-	return
+func (r *RemoteService) StartService() error {
+	return nil
 	//logger.Debug("starting service")
 	//
 	//err := r.loadConfig()

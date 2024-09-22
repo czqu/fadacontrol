@@ -4,6 +4,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/entity"
 	"fadacontrol/internal/router"
@@ -62,12 +63,14 @@ func (s *HttpService) GetHttpConfig(serviceName string) (interface{}, error) {
 		}, nil
 	}
 
-	//todo
-	return nil, fmt.Errorf("failed to find database")
+	return nil, exception.ErrUserParameterError
 }
 
 func (s *HttpService) UpdateHttpConfig(h interface{}, serviceName string) error {
 	if request, ok := h.(http_schema.HttpConfigRequest); ok {
+		if serviceName != HttpServiceApi {
+			return exception.ErrUserParameterError
+		}
 		var httpConfig entity.HttpConfig
 		if err := s._db.Where(&entity.HttpConfig{ServiceName: HttpServiceApi}).First(&httpConfig).Error; err != nil {
 			logger.Errorf("failed to find database: %v", err)
@@ -82,10 +85,12 @@ func (s *HttpService) UpdateHttpConfig(h interface{}, serviceName string) error 
 		}
 	}
 	if request, ok := h.(http_schema.HttpsConfigRequest); ok {
+		if serviceName != HttpServiceApi {
+			return exception.ErrUserParameterError
+		}
 		_, err := secure.LoadBaseX509KeyPair(request.Cer, request.Key)
 		if err != nil {
 			logger.Error(err)
-			//todo
 			return fmt.Errorf("failed to load https config: %v", err)
 		}
 
@@ -107,8 +112,7 @@ func (s *HttpService) UpdateHttpConfig(h interface{}, serviceName string) error 
 		}
 	}
 
-	//todo
-	return fmt.Errorf("unknow")
+	return exception.ErrUserParameterError
 
 }
 
@@ -140,8 +144,7 @@ func (s *HttpService) PatchHttpConfig(data map[string]interface{}, serviceName s
 		return nil
 	}
 
-	//todo
-	return fmt.Errorf("unknow")
+	return exception.ErrUserParameterError
 }
 
 func (s *HttpService) StartServer(r router.FadaControlRouter, serviceName string) error {

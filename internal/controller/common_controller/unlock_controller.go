@@ -28,7 +28,7 @@ func NewUnlockController(u *unlock.UnLockService) *UnlockController {
 func (o *UnlockController) Unlock(c *gin.Context) {
 	reqData := schema.PcUserInfo{}
 	if err := c.Bind(&reqData); err != nil {
-		c.Error(exception.ErrParameterError)
+		c.Error(exception.ErrUserParameterError)
 		return
 	}
 	if reqData.UserName == "" || reqData.Password == "" {
@@ -36,7 +36,7 @@ func (o *UnlockController) Unlock(c *gin.Context) {
 		return
 	}
 	if len(reqData.UserName) > 256 || len(reqData.Password) > 256 {
-		c.Error(exception.ErrParameterLengthExceeds)
+		c.Error(exception.ErrUserParameterLengthExceeds)
 		return
 	}
 

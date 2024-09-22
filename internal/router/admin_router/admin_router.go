@@ -76,7 +76,7 @@ func (d *AdminRouter) GetRouter() *gin.Engine {
 }
 func (d *AdminRouter) get404Page(c *gin.Context) {
 	c.JSON(http.StatusNotFound, schema.ResponseData{
-		Code: exception.ErrResourceNotFound.Code,
-		Msg:  exception.ErrResourceNotFound.Msg,
+		Code: exception.ErrUserResourceNotFound.Code,
+		Msg:  exception.ErrUserResourceNotFound.Msg,
 	})
 }

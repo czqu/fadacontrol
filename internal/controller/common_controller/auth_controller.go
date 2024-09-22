@@ -35,15 +35,19 @@ func (u *AuthController) Login(c *gin.Context) {
 	loginData := &schema.LoginRequest{}
 
 	if err := c.ShouldBindJSON(&loginData); err != nil {
-		c.Error(exception.ErrParameterError)
+		c.Error(exception.ErrUserParameterError)
 		return
 	}
 
 	user, err := u.s.Login(loginData.Username, loginData.Password)
 	if err != nil {
-		c.Error(exception.ErrLogonFailure)
+		c.Error(exception.ErrUserLogonFailure)
 		return
 	}
 	token, err := u.jwt.GenerateToken(user.Username)
+	if err != nil {
+		c.Error(exception.ErrSystemGenTokenErr)
+		return
+	}
 	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c, schema.TokenResponse{Token: token}))
 }

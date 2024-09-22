@@ -11,8 +11,8 @@ func ErrorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.Next() //must be called first
 		if c.Writer.Status() == http.StatusMethodNotAllowed {
-			//todo
-			c.JSON(http.StatusMethodNotAllowed, controller.GetGinError(c, exception.ErrUnknownException))
+
+			c.JSON(http.StatusMethodNotAllowed, controller.GetGinError(c, exception.ErrUserMethodNotAllowed))
 			return
 		}
 		if len(c.Errors) == 0 {
@@ -34,7 +34,7 @@ func ErrorHandler() gin.HandlerFunc {
 			}
 
 			status := http.StatusInternalServerError //The default is 500
-			if code == exception.ErrResourceNotFound.Code {
+			if code == exception.ErrUserResourceNotFound.Code {
 				status = http.StatusNotFound
 			} else if (code >= exception.UserErrorStart) && (code <= exception.UserErrorEnd) {
 
