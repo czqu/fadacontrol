@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
+	"gorm.io/gorm/logger"
 )
 
 type Data struct {
@@ -21,7 +22,13 @@ func NewDB(dataConf *conf.DatabaseConf) (*gorm.DB, error) {
 	if dataConf.Driver != "sqlite" {
 		return nil, errors.New("Unsupported driver")
 	}
-	engine, err := gorm.Open(sqlite.Open(dataConf.Connection), &gorm.Config{})
+	config := &gorm.Config{}
+	if dataConf.Debug {
+		config = &gorm.Config{
+			Logger: logger.Default.LogMode(logger.Info),
+		}
+	}
+	engine, err := gorm.Open(sqlite.Open(dataConf.Connection), config)
 	if err != nil {
 		return nil, err
 	}

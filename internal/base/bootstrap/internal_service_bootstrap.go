@@ -3,7 +3,6 @@ package bootstrap
 import (
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/service/common_service"
-
 	"net"
 	"strconv"
 )

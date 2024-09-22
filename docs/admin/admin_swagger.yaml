@@ -192,6 +192,27 @@ paths:
       summary: Update Discover Service Configuration
       tags:
       - Discover
+  /discovery/restart:
+    post:
+      consumes:
+      - application/json
+      description: Restart the discover service.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service restarted successfully.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Restart Discover Service
+      tags:
+      - Discover
   /http/config:
     get:
       consumes:
@@ -296,6 +317,33 @@ paths:
       summary: Update HTTP Configuration
       tags:
       - HTTP
+  /http/restart:
+    post:
+      consumes:
+      - application/json
+      description: Restart the server based on the provided type.
+      parameters:
+      - description: Service type (HTTP_SERVICE_API or HTTPS_SERVICE_API)
+        in: query
+        name: type
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service restarted successfully.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Restart Service
+      tags:
+      - HTTP
   /info:
     get:
       consumes:
@@ -391,6 +439,40 @@ paths:
         "200":
           description: success
       summary: Ping
+  /power-saving:
+    post:
+      consumes:
+      - application/json
+      description: Enable or disable power saving mode. This function first records
+        the setting in the database. If the database write fails, it returns immediately.
+        If the database write succeeds, it sets the power saving mode. A failure in
+        setting the mode does not affect the database value.
+      parameters:
+      - default: "true"
+        description: Enable power saving mode (true or false)
+        in: query
+        name: enable
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Power saving mode set successfully.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "400":
+          description: Invalid request parameters.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Set Power Saving Mode
+      tags:
+      - System
   /remote/config:
     get:
       consumes:
@@ -478,6 +560,27 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Update Remote Connect Configuration
+      tags:
+      - Remote
+  /remote/restart:
+    post:
+      consumes:
+      - application/json
+      description: Restart the remote service.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service restarted successfully.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Restart Remote Service
       tags:
       - Remote
   /unlock:

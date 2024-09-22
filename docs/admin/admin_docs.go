@@ -207,6 +207,40 @@ const docTemplateadmin = `{
                 }
             }
         },
+        "/discovery/restart": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Restart the discover service.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Discover"
+                ],
+                "summary": "Restart Discover Service",
+                "responses": {
+                    "200": {
+                        "description": "Service restarted successfully.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
         "/http/config": {
             "get": {
                 "security": [
@@ -355,6 +389,49 @@ const docTemplateadmin = `{
                     },
                     "400": {
                         "description": "Invalid request parameters.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
+        "/http/restart": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Restart the server based on the provided type.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "HTTP"
+                ],
+                "summary": "Restart Service",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Service type (HTTP_SERVICE_API or HTTPS_SERVICE_API)",
+                        "name": "type",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Service restarted successfully.",
                         "schema": {
                             "$ref": "#/definitions/schema.ResponseData"
                         }
@@ -523,6 +600,55 @@ const docTemplateadmin = `{
                 }
             }
         },
+        "/power-saving": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Enable or disable power saving mode. This function first records the setting in the database. If the database write fails, it returns immediately. If the database write succeeds, it sets the power saving mode. A failure in setting the mode does not affect the database value.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Set Power Saving Mode",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "true",
+                        "description": "Enable power saving mode (true or false)",
+                        "name": "enable",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Power saving mode set successfully.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request parameters.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
         "/remote/config": {
             "get": {
                 "security": [
@@ -648,6 +774,40 @@ const docTemplateadmin = `{
                     },
                     "400": {
                         "description": "Invalid request parameters.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
+        "/remote/restart": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Restart the remote service.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Remote"
+                ],
+                "summary": "Restart Remote Service",
+                "responses": {
+                    "200": {
+                        "description": "Service restarted successfully.",
                         "schema": {
                             "$ref": "#/definitions/schema.ResponseData"
                         }

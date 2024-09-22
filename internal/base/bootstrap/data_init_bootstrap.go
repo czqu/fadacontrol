@@ -34,7 +34,28 @@ func (d *DataInitBootstrap) Start() error {
 	d.initUdpConfig()
 	d.initCasbinConfig()
 	d.initUser()
+	d.initSysConfig()
+
 	return nil
+}
+func (d *DataInitBootstrap) initSysConfig() {
+	err := d._db.AutoMigrate(&entity.SysConfig{})
+	if err != nil {
+		logger.Errorf("failed to migrate database")
+		return
+	}
+	var cnt int64
+	err = d._db.Model(&entity.SysConfig{}).Count(&cnt).Error
+	if err != nil {
+		logger.Errorf("failed to count database")
+		return
+	}
+	if cnt == 0 {
+		sysConfig := entity.SysConfig{
+			PowerSavingMode: true,
+		}
+		d._db.Create(&sysConfig)
+	}
 }
 func (d *DataInitBootstrap) initHttpConfig() {
 

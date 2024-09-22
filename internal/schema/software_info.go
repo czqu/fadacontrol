@@ -5,6 +5,7 @@ type SoftwareInfo struct {
 	LogLevel      string          `json:"log_level"`
 	WorkDir       string          `json:"work_dir"`
 	Version       string          `json:"version"`
+	AppVersion    string          `json:"app_version"`
 	Edition       string          `json:"edition"`
 	ServiceInfo   []ServiceInfo   `json:"service_info"`
 	AlgorithmInfo []AlgorithmInfo `json:"algorithm_info"`

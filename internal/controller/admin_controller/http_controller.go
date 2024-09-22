@@ -136,3 +136,24 @@ func (h *HttpController) PatchHttpConfig(c *gin.Context) {
 
 	c.Error(exception.ErrParameterError)
 }
+
+// @Summary Restart Service
+// @Description Restart the server based on the provided type.
+// @Tags HTTP
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Param type query string true "Service type (HTTP_SERVICE_API or HTTPS_SERVICE_API)"
+// @Success 200 {object} schema.ResponseData "Service restarted successfully."
+// @Failure 500 {object} schema.ResponseData "Internal Server Error"
+// @Router /http/restart [post]
+func (h *HttpController) RestartHttpService(c *gin.Context) {
+	query := c.Query("type")
+	err := h.hs.RestartServer(query)
+	if err != nil {
+		c.Error(err)
+		return
+
+	}
+	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
+}

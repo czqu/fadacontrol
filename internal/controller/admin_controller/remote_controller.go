@@ -86,6 +86,25 @@ func (o *RemoteController) PatchRemoteConnectConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 }
 
+// @Summary Restart Remote Service
+// @Description Restart the remote service.
+// @Tags Remote
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} schema.ResponseData "Service restarted successfully."
+// @Failure 500 {object} schema.ResponseData "Internal Server Error"
+// @Router /remote/restart [post]
+func (o *RemoteController) RestartRemoteService(c *gin.Context) {
+
+	err := o.rcs.RestartService()
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
+}
+
 //	func (o *RemoteController) TestServerDelay(c *gin.Context) {
 //		c.JSON(http.StatusOK, schema.ResponseData{
 //			Code: exception.ErrSuccess.Code,

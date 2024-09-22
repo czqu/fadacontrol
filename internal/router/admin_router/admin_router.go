@@ -1,4 +1,4 @@
-package router
+package admin_router
 
 import (
 	"fadacontrol/internal/base/exception"
@@ -19,12 +19,12 @@ type AdminRouter struct {
 	di          *admin_controller.DiscoverController
 	auth        *common_controller.AuthController
 	jwt         *middleware.JwtMiddleware
-	sys         *common_controller.SysInfoController
+	_sys        *common_controller.SystemController
 	_http       *admin_controller.HttpController
 }
 
-func NewAdminRouter(_http *admin_controller.HttpController, sys *common_controller.SysInfoController, jwt *middleware.JwtMiddleware, rc *admin_controller.RemoteController, u *common_controller.UnlockController, o *common_controller.ControlPCController, di *admin_controller.DiscoverController, auth *common_controller.AuthController) *AdminRouter {
-	return &AdminRouter{router: gin.Default(), u: u, o: o, rc: rc, di: di, auth: auth, jwt: jwt, sys: sys, _http: _http}
+func NewAdminRouter(_http *admin_controller.HttpController, sys *common_controller.SystemController, jwt *middleware.JwtMiddleware, rc *admin_controller.RemoteController, u *common_controller.UnlockController, o *common_controller.ControlPCController, di *admin_controller.DiscoverController, auth *common_controller.AuthController) *AdminRouter {
+	return &AdminRouter{router: gin.Default(), u: u, o: o, rc: rc, di: di, auth: auth, jwt: jwt, _sys: sys, _http: _http}
 }
 func (d *AdminRouter) Register() {
 
@@ -47,21 +47,24 @@ func (d *AdminRouter) Register() {
 		apiv1.GET("/interface/:ip", d.o.GetInterfaceByIP)
 		apiv1.GET("/interface/:ip/all", d.o.GetInterfaceByIPAll)
 		apiv1.GET("/interface/", d.o.GetInterface)
-		apiv1.GET("/discovery", d.di.GetDiscoverServiceConfig)
-		apiv1.GET("/info", d.sys.GetSoftwareInfo)
+		apiv1.GET("/info", d._sys.GetSoftwareInfo)
+		apiv1.POST("/power-saving", d._sys.SetPowerSavingMode)
 		//	apiv1.GET("/internal-cmd/", d.internal.GetInternalCommandEvents)
 
 		//admin
 		apiv1.GET("/discovery/config", d.di.GetDiscoverServiceConfig)
 		apiv1.PATCH("/discovery/config", d.di.PatchDiscoverServiceConfig)
+		apiv1.POST("/discovery/restart", d.di.RestartDiscoverService)
 
 		apiv1.GET("/remote/config", d.rc.GetRemoteConnectConfig)
 		apiv1.PATCH("/remote/config", d.rc.PatchRemoteConnectConfig)
 		apiv1.PUT("/remote/config", d.rc.UpdateRemoteConnectConfig)
+		apiv1.POST("/remote/restart", d.rc.RestartRemoteService)
 
 		apiv1.GET("/http/config", d._http.GetHttpConfig)
 		apiv1.PATCH("/http/config", d._http.PatchHttpConfig)
 		apiv1.PUT("/http/config", d._http.UpdateHttpConfig)
+		apiv1.POST("/http/restart", d._http.RestartHttpService)
 
 		apiv1.POST("/login", d.auth.Login)
 	}

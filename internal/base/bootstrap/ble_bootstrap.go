@@ -19,12 +19,8 @@ func NewBleUnlockBootstrap(u *unlock.UnLockService) *BleUnlockBootstrap {
 	return &BleUnlockBootstrap{u: u}
 }
 
-//func init() {
-//	RegisterService(&BleUnlockBootstrap{})
-//}
-
 func (d *BleUnlockBootstrap) Start() error {
-	go d.StartServer()
+	//	go d.StartServer()
 	return nil
 }
 func (d *BleUnlockBootstrap) StartServer() error {
@@ -85,6 +81,6 @@ func (d *BleUnlockBootstrap) handleConnection(conn net.Conn) {
 	d.u.UnlockPc(username, password)
 }
 func (d *BleUnlockBootstrap) Stop() error {
-	return d.listener.Close()
-
+	//return d.listener.Close()
+	return nil
 }

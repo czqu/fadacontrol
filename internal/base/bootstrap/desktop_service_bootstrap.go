@@ -4,40 +4,38 @@ import (
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/data"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/credential_provider_service"
-	"fadacontrol/pkg/sys"
 )
 
 type DesktopServiceBootstrap struct {
 	_db      *data.Data
 	ble      *BleUnlockBootstrap
 	discover *DiscoverBootstrap
-	http_    *HttpBootstrap
+	_http    *HttpBootstrap
 	legacy_  *LegacyBootstrap
 	lo       *logger.Logger
 	_conf    *conf.Conf
 	_daemon  *DaemonConnectBootstrap
-	it       *InternalServiceBootstrap
-	done     chan interface{}
-	rcb      *RemoteConnectBootstrap
-	cp       *credential_provider_service.CredentialProviderService
-	di       *DataInitBootstrap
+
+	done chan interface{}
+	rcb  *RemoteConnectBootstrap
+	cp   *credential_provider_service.CredentialProviderService
+	di   *DataInitBootstrap
+	_co  *control_pc.ControlPCService
 }
 
-func NewRootBootstrap(di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, it *InternalServiceBootstrap, _daemon *DaemonConnectBootstrap, _conf *conf.Conf, _db *data.Data, lo *logger.Logger, ble *BleUnlockBootstrap, d *DiscoverBootstrap, http_ *HttpBootstrap, legacy *LegacyBootstrap) *DesktopServiceBootstrap {
-	return &DesktopServiceBootstrap{di: di, cp: cp, rcb: rcb, done: make(chan interface{}), it: it, _daemon: _daemon, _conf: _conf, _db: _db, lo: lo, ble: ble, discover: d, http_: http_, legacy_: legacy}
+func NewDesktopServiceBootstrap(_co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, _daemon *DaemonConnectBootstrap, _conf *conf.Conf, _db *data.Data, lo *logger.Logger, ble *BleUnlockBootstrap, d *DiscoverBootstrap, http_ *HttpBootstrap, legacy *LegacyBootstrap) *DesktopServiceBootstrap {
+	return &DesktopServiceBootstrap{_co: _co, di: di, cp: cp, rcb: rcb, done: make(chan interface{}), _daemon: _daemon, _conf: _conf, _db: _db, lo: lo, ble: ble, discover: d, _http: http_, legacy_: legacy}
 }
 func (r *DesktopServiceBootstrap) Start() {
 	r.di.Start()
 	r.lo.InitLog()
 
-	ret := sys.SetPowerSavingMode(true)
-	if ret == true {
-		logger.Debug("set power saving mode")
-	}
+	r._co.RunPowerSavingMode()
 	go r.discover.Start()
 	r._daemon.Start()
-	r.http_.Start()
+	r._http.Start()
 	r.legacy_.Start()
 	r.ble.Start()
 	r.rcb.Start()
@@ -57,7 +55,7 @@ func (r *DesktopServiceBootstrap) Stop() {
 	go func() {
 		r.ble.Stop()
 		r.discover.Stop()
-		r.http_.Stop()
+		r._http.Stop()
 		r.legacy_.Stop()
 		r.rcb.Stop()
 		r._daemon.Stop()

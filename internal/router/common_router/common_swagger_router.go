@@ -1,4 +1,4 @@
-package router
+package common_router
 
 import (
 	_ "fadacontrol/docs/webapi"
@@ -31,4 +31,4 @@ func init() {
 
 }
 
-// swag init   --parseDependency=false  --instanceName=webapi  --generalInfo=internal/router/common_swagger_router.go --exclude internal/controller/admin_controller/  --output docs/webapi
+// swag init   --parseDependency=false  --instanceName=webapi  --generalInfo=internal/router/common_router/common_swagger_router.go --exclude internal/controller/admin_controller/  --output docs/webapi

@@ -3,3 +3,4 @@
 *.log
 *.sh
 *.bat
+/cmd/core-service/out/

@@ -1,4 +1,4 @@
-package router
+package common_router
 
 import (
 	"fadacontrol/internal/base/exception"
@@ -18,10 +18,10 @@ type CommonRouter struct {
 	cu   *common_controller.CustomCommandController
 	auth *common_controller.AuthController
 	jwt  *middleware.JwtMiddleware
-	sys  *common_controller.SysInfoController
+	sys  *common_controller.SystemController
 }
 
-func NewCommonRouter(sys *common_controller.SysInfoController, jwt *middleware.JwtMiddleware, auth *common_controller.AuthController, cu *common_controller.CustomCommandController, u *common_controller.UnlockController, o *common_controller.ControlPCController) *CommonRouter {
+func NewCommonRouter(sys *common_controller.SystemController, jwt *middleware.JwtMiddleware, auth *common_controller.AuthController, cu *common_controller.CustomCommandController, u *common_controller.UnlockController, o *common_controller.ControlPCController) *CommonRouter {
 	return &CommonRouter{router: gin.Default(), u: u, o: o, cu: cu, auth: auth, jwt: jwt, sys: sys}
 }
 func (d *CommonRouter) Register() {

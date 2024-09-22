@@ -1,4 +1,4 @@
-package router
+package admin_router
 
 import (
 	_ "fadacontrol/docs/admin"
@@ -31,4 +31,4 @@ func init() {
 
 }
 
-//swag init   -parseDependency=false  --instanceName=admin  --generalInfo=internal/router/admin_swagger_router.go  --output docs/admin
+//swag init   -parseDependency=false  --instanceName=admin  --generalInfo=internal/router/admin_router/admin_swagger_router.go  --output docs/admin

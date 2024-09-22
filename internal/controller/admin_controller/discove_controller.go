@@ -59,3 +59,22 @@ func (d *DiscoverController) PatchDiscoverServiceConfig(c *gin.Context) {
 	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 
 }
+
+// @Summary Restart Discover Service
+// @Description Restart the discover service.
+// @Tags Discover
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} schema.ResponseData "Service restarted successfully."
+// @Failure 500 {object} schema.ResponseData "Internal Server Error"
+// @Router /discovery/restart [post]
+func (d *DiscoverController) RestartDiscoverService(c *gin.Context) {
+
+	err := d.di.RestartService()
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
+}

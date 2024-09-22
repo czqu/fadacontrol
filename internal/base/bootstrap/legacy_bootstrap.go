@@ -161,7 +161,7 @@ func (s *LegacyBootstrap) CreateConfig() {
 		strKey := base64.StdEncoding.EncodeToString(key)
 		socketServerConfig := entity.SocketServerConfig{
 			ServiceName: UnlockService,
-			Enable:      true,
+			Enable:      false,
 			Host:        "0.0.0.0",
 			Port:        2084,
 			Cer:         strCert,
@@ -170,7 +170,7 @@ func (s *LegacyBootstrap) CreateConfig() {
 		database.Create(&socketServerConfig)
 		controlServerConfig := entity.SocketServerConfig{
 			ServiceName: ControlService,
-			Enable:      true,
+			Enable:      false,
 			Host:        "0.0.0.0",
 			Port:        2090,
 			Cer:         strCert,

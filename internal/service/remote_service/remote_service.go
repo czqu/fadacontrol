@@ -306,7 +306,7 @@ func (r *RemoteService) GetConfig() (*remote_schema.RemoteConnectConfigResponse,
 		return nil, fmt.Errorf("failed to find database: %v", err)
 	}
 	var remoteMsgServer []entity.RemoteMsgServer
-	err := r.db.Limit(10).Find(&remoteMsgServer).Where("id IN ?", config.ID).Error
+	err := r.db.Where(&entity.RemoteMsgServer{RemoteConnectConfigId: config.ID}).Limit(10).Error
 	if err != nil && !errors.Is(err, gorm.ErrRecordNotFound) {
 		logger.Errorf("failed to find database: %v", err)
 		return nil, fmt.Errorf("failed to find database: %v", err)

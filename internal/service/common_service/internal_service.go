@@ -5,18 +5,19 @@ import (
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/schema"
 	"fadacontrol/internal/schema/custom_command_schema"
+	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/custom_command_service"
-	"fadacontrol/pkg/sys"
 	"github.com/mitchellh/mapstructure"
 	"net"
 )
 
 type InternalService struct {
-	cu *custom_command_service.CustomCommandService
+	cu  *custom_command_service.CustomCommandService
+	_co *control_pc.ControlPCService
 }
 
-func NewInternalService(cu *custom_command_service.CustomCommandService) *InternalService {
-	return &InternalService{cu: cu}
+func NewInternalService(_co *control_pc.ControlPCService, cu *custom_command_service.CustomCommandService) *InternalService {
+	return &InternalService{_co: _co, cu: cu}
 }
 
 func (s *InternalService) Handler(conn net.Conn) {
@@ -61,7 +62,7 @@ func (s *InternalService) JsonDataHandler(packet *schema.InternalDataPacket) err
 	}
 	if cmd.CommandType == schema.LockPC {
 		logger.Debug("Lock PC")
-		err := sys.LockWindows()
+		err := s._co.LockWindows(false)
 		return err
 	}
 	if cmd.CommandType == schema.Hello {

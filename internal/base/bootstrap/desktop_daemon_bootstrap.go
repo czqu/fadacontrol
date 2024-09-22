@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/pkg/sys"
 	"time"
 )
@@ -13,10 +14,11 @@ type DesktopDaemonBootstrap struct {
 	it    *InternalServiceBootstrap
 	done  chan interface{}
 	di    *DataInitBootstrap
+	_co   *control_pc.ControlPCService
 }
 
-func NewDesktopDaemonBootstrap(di *DataInitBootstrap, _conf *conf.Conf, lo *logger.Logger, it *InternalServiceBootstrap) *DesktopDaemonBootstrap {
-	return &DesktopDaemonBootstrap{di: di, _conf: _conf, lo: lo, it: it, done: make(chan interface{})}
+func NewDesktopDaemonBootstrap(_co *control_pc.ControlPCService, di *DataInitBootstrap, _conf *conf.Conf, lo *logger.Logger, it *InternalServiceBootstrap) *DesktopDaemonBootstrap {
+	return &DesktopDaemonBootstrap{_co: _co, di: di, _conf: _conf, lo: lo, it: it, done: make(chan interface{})}
 }
 
 func (r *DesktopDaemonBootstrap) Start() {
@@ -24,6 +26,7 @@ func (r *DesktopDaemonBootstrap) Start() {
 	r.di.Start()
 	r.lo.InitLog()
 
+	r._co.RunPowerSavingMode()
 	ret := sys.SetPowerSavingMode(true)
 	if ret == true {
 		logger.Debug("set power saving mode")
