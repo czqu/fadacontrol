@@ -1,21 +1,33 @@
 package version
 
-import "time"
+import (
+	"time"
+)
 
 var BuildDate string
 var Edition string
-var version = "240921"
+var _VersionName string
+var version string
+var GitCommit string
+var AuthorEmail string
 
-func GetVersion() (string, error) {
+func GetBuildInfo() string {
+	return GetVersionName() + " " + Edition + " " + "build-" + GetVersion() + "-" + GitCommit
+
+}
+func GetVersionName() string {
+	return _VersionName
+}
+func GetVersion() string {
 
 	if version != "" {
-		return version, nil
+		return version
 	}
 	t, err := GetBuildDate()
 	if err != nil {
-		return "", err
+		return ""
 	}
-	return t.Format("060102") + GetEdition(), nil
+	return t.Format("060102") + GetEdition()
 }
 func GetBuildDate() (time.Time, error) {
 	layout := time.RFC3339
@@ -37,6 +49,6 @@ func GetEdition() string {
 	case "canary":
 		return "07"
 	default:
-		return "07"
+		return "09"
 	}
 }

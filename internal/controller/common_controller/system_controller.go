@@ -33,12 +33,8 @@ func NewSystemController(_co *control_pc.ControlPCService, _conf *conf.Conf) *Sy
 // @Failure 500 {object} schema.ResponseData	 "Server internal error"
 // @Router /info [get]
 func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
-	ver, err := version.GetVersion()
-	if err != nil {
-		c.Error(err)
-		return
+	ver := version.GetVersion()
 
-	}
 	supportAlgo := make([]schema.AlgorithmInfo, 0)
 	for algo, _ := range secure.AlgorithmNames {
 		supportAlgo = append(supportAlgo, schema.AlgorithmInfo{AlgorithmName: secure.AlgorithmNames[algo]})
@@ -46,8 +42,10 @@ func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
 
 	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c,
 		schema.SoftwareInfo{
-			Version: ver,
-			Edition: version.GetEdition(),
+			Version:    ver,
+			BuildInfo:  version.GetBuildInfo(),
+			Edition:    version.GetEdition(),
+			AppVersion: version.GetVersionName(),
 			ServiceInfo: []schema.ServiceInfo{
 				{
 					ServiceName: sys.ServiceName,
@@ -57,7 +55,7 @@ func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
 			LogLevel:      logger.GetLogLevel(),
 			LogPath:       logger.GetLogPath(),
 			AlgorithmInfo: supportAlgo,
-			AppVersion:    "3.5.0.7",
+			AuthorEmail:   version.AuthorEmail,
 		}))
 }
 
