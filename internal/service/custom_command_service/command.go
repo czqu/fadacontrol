@@ -40,7 +40,7 @@ func (u *CustomCommandService) ReadConfig(filePath string) (map[string]custom_co
 	return ret, nil
 }
 func (u *CustomCommandService) ExecuteCommand(cmd custom_command_schema.Command, stdout, stderr *custom_command_schema.CustomWriter) error {
-	if u._conf.StartMode == conf.CommonMode || u._conf.StartMode == conf.DaemonMode {
+	if u._conf.StartMode == conf.CommonMode || u._conf.StartMode == conf.SlaveMode {
 		return u.executeCommand(cmd, stdout, stderr)
 	}
 

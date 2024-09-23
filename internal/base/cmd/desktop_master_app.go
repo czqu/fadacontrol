@@ -11,30 +11,28 @@ import (
 	"runtime"
 )
 
-type DesktopServiceApp struct {
-	_conf *conf.Conf
-	db    *conf.DatabaseConf
-
+type DesktopSlaveServiceApp struct {
+	_conf  *conf.Conf
+	db     *conf.DatabaseConf
+	root   *bootstrap.DesktopSlaveServiceBootstrap
 	logger *logger.Logger
-	root   *bootstrap.DesktopServiceBootstrap
-	debug  bool
 }
 
-func NewDesktopServiceApp(lo *logger.Logger, _conf *conf.Conf, db *conf.DatabaseConf, root *bootstrap.DesktopServiceBootstrap) *DesktopServiceApp {
-	return &DesktopServiceApp{logger: lo, _conf: _conf, db: db, root: root}
+func NewDesktopSlaveServiceApp(lo *logger.Logger, _conf *conf.Conf, db *conf.DatabaseConf, root *bootstrap.DesktopSlaveServiceBootstrap) *DesktopSlaveServiceApp {
+	return &DesktopSlaveServiceApp{logger: lo, _conf: _conf, db: db, root: root}
 }
-func (app *DesktopServiceApp) Stop() {
+func (app *DesktopSlaveServiceApp) Stop() {
 
 	app.root.Stop()
 }
-func (app *DesktopServiceApp) Start() {
+func (app *DesktopSlaveServiceApp) Start() {
 
 	app.root.Start()
 }
 
-var appDesktopService *DesktopServiceApp
+var appDesktopDaemon *DesktopSlaveServiceApp
 
-func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
+func DesktopDaemonAppMain(debug bool, mode conf.StartMode, workDir string) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	if utils.DirCanWrite(workDir) {
 		workDir, _ = filepath.Abs(workDir)
@@ -42,7 +40,7 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 		workDir = "./"
 	}
 	c := &conf.Conf{}
-	c.LogName = "service.log"
+	c.LogName = "daemon.log"
 	c.LogLevel = "warn"
 	c.Debug = false
 	c.StartMode = mode
@@ -63,6 +61,7 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 		fmt.Println(err)
 		return
 	}
+
 	dbFile, err = filepath.Abs(dbFile)
 	if err != nil {
 		fmt.Println(err)
@@ -88,13 +87,13 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 	if c.Debug {
 		c.LogLevel = "debug"
 	}
-	app, _ := initDesktopServiceApplication(c, &conf.DatabaseConf{Driver: "sqlite", Connection: connection, MaxIdleConnection: 10, MaxOpenConnection: 100, Debug: c.Debug})
-	appDesktopService = app
+	app, _ := initDesktopDaemonApplication(c, &conf.DatabaseConf{Driver: "sqlite", Connection: connection, MaxIdleConnection: 10, MaxOpenConnection: 100, Debug: c.Debug})
+	appDesktopDaemon = app
 	app.Start()
 }
-func StopDesktopService() {
-	if appDesktopService != nil {
-		appDesktopService.Stop()
+func StopDesktopDaemon() {
+	if appDesktopDaemon != nil {
+		appDesktopDaemon.Stop()
 	}
 
 }

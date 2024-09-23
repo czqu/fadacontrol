@@ -17,12 +17,12 @@ import (
 	"fadacontrol/internal/router/admin_router"
 	"fadacontrol/internal/router/common_router"
 	"fadacontrol/internal/service/auth_service"
-	"fadacontrol/internal/service/common_service"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/credential_provider_service"
 	"fadacontrol/internal/service/custom_command_service"
 	"fadacontrol/internal/service/discovery_service"
 	"fadacontrol/internal/service/http_service"
+	"fadacontrol/internal/service/internal_service"
 	"fadacontrol/internal/service/jwt_service"
 	"fadacontrol/internal/service/remote_service"
 	"fadacontrol/internal/service/unlock"
@@ -52,7 +52,7 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	unLockService := unlock.NewUnLockService(credentialProviderService)
 	remoteService := remote_service.NewRemoteService(controlPCService, unLockService, _conf, gormDB)
 	remoteConnectBootstrap := bootstrap.NewRemoteConnectBootstrap(_conf, gormDB, remoteService)
-	daemonConnectBootstrap := bootstrap.NewDaemonConnectBootstrap(chanGroup, _conf)
+	internalMasterService := internal_service.NewInternalMasterService(chanGroup)
 	dataData := data.NewData(gormDB)
 	bleUnlockBootstrap := bootstrap.NewBleUnlockBootstrap(unLockService)
 	discoverService := discovery_service.NewDiscoverService(gormDB)
@@ -76,12 +76,12 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	httpBootstrap := bootstrap.NewHttpBootstrap(_conf, httpService, commonRouter, adminRouter)
 	legacyControlService := control_pc.NewLegacyControlService(controlPCService, unLockService)
 	legacyBootstrap := bootstrap.NewLegacyBootstrap(unLockService, gormDB, legacyControlService)
-	desktopServiceBootstrap := bootstrap.NewDesktopServiceBootstrap(controlPCService, dataInitBootstrap, credentialProviderService, remoteConnectBootstrap, daemonConnectBootstrap, _conf, dataData, loggerLogger, bleUnlockBootstrap, discoverBootstrap, httpBootstrap, legacyBootstrap)
-	desktopServiceApp := NewDesktopServiceApp(loggerLogger, _conf, db, desktopServiceBootstrap)
+	desktopMasterServiceBootstrap := bootstrap.NewDesktopMasterServiceBootstrap(controlPCService, dataInitBootstrap, credentialProviderService, remoteConnectBootstrap, internalMasterService, _conf, dataData, loggerLogger, bleUnlockBootstrap, discoverBootstrap, httpBootstrap, legacyBootstrap)
+	desktopServiceApp := NewDesktopServiceApp(loggerLogger, _conf, db, desktopMasterServiceBootstrap)
 	return desktopServiceApp, nil
 }
 
-func initDesktopDaemonApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopDaemonApp, error) {
+func initDesktopDaemonApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopSlaveServiceApp, error) {
 	loggerLogger := logger.NewLogger(_conf)
 	gormDB, err := data.NewDB(db)
 	if err != nil {
@@ -99,9 +99,8 @@ func initDesktopDaemonApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*Des
 	}
 	dataInitBootstrap := bootstrap.NewDataInitBootstrap(adapter, enforcer, gormDB)
 	customCommandService := custom_command_service.NewCustomCommandService(_conf)
-	internalService := common_service.NewInternalService(controlPCService, customCommandService)
-	internalServiceBootstrap := bootstrap.NewInternalServiceBootstrap(internalService)
-	desktopDaemonBootstrap := bootstrap.NewDesktopDaemonBootstrap(controlPCService, dataInitBootstrap, _conf, loggerLogger, internalServiceBootstrap)
-	desktopDaemonApp := NewDesktopDaemonApp(loggerLogger, _conf, db, desktopDaemonBootstrap)
-	return desktopDaemonApp, nil
+	internalSlaveService := internal_service.NewInternalSlaveService(customCommandService, controlPCService, chanGroup, _conf)
+	desktopSlaveServiceBootstrap := bootstrap.NewDesktopSlaveServiceBootstrap(controlPCService, dataInitBootstrap, _conf, loggerLogger, internalSlaveService)
+	desktopSlaveServiceApp := NewDesktopSlaveServiceApp(loggerLogger, _conf, db, desktopSlaveServiceBootstrap)
+	return desktopSlaveServiceApp, nil
 }

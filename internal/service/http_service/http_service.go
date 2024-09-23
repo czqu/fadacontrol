@@ -222,7 +222,7 @@ func startHttpServer(host string, port int, cert tls.Certificate, router *gin.En
 	go func() {
 		<-sign
 		if err := srv.Shutdown(nil); err != nil {
-			logger.Error("server Shutdown: %s", err)
+			logger.Errorf("server Shutdown: %s", err)
 			close(sign)
 		}
 	}()

@@ -18,7 +18,8 @@ const (
 	Unknown                   = 0xff
 )
 
-var AESGCMAlgorithmKeyLengths = map[EncryptionAlgorithmEnum]int{
+var AlgorithmKeyLengths = map[EncryptionAlgorithmEnum]int{
+	None: 0,
 
 	AESGCM128Algorithm:        16, // 128-bit AES-GCM key length
 	AESGCM192Algorithm:        24, // 192-bit AES-GCM key length
@@ -33,32 +34,44 @@ var AlgorithmNames = map[EncryptionAlgorithmEnum]string{
 }
 
 func DecryptData(algo EncryptionAlgorithmEnum, encryptedData []byte, key []byte) ([]byte, error) {
+	err := checkAlgoKeyLen(algo, key)
+	if err != nil {
+		return nil, err
+	}
+	key = key[:AlgorithmKeyLengths[algo]]
 	switch algo {
 	case AESGCM128Algorithm, AESGCM192Algorithm, AESGCM256Algorithm:
-		if len(key) != AESGCMAlgorithmKeyLengths[algo] {
-			return nil, exception.ErrUnknownException
-		}
-		return DecryptAESGCM(encryptedData, key)
+
+		return DecryptAESGCM(key, encryptedData)
 	case None:
 		return encryptedData, nil
 	case ChaCha20Poly1305Algorithm:
-		return DecryptChaCha20Poly1305(encryptedData, key)
+		return DecryptChaCha20Poly1305(key, encryptedData)
 	default:
 		return nil, exception.ErrUserUnsupportedEncryptionType
 	}
 }
 func EncryptData(algo EncryptionAlgorithmEnum, data []byte, key []byte) ([]byte, error) {
+	err := checkAlgoKeyLen(algo, key)
+	if err != nil {
+		return nil, err
+	}
+	key = key[:AlgorithmKeyLengths[algo]]
 	switch algo {
 	case AESGCM128Algorithm, AESGCM192Algorithm, AESGCM256Algorithm:
-		if len(key) != AESGCMAlgorithmKeyLengths[algo] {
-			return nil, exception.ErrUnknownException
-		}
-		return EncryptAESGCM(data, key)
+
+		return EncryptAESGCM(key, data)
 	case None:
 		return data, nil
 	case ChaCha20Poly1305Algorithm:
-		return EncryptChaCha20Poly1305(data, key)
+		return EncryptChaCha20Poly1305(key, data)
 	default:
 		return nil, exception.ErrUserUnsupportedEncryptionType
 	}
+}
+func checkAlgoKeyLen(algo EncryptionAlgorithmEnum, key []byte) error {
+	if len(key) < AlgorithmKeyLengths[algo] {
+		return exception.ErrUserInvalidAlgoKeyLen
+	}
+	return nil
 }

@@ -76,14 +76,14 @@ func (d *DiscoverService) listenAndSend(port int) {
 			logger.Warn("Error reading from UDP:", err)
 			continue
 		}
-		logger.Debug("Received message from %s: %s", remoteAddr, string(buffer[:n]))
+		logger.Debugf("Received message from %s: %s", remoteAddr, string(buffer[:n]))
 
 		_, err = conn.WriteToUDP([]byte(hostname), remoteAddr)
 
 		if err != nil {
 			logger.Warn("Error sending response:", err)
 		} else {
-			logger.Warn("Sent 'hello' to %s", remoteAddr)
+			logger.Warnf("Sent 'hello' to %s", remoteAddr)
 		}
 	}
 

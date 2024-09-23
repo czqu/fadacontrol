@@ -10,7 +10,7 @@ type StartMode uint8
 
 const (
 	Unknown StartMode = iota
-	DaemonMode
+	SlaveMode
 	ServiceMode
 	CommonMode
 )

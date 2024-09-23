@@ -12,7 +12,7 @@ var serviceMode bool
 var installServiceMode bool
 var unInstallServiceMode bool
 var workDir string
-var daemonMode bool
+var slaveMode bool
 var debugMode bool
 var commonMode bool
 var rootCmd = &cobra.Command{
@@ -41,9 +41,9 @@ var rootCmd = &cobra.Command{
 			UninstallService()
 			return
 		}
-		if daemonMode {
-			fmt.Println("daemon mode")
-			DesktopDaemonAppMain(debugMode, conf.DaemonMode, workDir)
+		if slaveMode {
+			fmt.Println("slave mode")
+			DesktopDaemonAppMain(debugMode, conf.SlaveMode, workDir)
 			return
 		}
 		if commonMode {
@@ -65,8 +65,8 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&installServiceMode, "install", "i", false, "install service")
 	rootCmd.PersistentFlags().BoolVarP(&unInstallServiceMode, "uninstall", "u", false, "uninstall service")
 	rootCmd.PersistentFlags().StringVarP(&workDir, "workdir", "w", "", "working directory")
-	rootCmd.PersistentFlags().BoolVarP(&daemonMode, "daemon-mode", "d", false, "d")
-	rootCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "", false, "debug mode")
+	rootCmd.PersistentFlags().BoolVarP(&slaveMode, "slave", "", false, "slave-mode")
+	rootCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", false, "debug mode")
 	rootCmd.PersistentFlags().BoolVarP(&commonMode, "common-mode", "", true, "common mode")
 	//err := rootCmd.MarkPersistentFlagRequired("config")
 
