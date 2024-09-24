@@ -15,12 +15,18 @@ var workDir string
 var slaveMode bool
 var debugMode bool
 var commonMode bool
+var rootPassword string
 var rootCmd = &cobra.Command{
 	Use:    "fadacontrol comandline",
 	Short:  "fadacontrol comandline",
 	Hidden: true,
 
 	Run: func(cmd *cobra.Command, args []string) {
+		if rootPassword != "" {
+			conf.RootPassword = rootPassword
+			conf.ResetPassword = true
+
+		}
 
 		if serviceMode {
 			if debugMode {
@@ -68,6 +74,7 @@ func init() {
 	rootCmd.PersistentFlags().BoolVarP(&slaveMode, "slave", "", false, "slave-mode")
 	rootCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", false, "debug mode")
 	rootCmd.PersistentFlags().BoolVarP(&commonMode, "common-mode", "", true, "common mode")
+	rootCmd.PersistentFlags().StringVarP(&rootPassword, "root-password", "", "", "reset root password")
 	//err := rootCmd.MarkPersistentFlagRequired("config")
 
 }

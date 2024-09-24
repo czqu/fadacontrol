@@ -2,9 +2,11 @@ package bootstrap
 
 import (
 	"encoding/base64"
+	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/entity"
 	"fadacontrol/pkg/secure"
+	"fadacontrol/pkg/sys"
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"gorm.io/gorm"
@@ -28,12 +30,13 @@ func (d *DataInitBootstrap) Stop() error {
 	return nil
 }
 func (d *DataInitBootstrap) Start() error {
+	d.initUser()
 	d.initHttpConfig()
 
 	d.initRemoteConfig()
 	d.initUdpConfig()
 	d.initCasbinConfig()
-	d.initUser()
+
 	d.initSysConfig()
 
 	return nil
@@ -175,9 +178,19 @@ func (d *DataInitBootstrap) initUser() {
 		salt, _ := secure.GenerateSaltBase64(10)
 		user := entity.User{
 			Username: "root",
-			Password: secure.HashPasswordByKDFBase64("1234", salt),
+			Password: secure.HashPasswordByKDFBase64(conf.RootPassword, salt),
 			Salt:     salt,
 		}
 		d._db.Create(&user)
 	}
+	if conf.ResetPassword {
+		user := entity.User{}
+		d._db.First(&user)
+		salt, _ := secure.GenerateSaltBase64(10)
+		user.Password = secure.HashPasswordByKDFBase64(conf.RootPassword, salt)
+		user.Salt = salt
+		d._db.Save(&user)
+		sys.ShutDownMe(0)
+	}
+
 }
