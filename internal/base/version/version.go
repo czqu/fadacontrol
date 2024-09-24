@@ -41,7 +41,7 @@ func GetBuildDate() (time.Time, error) {
 func GetEdition() string {
 	switch Edition {
 	case "release":
-		return "01"
+		return "00"
 	case "beta":
 		return "03"
 	case "dev":
