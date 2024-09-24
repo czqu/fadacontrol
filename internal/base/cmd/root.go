@@ -43,7 +43,7 @@ var rootCmd = &cobra.Command{
 		}
 		if slaveMode {
 			fmt.Println("slave mode")
-			DesktopDaemonAppMain(debugMode, conf.SlaveMode, workDir)
+			DesktopSlaveAppMain(debugMode, conf.SlaveMode, workDir)
 			return
 		}
 		if commonMode {

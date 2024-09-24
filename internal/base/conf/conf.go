@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
+	"path/filepath"
 )
 
 type StartMode uint8
@@ -37,6 +38,11 @@ func (c *Conf) ReadConfigFromYml(filePath string) error {
 	return nil
 }
 func (c *Conf) SetWorkdir(path string) {
+	var err error
+	c.workdir, err = filepath.Abs(path)
+	if err != nil {
+		panic(err)
+	}
 	c.workdir = path
 }
 func (c *Conf) GetWorkdir() string {

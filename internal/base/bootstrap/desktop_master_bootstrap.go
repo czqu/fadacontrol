@@ -31,7 +31,6 @@ func NewDesktopMasterServiceBootstrap(_co *control_pc.ControlPCService, di *Data
 }
 func (r *DesktopMasterServiceBootstrap) Start() {
 	r.di.Start()
-	r.lo.InitLog()
 
 	r._co.RunPowerSavingMode()
 	go r.discover.Start()

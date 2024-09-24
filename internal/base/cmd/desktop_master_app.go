@@ -32,7 +32,7 @@ func (app *DesktopSlaveServiceApp) Start() {
 
 var appDesktopDaemon *DesktopSlaveServiceApp
 
-func DesktopDaemonAppMain(debug bool, mode conf.StartMode, workDir string) {
+func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	if utils.DirCanWrite(workDir) {
 		workDir, _ = filepath.Abs(workDir)
@@ -40,12 +40,12 @@ func DesktopDaemonAppMain(debug bool, mode conf.StartMode, workDir string) {
 		workDir = "./"
 	}
 	c := &conf.Conf{}
-	c.LogName = "daemon.log"
-	c.LogLevel = "warn"
+	c.LogName = conf.DefaultSlaveLogName
+	c.LogLevel = conf.DefaultLogLevel
 	c.Debug = false
 	c.StartMode = mode
-	workDir, _ = filepath.Abs(workDir)
 	c.SetWorkdir(workDir)
+	logger.InitLog(c)
 	err := c.ReadConfigFromYml(workDir + "/config.yml")
 	if err != nil {
 		err = c.ReadConfigFromYml("config.yml")

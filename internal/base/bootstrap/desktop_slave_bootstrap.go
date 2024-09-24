@@ -25,7 +25,6 @@ func NewDesktopSlaveServiceBootstrap(_co *control_pc.ControlPCService, di *DataI
 func (r *DesktopSlaveServiceBootstrap) Start() {
 
 	r.di.Start()
-	r.lo.InitLog()
 
 	r._co.RunPowerSavingMode()
 	ret := sys.SetPowerSavingMode(true)

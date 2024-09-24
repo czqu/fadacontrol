@@ -8,6 +8,8 @@ import (
 	"go.uber.org/zap/zapcore"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 )
 import "gopkg.in/natefinch/lumberjack.v2"
 
@@ -55,25 +57,34 @@ type Logger struct {
 	logLevel string
 }
 
+var once sync.Once
+
 func NewLogger(r *conf.Conf) *Logger {
 	return &Logger{r: r}
 }
-func (l *Logger) InitLog() {
-	logger = l
+func InitLog(c *conf.Conf) {
+	once.Do(func() {
+		if logger != nil {
+			return
+		}
+		l := new(Logger)
+		logger = l
+		l.r = c
 
-	var err error
-	logger.logLevel = l.r.LogLevel
-	logger.logPath, err = filepath.Abs(l.r.GetWorkdir() + "/log/" + l.r.LogName)
-	if err != nil {
-		logger = nil
+		var err error
+		logger.logLevel = l.r.LogLevel
+		logger.logPath, err = filepath.Abs(l.r.GetWorkdir() + "/log/" + l.r.LogName)
+		if err != nil {
+			logger = nil
+			return
+		}
+		err = l.Init(l.logPath, str2Loglevel(l.logLevel))
+		if err != nil {
+			logger = nil
+			return
+		}
 		return
-	}
-	err = l.Init(l.logPath, str2Loglevel(l.logLevel))
-	if err != nil {
-		logger = nil
-		return
-	}
-	return
+	})
 
 }
 func GetLogPath() string {
@@ -124,13 +135,22 @@ func (l *Logger) Init(logPath string, loglevel Loglevel) error {
 		MaxAge:     30,
 		Compress:   false,
 	}
+	flushInterval := 30 * time.Second
+	if logger.r.Debug == true {
+		flushInterval = 1 * time.Second
+	}
+	bufferedWriteSyncer := zapcore.AddSync(&zapcore.BufferedWriteSyncer{
+		WS:            zapcore.AddSync(&logHook),
+		Size:          256 * 1024, // 256 KB buffer size
+		FlushInterval: flushInterval,
+	})
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 
 	core := zapcore.NewCore(
 		zapcore.NewConsoleEncoder(encoderConfig),
-		zapcore.NewMultiWriteSyncer(zapcore.AddSync(&logHook), zapcore.AddSync(os.Stdout)),
+		zapcore.NewMultiWriteSyncer(bufferedWriteSyncer, zapcore.AddSync(os.Stdout)),
 		atomicLevel,
 	)
 
