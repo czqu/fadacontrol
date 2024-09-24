@@ -3,6 +3,7 @@ package common_router
 import (
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/middleware"
+	"fadacontrol/internal/base/version"
 	"fadacontrol/internal/controller/common_controller"
 	"fadacontrol/internal/schema"
 	"net/http"
@@ -34,7 +35,7 @@ func (d *CommonRouter) Register() {
 	r.HandleMethodNotAllowed = true
 	r.Delims("[[[", "]]]")
 	r.NoRoute(d.get404Page)
-	if commonSwagHandler != nil {
+	if commonSwagHandler != nil && (version.Edition != "release") {
 		r.GET("/swagger/*any", commonSwagHandler)
 	}
 	apiv1 := r.Group("/api/v1")

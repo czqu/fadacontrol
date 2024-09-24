@@ -3,6 +3,7 @@ package admin_router
 import (
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/middleware"
+	"fadacontrol/internal/base/version"
 	"fadacontrol/internal/controller/admin_controller"
 	"fadacontrol/internal/controller/common_controller"
 	"fadacontrol/internal/schema"
@@ -36,7 +37,7 @@ func (d *AdminRouter) Register() {
 	r.HandleMethodNotAllowed = true
 	r.Delims("[[[", "]]]")
 	r.NoRoute(d.get404Page)
-	if adminSwagHandler != nil {
+	if adminSwagHandler != nil && (version.Edition != "release") {
 		r.GET("/swagger/*any", adminSwagHandler)
 	}
 	apiv1 := r.Group("/admin/api/v1")

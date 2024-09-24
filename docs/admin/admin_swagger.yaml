@@ -86,6 +86,10 @@ paths:
         name: action
         required: true
         type: string
+      - description: Delay time in seconds
+        in: query
+        name: delay
+        type: string
       - description: The type of shutdown
         in: query
         name: shutdown_type

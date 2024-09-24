@@ -103,6 +103,12 @@ const docTemplatewebapi = `{
                     },
                     {
                         "type": "string",
+                        "description": "Delay time in seconds",
+                        "name": "delay",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
                         "description": "The type of shutdown",
                         "name": "shutdown_type",
                         "in": "query"
