@@ -84,14 +84,14 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 			}
 			logger.Debug("recv a packet from server")
 			if packet.DataType == schema.JsonData {
-				err := s.JsonDataHandler(packet)
+				err := s.JsonDataHandler(conn, packet)
 				if err != nil {
 					logger.Warnf("JsonDataHandler err: %v", err)
 					break
 				}
 			}
 			if packet.DataType == schema.BinaryData {
-				err := s.BinaryDataHandler(packet)
+				err := s.BinaryDataHandler(conn, packet)
 				if err != nil {
 					logger.Warnf("BinaryDataHandler err: %v", err)
 					break
@@ -103,7 +103,7 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 
 	}
 }
-func (s *InternalSlaveService) JsonDataHandler(packet *schema.InternalDataPacket) error {
+func (s *InternalSlaveService) JsonDataHandler(conn net.Conn, packet *schema.InternalDataPacket) error {
 	if packet.DataType != schema.JsonData {
 		return nil
 	}
@@ -145,6 +145,6 @@ func (s *InternalSlaveService) JsonDataHandler(packet *schema.InternalDataPacket
 	return nil
 }
 
-func (s *InternalSlaveService) BinaryDataHandler(packet *schema.InternalDataPacket) error {
+func (s *InternalSlaveService) BinaryDataHandler(conn net.Conn, packet *schema.InternalDataPacket) error {
 	return nil
 }

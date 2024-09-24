@@ -8,6 +8,7 @@ import (
 	"fadacontrol/internal/schema"
 	"fadacontrol/pkg/sys"
 	"gorm.io/gorm"
+	"time"
 )
 
 type ControlPCService struct {
@@ -37,9 +38,13 @@ func (control *ControlPCService) LockWindows(useAgent bool) *exception.Exception
 	if err != nil {
 		return exception.ErrSystemUnknownException
 	}
-	go func() {
-		control.commandGroup.InternalCommandSend <- cmdStr
-	}()
+	select {
+	case control.commandGroup.InternalCommandSend <- cmdStr:
+		break
+	case <-time.After(time.Second * 2):
+		break
+	}
+	//todo always return success
 
 	return exception.ErrSuccess
 

@@ -57,6 +57,10 @@ paths:
         name: action
         required: true
         type: string
+      - description: The type of shutdown
+        in: query
+        name: shutdown_type
+        type: string
       produces:
       - application/json
       responses:

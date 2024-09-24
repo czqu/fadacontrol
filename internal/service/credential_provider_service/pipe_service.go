@@ -94,16 +94,20 @@ func (p *CredentialProviderService) SetFieldBitmap(data []byte) *exception.Excep
 	return ret
 
 }
-func (p *CredentialProviderService) SetCommandLinkText(text string) *exception.Exception {
+func (p *CredentialProviderService) SetText(tpe entity.PipePacketType, text string) *exception.Exception {
 	if len(text) == 0 {
 		return exception.ErrUserParameterError
 	}
-	var packet entity.PipePacket
-	packet.Tpe = entity.SetCommandClickText
-	packet.Size = uint32(len(text))
-	packet.Data = []byte(text)
-	ret := p.SendData(&packet)
-	return ret
+	if tpe == entity.SetCommandClickText || tpe == entity.SetLargeText {
+		var packet entity.PipePacket
+		packet.Tpe = tpe
+		packet.Size = uint32(len(text))
+		packet.Data = []byte(text)
+		ret := p.SendData(&packet)
+		return ret
+	}
+	return exception.ErrUserParameterError
+
 }
 func (p *CredentialProviderService) SendData(packet *entity.PipePacket) *exception.Exception {
 	if p.pipe == nil {
@@ -119,7 +123,8 @@ func (p *CredentialProviderService) SendData(packet *entity.PipePacket) *excepti
 	logger.Debugf("write data")
 
 	if _, err := p.pipe.Write(packetData); err != nil {
-		logger.Error("write data err")
+		logger.Debugf("write data err")
+
 		return exception.ErrSystemUnknownException
 	}
 	logger.Debugf("write data %d ", len(packetData))
@@ -131,7 +136,7 @@ func (p *CredentialProviderService) getResp() *exception.Exception {
 	select {
 	case ret := <-resp:
 		return ret.err
-		//case <-time.After(time.Second * 1):
+		//case <-time.After(time.Second * 2):
 		//	return exception.ErrSystemUnknownException
 	}
 }
@@ -153,6 +158,14 @@ func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
 
 	defer conn.Close()
 	p.pipe = conn
+	logger.Debug("connect pipe")
+	go func() {
+		time.Sleep(1 * time.Second)
+		go p.SetText(entity.SetLargeText, "RemoteFingerUnlock")
+		go p.SetText(entity.SetCommandClickText, "use your phone to unlock")
+	}()
+
+	logger.Debug("connect pipe")
 	for {
 		var packet entity.PipePacket
 		logger.Debug("read pipe")
@@ -169,18 +182,16 @@ func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
 		switch packet.Tpe {
 		case entity.Resp:
 			logger.Debugf("recv resp")
-			if len(packet.Data) != 4 {
+			var code uint32
+			codeSize := 4
+			if len(packet.Data) != codeSize {
 				logger.Debug("read err")
-				select {
-				case resp <- pipeSendStatus{exception.ErrSystemUnknownException, nil}:
-					break
-				case <-time.After(time.Second * 1):
-					break
-				}
+
+				resp <- pipeSendStatus{exception.ErrSystemUnknownException, nil}
 
 				break
 			}
-			code := binary.BigEndian.Uint32(packet.Data[0:4])
+			code = binary.BigEndian.Uint32(packet.Data[0:codeSize])
 			logger.Debug("code is ", code)
 			resp <- pipeSendStatus{exception.GetErrorByCode(int(code)), &packet}
 			logger.Debug("over")
@@ -203,8 +214,9 @@ func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
 			}
 			text := hostname + ";" + clientId + ";"
 			go func() {
-				p.SetQrCode(text, 256, 5)
-				p.SetCommandLinkText("Click to refresh QR code")
+				logger.Debug("set text", text)
+				//p.SetQrCode(text, 256, 5)
+
 			}()
 
 			break

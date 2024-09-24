@@ -190,7 +190,7 @@ func ListenNamedPipeWithHandler(pipeName string, handler func(conn net.Conn), in
 		}
 
 		logger.Debugf("new pipe accepted")
-		handler(conn)
+		go handler(conn)
 	}
 
 }

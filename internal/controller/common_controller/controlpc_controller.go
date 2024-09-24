@@ -27,7 +27,7 @@ func NewControlPCController(p *control_pc.ControlPCService) *ControlPCController
 //		@Accept			json
 //		@Produce		json
 //		@Param			action	path		string					true	"The type of operation（shutdown、standby、lock）"	Enums(shutdown, standby, lock)
-//	 @Query			shutdown_type	path		string	false	"The type of shutdown（0、1、2、3、4、5、6）"	Enums(0, 1, 2, 3, 4, 5, 6)
+//	    @Param			shutdown_type	query		string	false	"The type of shutdown"	sys.ShutdownType
 //		@Success		200		{object}	schema.ResponseData	"success"
 //		@Failure		400		{object}	schema.ResponseData	"Invalid action type"
 //		@Failure		500		{object}	schema.ResponseData		"The operation failed"

@@ -10,7 +10,7 @@ build_exe() {
   local build_exe_cxx=$7
   local build_exe_output=$8
 
-  CGO_ENABLED=1 CC=$build_exe_cc CXX=$build_exe_cxx GOOS=$build_exe_os GOARCH=$build_exe_arch go build -x -buildmode=pie -trimpath -ldflags "-X 'fadacontrol/internal/base/version.AuthorEmail=$build_authors' -X 'fadacontrol/internal/base/version._VersionName=$build_version' -X 'fadacontrol/internal/base/version.GitCommit=$(git log --pretty=format:'%h' -1)' -X 'fadacontrol/internal/base/version.Edition=$build_edition' -X 'fadacontrol/internal/base/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)' -s -w -linkmode=external -extldflags '-flto -O2 -Wl,--gc-sections'" -o $build_exe_output
+  CGO_ENABLED=1 CC=$build_exe_cc CXX=$build_exe_cxx GOOS=$build_exe_os GOARCH=$build_exe_arch go build -x -buildmode=pie -trimpath -ldflags "-H=windowsgui -X 'fadacontrol/internal/base/version.AuthorEmail=$build_authors' -X 'fadacontrol/internal/base/version._VersionName=$build_version' -X 'fadacontrol/internal/base/version.GitCommit=$(git log --pretty=format:'%h' -1)' -X 'fadacontrol/internal/base/version.Edition=$build_edition' -X 'fadacontrol/internal/base/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)' -s -w -linkmode=external -extldflags '-static -flto -O2 -Wl,--gc-sections'" -o $build_exe_output
 }
 if [ "$#" -ne 4 ]; then
   echo "Usage: $0 <author_email> <build_version> <build_edition> <build_os>"

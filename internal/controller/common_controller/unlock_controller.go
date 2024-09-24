@@ -42,7 +42,7 @@ func (o *UnlockController) Unlock(c *gin.Context) {
 
 	logger.Info("Username and password information have been received")
 	e := o.u.UnlockPc(reqData.UserName, reqData.Password)
-	if e.NotEqual(exception.ErrSuccess) {
+	if e == nil || !e.Equal(exception.ErrSuccess) {
 		logger.Info(e.Msg)
 		c.Error(e)
 		return

@@ -48,6 +48,9 @@ func GetEdition() string {
 		return "05"
 	case "canary":
 		return "07"
+	case "nightly":
+		return "08"
+
 	default:
 		return "09"
 	}

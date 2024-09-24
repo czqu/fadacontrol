@@ -22,6 +22,7 @@ const (
 	SetFieldBitmap
 	CommandClicked
 	SetCommandClickText
+	SetLargeText
 	END = 0xff
 )
 

@@ -100,6 +100,12 @@ const docTemplateadmin = `{
                         "name": "action",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "The type of shutdown",
+                        "name": "shutdown_type",
+                        "in": "query"
                     }
                 ],
                 "responses": {
