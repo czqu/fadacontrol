@@ -9,6 +9,13 @@ jobs:
   build:
     runs-on: ubuntu-24.04
     steps:
+      - name: get version
+        id: get-version
+        run: |
+          ref="${{ github.ref }}"
+          version=$(echo $ref | sed 's|refs/tags/v||')
+          echo "CURRENT_VER=v$version" >> $GITHUB_ENV
+          echo "CURRENT_VER_NUM=$version" >>  $GITHUB_ENV
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -31,7 +38,7 @@ jobs:
           export LLVM_PATH=$GITHUB_WORKSPACE/llvm-mingw-20240917-ucrt-ubuntu-20.04-x86_64/bin
           export PATH=$LLVM_PATH:$PATH
           cd cmd/core-service
-          sh  build-windows.sh ${{ github.ref }} ${{secrets.ME_MAIL}} release windows
+          sh  build-windows.sh ${{ env.CURRENT_VER_NUM }} ${{secrets.ME_MAIL}} release windows
       - name: Upload release
         uses: softprops/action-gh-release@v2
         with:
