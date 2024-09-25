@@ -25,6 +25,9 @@ type CommonRouter struct {
 func NewCommonRouter(sys *common_controller.SystemController, jwt *middleware.JwtMiddleware, auth *common_controller.AuthController, cu *common_controller.CustomCommandController, u *common_controller.UnlockController, o *common_controller.ControlPCController) *CommonRouter {
 	return &CommonRouter{router: gin.Default(), u: u, o: o, cu: cu, auth: auth, jwt: jwt, sys: sys}
 }
+
+var swagHandler gin.HandlerFunc
+
 func (d *CommonRouter) Register() {
 
 	r := gin.Default()
@@ -35,8 +38,8 @@ func (d *CommonRouter) Register() {
 	r.HandleMethodNotAllowed = true
 	r.Delims("[[[", "]]]")
 	r.NoRoute(d.get404Page)
-	if commonSwagHandler != nil && (version.Edition != "release") {
-		r.GET("/swagger/*any", commonSwagHandler)
+	if swagHandler != nil && (version.Edition != "release") {
+		r.GET("/swagger/*any", swagHandler)
 	}
 	apiv1 := r.Group("/api/v1")
 
@@ -65,4 +68,7 @@ func (d *CommonRouter) get404Page(c *gin.Context) {
 		Code: exception.ErrUserResourceNotFound.Code,
 		Msg:  exception.ErrUserResourceNotFound.Msg,
 	})
+}
+func SetSwagHandler(handler gin.HandlerFunc) {
+	swagHandler = handler
 }

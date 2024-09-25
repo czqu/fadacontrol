@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fadacontrol/internal/base/conf"
-	"fadacontrol/pkg/utils"
 	"fmt"
 	"github.com/spf13/cobra"
 	"os"
@@ -77,12 +76,4 @@ func init() {
 	rootCmd.PersistentFlags().StringVarP(&rootPassword, "root-password", "", "", "reset root password")
 	//err := rootCmd.MarkPersistentFlagRequired("config")
 
-}
-func loadConfFile(filepath string) error {
-	ret := utils.FileCanRead(filepath)
-	if !ret {
-
-	}
-
-	return nil
 }

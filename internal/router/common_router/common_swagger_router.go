@@ -1,8 +1,9 @@
+//go:build swag
+
 package common_router
 
 import (
 	_ "fadacontrol/docs/webapi"
-	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -22,13 +23,12 @@ import (
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header
 // @name Authorization
-var commonSwagHandler gin.HandlerFunc
 
 func init() {
-	commonSwagHandler = ginSwagger.WrapHandler(swaggerFiles.Handler, func(config *ginSwagger.Config) {
+	commonSwagHandler := ginSwagger.WrapHandler(swaggerFiles.Handler, func(config *ginSwagger.Config) {
 		config.InstanceName = "webapi"
 	})
-
+	SetSwagHandler(commonSwagHandler)
 }
 
 // swag init   --parseDependency=false  --instanceName=webapi  --generalInfo=internal/router/common_router/common_swagger_router.go --exclude internal/controller/admin_controller/  --output docs/webapi

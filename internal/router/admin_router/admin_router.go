@@ -27,6 +27,9 @@ type AdminRouter struct {
 func NewAdminRouter(_http *admin_controller.HttpController, sys *common_controller.SystemController, jwt *middleware.JwtMiddleware, rc *admin_controller.RemoteController, u *common_controller.UnlockController, o *common_controller.ControlPCController, di *admin_controller.DiscoverController, auth *common_controller.AuthController) *AdminRouter {
 	return &AdminRouter{router: gin.Default(), u: u, o: o, rc: rc, di: di, auth: auth, jwt: jwt, _sys: sys, _http: _http}
 }
+
+var swagHandler gin.HandlerFunc
+
 func (d *AdminRouter) Register() {
 
 	r := gin.Default()
@@ -37,8 +40,8 @@ func (d *AdminRouter) Register() {
 	r.HandleMethodNotAllowed = true
 	r.Delims("[[[", "]]]")
 	r.NoRoute(d.get404Page)
-	if adminSwagHandler != nil && (version.Edition != "release") {
-		r.GET("/swagger/*any", adminSwagHandler)
+	if swagHandler != nil && (version.Edition != "release") {
+		r.GET("/swagger/*any", swagHandler)
 	}
 	apiv1 := r.Group("/admin/api/v1")
 	{
@@ -80,4 +83,7 @@ func (d *AdminRouter) get404Page(c *gin.Context) {
 		Code: exception.ErrUserResourceNotFound.Code,
 		Msg:  exception.ErrUserResourceNotFound.Msg,
 	})
+}
+func SetSwagHandler(handler gin.HandlerFunc) {
+	swagHandler = handler
 }

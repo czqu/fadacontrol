@@ -1,8 +1,9 @@
+//go:build swag
+
 package admin_router
 
 import (
 	_ "fadacontrol/docs/admin"
-	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
 	ginSwagger "github.com/swaggo/gin-swagger"
 )
@@ -22,13 +23,12 @@ import (
 // @securityDefinitions.apikey ApiKeyAuth
 // @in header
 // @name Authorization
-var adminSwagHandler gin.HandlerFunc
 
 func init() {
-	adminSwagHandler = ginSwagger.WrapHandler(swaggerFiles.Handler, func(config *ginSwagger.Config) {
+	adminSwagHandler := ginSwagger.WrapHandler(swaggerFiles.Handler, func(config *ginSwagger.Config) {
 		config.InstanceName = "admin"
 	})
-
+	SetSwagHandler(adminSwagHandler)
 }
 
 //swag init   -parseDependency=false  --instanceName=admin  --generalInfo=internal/router/admin_router/admin_swagger_router.go  --output docs/admin
