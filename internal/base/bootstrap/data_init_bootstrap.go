@@ -94,6 +94,7 @@ func (d *DataInitBootstrap) initHttpConfig() {
 			Port:        2091,
 			Cer:         strCert,
 			Key:         strKey,
+			EnableHttp3: false,
 		}
 		d._db.Create(&httpsConfig)
 

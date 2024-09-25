@@ -10,4 +10,5 @@ type HttpConfig struct {
 	Port        int    `gorm:"not null;uniqueIndex:idx_http_service_port"`
 	Cer         string `gorm:"not null;default:''"`
 	Key         string `gorm:"not null;default:''"`
+	EnableHttp3 bool   `gorm:"not null;default:false"`
 }

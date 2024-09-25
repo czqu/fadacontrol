@@ -93,3 +93,50 @@ func (s *SystemController) SetPowerSavingMode(c *gin.Context) {
 	c.Error(exception.ErrUserParameterError)
 
 }
+
+// @Summary Get System Logs
+// @Description Stream the system logs in real-time. This endpoint opens a connection to the log buffer and sends log entries as they are generated. The connection remains open until explicitly closed or an error occurs. If the buffer is not available, it returns an error response.
+// @Tags System
+// @Security ApiKeyAuth
+// @Produce text/event-stream
+// @Param module path string true "Specify the module to retrieve logs from (must be 'service')"
+// @Success 200 {string} string "Stream of system logs."
+// @Failure 400 {object} schema.ResponseData "Invalid module specified."
+// @Failure 500 {object} schema.ResponseData "Internal Server Error"
+// @Router /logs/{module} [get]
+func (s *SystemController) GetLog(c *gin.Context) {
+	module := c.Param("module")
+	if module != "service" {
+
+		c.Error(exception.ErrUserParameterError)
+		return
+	}
+	buf := logger.GetBuffer()
+	if buf != nil {
+		c.Writer.Header().Set("Content-Type", "text/event-stream")
+		c.Writer.Header().Set("Cache-Control", "no-cache")
+		c.Writer.Header().Set("Connection", "keep-alive")
+		flush, ok := c.Writer.(http.Flusher)
+		if !ok {
+			c.Error(exception.ErrUnknownException)
+			return
+		}
+		notify := c.Writer.CloseNotify()
+		logChan := make(chan string)
+		id := buf.AddReader(logChan)
+		go func() {
+			<-notify
+			buf.RemoveReader(id)
+		}()
+
+		for {
+			select {
+			case log := <-logChan:
+				c.Writer.Write([]byte(log))
+				flush.Flush()
+			}
+		}
+
+	}
+	c.JSON(http.StatusOK, controller.GetGinError(c, exception.ErrUnknownException))
+}

@@ -40,18 +40,12 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 	r.ble.Start()
 	r.rcb.Start()
 	go r.cp.Connect()
-	//go func() {
-	//	signalCh := make(chan os.Signal, 1)
-	//	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
-	//	logger.Debug("received signal")
-	//	<-signalCh
-	//	r.Stop()
-	//}()
 	r.Wait()
 }
 func (r *DesktopMasterServiceBootstrap) Stop() {
 
 	logger.Debug("stopping root bootstrap")
+	logger.Sync()
 	go func() {
 		r.ble.Stop()
 		r.discover.Stop()

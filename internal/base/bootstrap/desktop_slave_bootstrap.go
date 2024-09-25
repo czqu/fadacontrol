@@ -43,6 +43,7 @@ func (r *DesktopSlaveServiceBootstrap) Wait() {
 	}
 }
 func (r *DesktopSlaveServiceBootstrap) Stop() {
+	logger.Sync()
 
 	logger.Debug("stopping root bootstrap")
 	go func() {

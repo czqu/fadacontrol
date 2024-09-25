@@ -52,6 +52,7 @@ func (d *AdminRouter) Register() {
 		apiv1.GET("/interface/:ip/all", d.o.GetInterfaceByIPAll)
 		apiv1.GET("/interface/", d.o.GetInterface)
 		apiv1.GET("/info", d._sys.GetSoftwareInfo)
+		apiv1.GET("/logs/:module", d._sys.GetLog)
 		apiv1.POST("/power-saving", d._sys.SetPowerSavingMode)
 		//	apiv1.GET("/internal-cmd/", d.internal.GetInternalCommandEvents)
 

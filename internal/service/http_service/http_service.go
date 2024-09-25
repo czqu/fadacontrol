@@ -6,15 +6,17 @@ import (
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
+
 	"fadacontrol/internal/entity"
 	"fadacontrol/internal/router"
 	"fadacontrol/internal/schema/http_schema"
 	"fadacontrol/pkg/secure"
 	"fmt"
 	"github.com/gin-gonic/gin"
-	"net/http"
-
+	"github.com/quic-go/quic-go"
+	"github.com/quic-go/quic-go/http3"
 	"gorm.io/gorm"
+	"net/http"
 )
 
 type HttpService struct {
@@ -105,6 +107,7 @@ func (s *HttpService) UpdateHttpConfig(h interface{}, serviceName string) error 
 		httpsConfig.Port = request.Port
 		httpsConfig.Key = request.Key
 		httpsConfig.Cer = request.Cer
+		httpsConfig.EnableHttp3 = request.EnableHttp3
 
 		err = s._db.Save(&httpsConfig).Error
 		if err != nil {
@@ -148,6 +151,7 @@ func (s *HttpService) PatchHttpConfig(data map[string]interface{}, serviceName s
 }
 
 func (s *HttpService) StartServer(r router.FadaControlRouter, serviceName string) error {
+	enableQuic := false
 
 	if s._conf.Debug {
 		gin.SetMode(gin.DebugMode)
@@ -182,20 +186,22 @@ func (s *HttpService) StartServer(r router.FadaControlRouter, serviceName string
 				logger.Error(err)
 				return err
 			}
+			enableQuic = config.EnableHttp3
 		}
+
 		_router := r.GetRouter()
 		sign := make(chan interface{})
 		s.signalChanMap[config.ServiceName] = sign
-		go startHttpServer(config.Host, config.Port, cert, _router, sign)
+		go startHttpServer(config.Host, config.Port, cert, _router, enableQuic, sign)
 		return nil
 	}
 
 	return nil
 }
 
-func startHttpServer(host string, port int, cert tls.Certificate, router *gin.Engine, sign chan interface{}) {
+func startHttpServer(host string, port int, cert tls.Certificate, router *gin.Engine, enableEnableHttp3 bool, sign chan interface{}) {
 	var srv *http.Server
-
+	var http3Server *http3.Server
 	tlsFlag := false
 	if cert.Certificate == nil || len(cert.Certificate) == 0 || cert.PrivateKey == nil {
 		tlsFlag = false
@@ -208,16 +214,38 @@ func startHttpServer(host string, port int, cert tls.Certificate, router *gin.En
 	} else {
 		tlsFlag = true
 		tlsConfig := &tls.Config{
-			Certificates: []tls.Certificate{cert},
-			MinVersion:   tls.VersionTLS13,
+			Certificates:       []tls.Certificate{cert},
+			MinVersion:         tls.VersionTLS13,
+			InsecureSkipVerify: true,
 		}
+
+		if enableEnableHttp3 {
+			conf.Http3Enabled = true
+			conf.Http3Port = port
+			http3Server = &http3.Server{
+				Addr:       fmt.Sprintf(":%d", port),
+				Handler:    router,
+				TLSConfig:  tlsConfig,
+				QUICConfig: &quic.Config{},
+			}
+			logger.Info("start http3 server at ", port)
+
+			go func() {
+				err := http3Server.ListenAndServe()
+				if err != nil {
+					logger.Error(err)
+				}
+			}()
+
+		}
+
 		srv = &http.Server{
 			Addr:      fmt.Sprintf(":%d", port),
 			Handler:   router,
 			TLSConfig: tlsConfig,
 		}
-
 		logger.Info("start secure server at ", port)
+
 	}
 	go func() {
 		<-sign
@@ -225,9 +253,14 @@ func startHttpServer(host string, port int, cert tls.Certificate, router *gin.En
 			logger.Errorf("server Shutdown: %s", err)
 			close(sign)
 		}
+		err := http3Server.Close()
+		if err != nil {
+			logger.Errorf("http3 server Close Err: %s", err)
+			return
+		}
 	}()
 	var err error
-	if tlsFlag {
+	if tlsFlag || enableEnableHttp3 {
 		err = srv.ListenAndServeTLS("", "")
 
 	} else {

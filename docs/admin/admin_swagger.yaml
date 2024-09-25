@@ -439,6 +439,38 @@ paths:
       summary: User Login
       tags:
       - User
+  /logs/{module}:
+    get:
+      description: Stream the system logs in real-time. This endpoint opens a connection
+        to the log buffer and sends log entries as they are generated. The connection
+        remains open until explicitly closed or an error occurs. If the buffer is
+        not available, it returns an error response.
+      parameters:
+      - description: Specify the module to retrieve logs from (must be 'service')
+        in: path
+        name: module
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: Stream of system logs.
+          schema:
+            type: string
+        "400":
+          description: Invalid module specified.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Get System Logs
+      tags:
+      - System
   /ping:
     get:
       produces:

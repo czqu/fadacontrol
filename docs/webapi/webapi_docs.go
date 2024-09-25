@@ -278,6 +278,52 @@ const docTemplatewebapi = `{
                 }
             }
         },
+        "/logs/{module}": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Stream the system logs in real-time. This endpoint opens a connection to the log buffer and sends log entries as they are generated. The connection remains open until explicitly closed or an error occurs. If the buffer is not available, it returns an error response.",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Get System Logs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Specify the module to retrieve logs from (must be 'service')",
+                        "name": "module",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Stream of system logs.",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid module specified.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
         "/ping": {
             "get": {
                 "produces": [

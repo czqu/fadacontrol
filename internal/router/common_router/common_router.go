@@ -31,6 +31,7 @@ var swagHandler gin.HandlerFunc
 func (d *CommonRouter) Register() {
 
 	r := gin.Default()
+	r.Use(middleware.UserHttp3())
 	r.Use(middleware.Recovery())
 	r.Use(middleware.Cors())
 	r.Use(middleware.ErrorHandler())
