@@ -16,5 +16,4 @@ var IgnoredPaths = []string{
 	"/admin/api/v1/unlock",
 	"/admin/api/v1/login",
 	"/swagger/*",
-	"/admin/*",
 }
