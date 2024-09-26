@@ -10,8 +10,10 @@ import (
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/pkg/secure"
 	"fadacontrol/pkg/sys"
+	"fadacontrol/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"time"
 )
 
 type SystemController struct {
@@ -107,35 +109,26 @@ func (s *SystemController) SetPowerSavingMode(c *gin.Context) {
 func (s *SystemController) GetLog(c *gin.Context) {
 	module := c.Param("module")
 	if module != "service" {
-
 		c.Error(exception.ErrUserParameterError)
 		return
 	}
-	buf := logger.GetBuffer()
-	if buf != nil {
+	log := logger.GetLogger()
+	if log != nil {
 		c.Writer.Header().Set("Content-Type", "text/event-stream")
 		c.Writer.Header().Set("Cache-Control", "no-cache")
 		c.Writer.Header().Set("Connection", "keep-alive")
-		flush, ok := c.Writer.(http.Flusher)
-		if !ok {
-			c.Error(exception.ErrUnknownException)
-			return
-		}
-		notify := c.Writer.CloseNotify()
-		logChan := make(chan string)
-		id := buf.AddReader(logChan)
-		go func() {
-			<-notify
-			buf.RemoveReader(id)
-		}()
 
-		for {
-			select {
-			case log := <-logChan:
-				c.Writer.Write([]byte(log))
-				flush.Flush()
-			}
+		ctx := c.Request.Context()
+
+		w := utils.BufferedWriteSyncer{
+			WS:            utils.AddResponseSyncer(c.Writer),
+			FlushInterval: 500 * time.Millisecond,
 		}
+		id := log.AddReader(&w)
+
+		<-ctx.Done()
+		w.Stop()
+		log.RemoveWriter(id)
 
 	}
 	c.JSON(http.StatusOK, controller.GetGinError(c, exception.ErrUnknownException))

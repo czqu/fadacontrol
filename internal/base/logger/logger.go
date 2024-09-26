@@ -3,9 +3,11 @@ package logger
 import (
 	"errors"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/pkg/utils"
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"io"
 	"os"
 	"path/filepath"
 	"sync"
@@ -48,99 +50,30 @@ func (l Loglevel) zapLevel() zapcore.Level {
 	}
 }
 
-type CircularBuffer struct {
-	buffer        chan string
-	size          int
-	output        map[int]chan string
-	mu            sync.Mutex
-	broadcastOnce sync.Once
-	readTimeout   time.Duration
-}
-
-func NewCircularBuffer(size int) *CircularBuffer {
-	return &CircularBuffer{
-		buffer: make(chan string, size),
-		size:   size,
-		output: make(map[int]chan string, 5),
-	}
-
-}
-
-func (cb *CircularBuffer) Write(p []byte) (n int, err error) {
-	value := string(p)
-
-	select {
-	case cb.buffer <- value:
-	default:
-		<-cb.buffer
-		cb.buffer <- value
-	}
-
-	return len(p), nil
-}
-
-func (cb *CircularBuffer) broadcast() {
-	for val := range cb.buffer {
-		cb.mu.Lock()
-
-		for _, ch := range cb.output {
-			select {
-
-			case ch <- val:
-
-			case <-time.After(cb.readTimeout):
-
-			}
-
-		}
-
-		cb.mu.Unlock()
-	}
-}
-func (cb *CircularBuffer) RemoveReader(id int) {
-
-	cb.mu.Lock()
-	defer cb.mu.Unlock()
-	delete(cb.output, id)
-}
-func (cb *CircularBuffer) AddReader(reader chan string) int {
-	cb.mu.Lock()
-	defer cb.mu.Unlock()
-	id := len(cb.output)
-	cb.output[id] = reader
-	cb.broadcastOnce.Do(func() {
-		go cb.broadcast()
-	})
-
-	//fmt.Println("add reader: ", id)
-	return id
-
-}
-
 type Logger struct {
-	logger       *zap.Logger
-	sugar        *zap.SugaredLogger
-	level        Loglevel
-	r            *conf.Conf
-	logPath      string
-	logLevel     string
-	cyBuffer     *CircularBuffer
-	cyBufferSize int
+	logger          *zap.Logger
+	sugar           *zap.SugaredLogger
+	level           Loglevel
+	r               *conf.Conf
+	logPath         string
+	logLevel        string
+	logOutputSyncer *utils.MultiBufferSyncWriteSyncer
 }
 
 var once sync.Once
 
-func GetBuffer() *CircularBuffer {
-	if logger == nil {
-		return nil
-	}
-	return logger.cyBuffer
-}
 func NewLogger(r *conf.Conf) *Logger {
 	return &Logger{r: r}
 }
-func (l *Logger) GetBufferSize() int {
-	return l.cyBufferSize
+
+func (l *Logger) AddReader(reader io.Writer) int {
+
+	return l.logOutputSyncer.AddSyncerAndFlushBuf(utils.AddSync(reader))
+
+}
+func (l *Logger) RemoveWriter(id int) {
+
+	l.logOutputSyncer.Remove(id)
 }
 func InitLog(c *conf.Conf) {
 	once.Do(func() {
@@ -150,9 +83,7 @@ func InitLog(c *conf.Conf) {
 		l := new(Logger)
 		logger = l
 		l.r = c
-		l.cyBufferSize = 100
-		l.cyBuffer = NewCircularBuffer(l.cyBufferSize)
-		l.cyBuffer.readTimeout = time.Second * 10
+		l.logOutputSyncer = utils.NewMultiBufferSyncWriteSyncer(100)
 		var err error
 		logger.logLevel = l.r.LogLevel
 		logger.logPath, err = filepath.Abs(l.r.GetWorkdir() + "/log/" + l.r.LogName)
@@ -232,7 +163,7 @@ func (l *Logger) Init(logPath string, loglevel Loglevel) error {
 
 	core := zapcore.NewCore(
 		zapcore.NewConsoleEncoder(encoderConfig),
-		zapcore.NewMultiWriteSyncer(bufferedWriteSyncer, zapcore.AddSync(os.Stdout), zapcore.AddSync(l.cyBuffer)),
+		zapcore.NewMultiWriteSyncer(bufferedWriteSyncer, zapcore.AddSync(os.Stdout), zapcore.AddSync(l.logOutputSyncer)),
 		atomicLevel,
 	)
 
