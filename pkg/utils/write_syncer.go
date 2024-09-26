@@ -56,7 +56,9 @@ func (r *responseWriterSyncer) Write(p []byte) (int, error) {
 	if r.w == nil {
 		return 0, nil
 	}
-	return r.w.Write(p)
+	n, err := r.w.Write(p)
+	r.Sync()
+	return n, err
 }
 
 type lockedWriteSyncer struct {

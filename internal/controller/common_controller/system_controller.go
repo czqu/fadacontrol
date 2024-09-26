@@ -13,7 +13,6 @@ import (
 	"fadacontrol/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"time"
 )
 
 type SystemController struct {
@@ -120,14 +119,10 @@ func (s *SystemController) GetLog(c *gin.Context) {
 
 		ctx := c.Request.Context()
 
-		w := utils.BufferedWriteSyncer{
-			WS:            utils.AddResponseSyncer(c.Writer),
-			FlushInterval: 500 * time.Millisecond,
-		}
-		id := log.AddReader(&w)
+		w := utils.AddResponseSyncer(c.Writer)
+		id := log.AddReader(w)
 
 		<-ctx.Done()
-		w.Stop()
 		log.RemoveWriter(id)
 
 	}
