@@ -87,7 +87,7 @@ func (w writerWrapper) Sync() error {
 }
 
 type RingBuffer interface {
-	Read() any
+	ReadAndRemove() any
 	Write(any)
 	ReadAll() []any
 	Full() bool
@@ -105,7 +105,7 @@ func NewLinkedListRingBuffer(size int) *LinkedListRingBuffer {
 	buf := ring.New(size)
 	return &LinkedListRingBuffer{buf: buf, capacity: size, length: 0, readPos: buf, writePos: buf}
 }
-func (l *LinkedListRingBuffer) Read() any {
+func (l *LinkedListRingBuffer) ReadAndRemove() any {
 	if l.length == 0 {
 		return nil
 	}
@@ -117,13 +117,13 @@ func (l *LinkedListRingBuffer) Read() any {
 }
 func (l *LinkedListRingBuffer) ReadAll() []any {
 	ret := make([]any, l.length)
+	lP := l.readPos
 	for i := 0; i < l.length; i++ {
-		val := l.readPos.Value
+		val := lP.Value
 		ret[i] = val
-		l.readPos = l.readPos.Next()
+		lP = lP.Next()
 
 	}
-	l.length = 0
 
 	return ret
 }
@@ -155,7 +155,7 @@ func NewArrayRingBuffer(size int) *ArrayRingBuffer {
 	return &ArrayRingBuffer{buf: make([]any, size), capacity: size}
 }
 
-func (a *ArrayRingBuffer) Read() any {
+func (a *ArrayRingBuffer) ReadAndRemove() any {
 	if a.length == 0 {
 		return nil
 	}
@@ -171,17 +171,18 @@ func (a *ArrayRingBuffer) Read() any {
 
 func (a *ArrayRingBuffer) ReadAll() []any {
 	ret := make([]any, a.length)
+	ar := a.readPos
 	for i := 0; i < a.length; i++ {
-		val := a.buf[a.readPos]
+		val := a.buf[ar]
 		ret[i] = val
-		if a.readPos == a.capacity-1 {
-			a.readPos = 0
+		if ar == a.capacity-1 {
+			ar = 0
 		} else {
-			a.readPos = a.readPos + 1
+			ar = ar + 1
 		}
 
 	}
-	a.length = 0
+
 	return ret
 }
 
