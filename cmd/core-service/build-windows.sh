@@ -12,15 +12,16 @@ build_exe() {
   local build_exe_output=$8
   local build_go_args=$9
   echo "go_args: $build_go_args"
+  echo "build_data: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
   CGO_ENABLED=1 CC=$build_exe_cc CXX=$build_exe_cxx GOOS=$build_exe_os GOARCH=$build_exe_arch go build $build_go_args -buildmode=pie -trimpath -ldflags "-H=windowsgui -X 'fadacontrol/internal/base/version.AuthorEmail=$build_authors' -X 'fadacontrol/internal/base/version._VersionName=$build_version' -X 'fadacontrol/internal/base/version.GitCommit=$(git log --pretty=format:'%h' -1)' -X 'fadacontrol/internal/base/version.Edition=$build_edition' -X 'fadacontrol/internal/base/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)' -s -w -linkmode=external -extldflags '-static -flto -O2 -Wl,--gc-sections'" -o $build_exe_output
 }
 if [ "$#" -ne 3 ]; then
-  echo "Usage: $0 <author_email> <build_version>  <build_os>"
+  echo "Usage: $0 <build_version> <author_email>  <build_os>"
   exit 1
 fi
-author_email=$1
-build_version=$2
+build_version=$1
+author_email=$2
 build_os=$3
 last_digit=${build_version: -1}
 build_edition="nightly"
