@@ -8,7 +8,6 @@ import (
 	"fadacontrol/internal/service/user_service"
 	"github.com/gin-gonic/gin"
 	"net/http"
-	"time"
 )
 
 type AuthController struct {
@@ -50,5 +49,5 @@ func (u *AuthController) Login(c *gin.Context) {
 		c.Error(exception.ErrSystemGenTokenErr)
 		return
 	}
-	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c, schema.TokenResponse{Token: token, TimeStamp: time.Now().UnixNano() / int64(time.Millisecond)}))
+	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c, schema.TokenResponse{Token: token}))
 }
