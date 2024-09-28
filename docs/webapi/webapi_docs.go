@@ -358,9 +358,9 @@ const docTemplatewebapi = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "default": "true",
-                        "description": "Enable power saving mode (true or false)",
-                        "name": "enable",
+                        "default": "auto",
+                        "description": "Enable power saving mode (enable or disable or auto)",
+                        "name": "mode",
                         "in": "query"
                     }
                 ],

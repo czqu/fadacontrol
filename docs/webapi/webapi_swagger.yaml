@@ -254,10 +254,10 @@ paths:
         If the database write succeeds, it sets the power saving mode. A failure in
         setting the mode does not affect the database value.
       parameters:
-      - default: "true"
-        description: Enable power saving mode (true or false)
+      - default: auto
+        description: Enable power saving mode (enable or disable or auto)
         in: query
-        name: enable
+        name: mode
         type: string
       produces:
       - application/json

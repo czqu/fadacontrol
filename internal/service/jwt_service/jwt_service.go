@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-const ExpirationTime = 24 * time.Hour
+const ExpirationTime = 7 * 24 * time.Hour
 const JwtSecretKey = "test"
 
 type JwtService struct {

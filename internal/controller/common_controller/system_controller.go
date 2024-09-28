@@ -66,15 +66,15 @@ func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param enable query string false "Enable power saving mode (true or false)" default(true)
+// @Param mode query string false "Enable power saving mode (enable or disable or auto)" default(auto)
 // @Success 200 {object} schema.ResponseData "Power saving mode set successfully."
 // @Failure 400 {object} schema.ResponseData "Invalid request parameters."
 // @Failure 500 {object} schema.ResponseData "Internal Server Error"
 // @Router /power-saving [post]
 func (s *SystemController) SetPowerSavingMode(c *gin.Context) {
 
-	enable := c.DefaultQuery("enable", "true")
-	if enable == "true" {
+	enable := c.DefaultQuery("mode", "auto")
+	if enable == "enable" || enable == "auto" {
 		err := s._co.SetPowerSavingMode(true)
 		if err != nil {
 			c.Error(err)
@@ -82,7 +82,7 @@ func (s *SystemController) SetPowerSavingMode(c *gin.Context) {
 		}
 		c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 		return
-	} else if enable == "false" {
+	} else if enable == "disable" {
 		err := s._co.SetPowerSavingMode(false)
 		if err != nil {
 			c.Error(err)
