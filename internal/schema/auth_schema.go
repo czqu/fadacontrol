@@ -1,7 +1,8 @@
 package schema
 
 type TokenResponse struct {
-	Token string `json:"token"`
+	TimeStamp int64  `json:"timestamp"`
+	Token     string `json:"token"`
 }
 type LoginRequest struct {
 	Username string `json:"username" binding:"required"`
