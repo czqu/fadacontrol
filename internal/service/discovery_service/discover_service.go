@@ -129,7 +129,7 @@ func (d *DiscoverService) udpBroadcast() {
 	}
 	for _, iface := range interfaces {
 		for _, ipnet := range iface.IPAddresses {
-			d.sendUdp(ipnet)
+			go d.sendUdp(ipnet)
 		}
 	}
 

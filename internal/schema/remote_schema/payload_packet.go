@@ -24,24 +24,27 @@ const (
 )
 
 type PayloadPacket struct {
+	Reserve             uint8
 	RequestIdLen        uint8
 	RequestId           []byte
-	EncryptionAlgorithm secure.EncryptionAlgorithmEnum // 1字节 加密算法长度组合 0x00为不加密 0xff 保留
-	DataType            PacketType                     //数据包类型:
-	Data                []byte                         // 数据部分
+	EncryptionAlgorithm secure.EncryptionAlgorithmEnum // 1 byte encryption algorithm length combination 0x00 reserved for unencrypted 0xff
+	DataType            PacketType                     // packet Type
+	Data                []byte                         // data section
 }
 
 // Pack converts a PayloadPacket struct into a byte slice.
 func (p *PayloadPacket) Pack() ([]byte, error) {
 	var buf bytes.Buffer
-
+	buf.WriteByte(p.Reserve)
 	// Write RequestIdLen
 	if err := binary.Write(&buf, binary.BigEndian, p.RequestIdLen); err != nil {
 		return nil, err
 	}
-	// Write RequestId
-	if _, err := buf.Write(p.RequestId); err != nil {
-		return nil, err
+	if p.RequestIdLen > 0 {
+		// Write RequestId
+		if _, err := buf.Write(p.RequestId); err != nil {
+			return nil, err
+		}
 	}
 	// Write EncryptionAlgorithm
 	if err := binary.Write(&buf, binary.BigEndian, p.EncryptionAlgorithm); err != nil {
@@ -65,16 +68,25 @@ func (p *PayloadPacket) Pack() ([]byte, error) {
 func (p *PayloadPacket) Unpack(data []byte) error {
 	buf := bytes.NewReader(data)
 
+	b, err := buf.ReadByte()
+	if err != nil {
+		return err
+	}
+	p.Reserve = b
 	// Read RequestIdLen
 	if err := binary.Read(buf, binary.BigEndian, &p.RequestIdLen); err != nil {
 		return err
 	}
-	// Read RequestId
-	requestId := make([]byte, p.RequestIdLen)
-	if _, err := buf.Read(requestId); err != nil {
-		return err
+	p.RequestId = nil
+	if p.RequestIdLen > 0 {
+		// Read RequestId
+		requestId := make([]byte, p.RequestIdLen)
+		if _, err := buf.Read(requestId); err != nil {
+			return err
+		}
+		p.RequestId = requestId
 	}
-	p.RequestId = requestId
+
 	// Read EncryptionAlgorithm
 	if err := binary.Read(buf, binary.BigEndian, &p.EncryptionAlgorithm); err != nil {
 		return err

@@ -11,6 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"regexp"
+	"strings"
 )
 
 type JwtMiddleware struct {
@@ -30,6 +31,15 @@ func (j *JwtMiddleware) JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 		tokenString := c.GetHeader("Authorization")
+		if tokenString == "" || !strings.HasPrefix(tokenString, "Bearer ") {
+			if j.auth.CheckHttpPermission("", c.Request.URL.Path, j.RequestMethodToAuthAction(c.Request.Method)) {
+				c.Next()
+				return
+			}
+			c.JSON(http.StatusUnauthorized, controller.GetGinError(c, exception.ErrUserUnauthorizedAccess))
+			c.Abort()
+			return
+		}
 		if tokenString == "" {
 			if j.auth.CheckHttpPermission("", c.Request.URL.Path, j.RequestMethodToAuthAction(c.Request.Method)) {
 				c.Next()
@@ -40,7 +50,7 @@ func (j *JwtMiddleware) JWTAuthMiddleware() gin.HandlerFunc {
 			return
 		}
 
-		claims, err := j.jw.ValidateToken(tokenString)
+		claims, err := j.jw.ValidateToken(strings.TrimPrefix(tokenString, "Bearer "))
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, controller.GetGinError(c, exception.ErrUserUnauthorizedAccess))
 			c.Abort()

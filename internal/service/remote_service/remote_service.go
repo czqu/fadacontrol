@@ -153,7 +153,7 @@ func (r *RemoteService) PushTextRet(client RMTT.Client, ret *exception.Exception
 	}
 
 	payload := buffer.Bytes()
-	packet := &remote_schema.PayloadPacket{EncryptionAlgorithm: secure.None, DataType: remote_schema.Text,
+	packet := &remote_schema.PayloadPacket{EncryptionAlgorithm: secure.NoEncryption, DataType: remote_schema.Text,
 		Data: payload, RequestIdLen: requestIdLen, RequestId: requestId}
 	if client != nil {
 
@@ -182,7 +182,7 @@ func (r *RemoteService) PushProtoRet(client RMTT.Client, encryptFlag bool, ex *e
 		return
 	}
 	if !encryptFlag {
-		packet := &remote_schema.PayloadPacket{EncryptionAlgorithm: secure.None, DataType: remote_schema.ProtoBuf, Data: data}
+		packet := &remote_schema.PayloadPacket{EncryptionAlgorithm: secure.NoEncryption, DataType: remote_schema.ProtoBuf, Data: data}
 		ret, err := packet.Pack()
 		if err != nil {
 			logger.Error(err)

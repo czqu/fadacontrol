@@ -10,7 +10,7 @@ const MaxKeyLength = 32
 type EncryptionAlgorithmEnum uint8
 
 const (
-	None                      EncryptionAlgorithmEnum = iota
+	NoEncryption              EncryptionAlgorithmEnum = iota
 	AESGCM128Algorithm                                // The AES-128GCM key is 16 bytes long
 	AESGCM192Algorithm                                // The AES-192GCM key is 24 bytes long
 	AESGCM256Algorithm                                // The AES-256GCM key is 32 bytes long
@@ -19,7 +19,7 @@ const (
 )
 
 var AlgorithmKeyLengths = map[EncryptionAlgorithmEnum]int{
-	None: 0,
+	NoEncryption: 0,
 
 	AESGCM128Algorithm:        16, // 128-bit AES-GCM key length
 	AESGCM192Algorithm:        24, // 192-bit AES-GCM key length
@@ -43,7 +43,7 @@ func DecryptData(algo EncryptionAlgorithmEnum, encryptedData []byte, key []byte)
 	case AESGCM128Algorithm, AESGCM192Algorithm, AESGCM256Algorithm:
 
 		return DecryptAESGCM(key, encryptedData)
-	case None:
+	case NoEncryption:
 		return encryptedData, nil
 	case ChaCha20Poly1305Algorithm:
 		return DecryptChaCha20Poly1305(key, encryptedData)
@@ -61,7 +61,7 @@ func EncryptData(algo EncryptionAlgorithmEnum, data []byte, key []byte) ([]byte,
 	case AESGCM128Algorithm, AESGCM192Algorithm, AESGCM256Algorithm:
 
 		return EncryptAESGCM(key, data)
-	case None:
+	case NoEncryption:
 		return data, nil
 	case ChaCha20Poly1305Algorithm:
 		return EncryptChaCha20Poly1305(key, data)
