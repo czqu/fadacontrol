@@ -37,8 +37,7 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	if err != nil {
 		return nil, err
 	}
-	chanGroup := conf.NewChanGroup()
-	controlPCService := control_pc.NewControlPCService(gormDB, chanGroup)
+	controlPCService := control_pc.NewControlPCService(gormDB)
 	adapter, err := data.NewAdapterByDB(gormDB)
 	if err != nil {
 		return nil, err
@@ -52,7 +51,7 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	unLockService := unlock.NewUnLockService(credentialProviderService)
 	remoteService := remote_service.NewRemoteService(controlPCService, unLockService, _conf, gormDB)
 	remoteConnectBootstrap := bootstrap.NewRemoteConnectBootstrap(_conf, gormDB, remoteService)
-	internalMasterService := internal_service.NewInternalMasterService(chanGroup)
+	internalMasterService := internal_service.NewInternalMasterService(controlPCService)
 	dataData := data.NewData(gormDB)
 	bleUnlockBootstrap := bootstrap.NewBleUnlockBootstrap(unLockService)
 	discoverService := discovery_service.NewDiscoverService(gormDB)
@@ -87,8 +86,7 @@ func initDesktopDaemonApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*Des
 	if err != nil {
 		return nil, err
 	}
-	chanGroup := conf.NewChanGroup()
-	controlPCService := control_pc.NewControlPCService(gormDB, chanGroup)
+	controlPCService := control_pc.NewControlPCService(gormDB)
 	adapter, err := data.NewAdapterByDB(gormDB)
 	if err != nil {
 		return nil, err
@@ -99,7 +97,7 @@ func initDesktopDaemonApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*Des
 	}
 	dataInitBootstrap := bootstrap.NewDataInitBootstrap(adapter, enforcer, gormDB)
 	customCommandService := custom_command_service.NewCustomCommandService(_conf)
-	internalSlaveService := internal_service.NewInternalSlaveService(customCommandService, controlPCService, chanGroup, _conf)
+	internalSlaveService := internal_service.NewInternalSlaveService(customCommandService, controlPCService, _conf)
 	desktopSlaveServiceBootstrap := bootstrap.NewDesktopSlaveServiceBootstrap(controlPCService, dataInitBootstrap, _conf, loggerLogger, internalSlaveService)
 	desktopSlaveServiceApp := NewDesktopSlaveServiceApp(loggerLogger, _conf, db, desktopSlaveServiceBootstrap)
 	return desktopSlaveServiceApp, nil

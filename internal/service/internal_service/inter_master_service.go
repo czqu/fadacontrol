@@ -2,24 +2,28 @@ package internal_service
 
 import (
 	"encoding/json"
-	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/schema"
+	"fadacontrol/internal/service/control_pc"
 	"net"
 	"strconv"
+	"sync"
 	"time"
 )
 
 type InternalMasterService struct {
-	_done      chan bool
-	_chanGroup *conf.ChanGroup
+	_done       chan bool
+	_activeConn map[string]net.Conn
+	cp          *control_pc.ControlPCService
+	_lock       sync.Mutex
 }
 
-func NewInternalMasterService(_chanGroup *conf.ChanGroup) *InternalMasterService {
-	return &InternalMasterService{_chanGroup: _chanGroup, _done: make(chan bool)}
+func NewInternalMasterService(cp *control_pc.ControlPCService) *InternalMasterService {
+	return &InternalMasterService{_done: make(chan bool), cp: cp, _activeConn: make(map[string]net.Conn)}
 
 }
 func (s *InternalMasterService) Start() error {
+	s.cp.SetCommandSender(s.SendCommand)
 	go s.StartServer()
 	return nil
 
@@ -76,7 +80,18 @@ func (s *InternalMasterService) StopServer() error {
 	return nil
 }
 func (s *InternalMasterService) Handler(conn net.Conn) {
-	defer conn.Close()
+	s._lock.Lock()
+	s._activeConn[conn.RemoteAddr().String()] = conn
+	s._lock.Unlock()
+
+	defer func() {
+		s._lock.Lock()
+		delete(s._activeConn, conn.RemoteAddr().String())
+		s._lock.Unlock()
+		conn.Close()
+
+	}()
+
 	tcpConn := conn.(*net.TCPConn)
 	err := tcpConn.SetKeepAlive(true)
 	if err != nil {
@@ -98,25 +113,13 @@ func (s *InternalMasterService) Handler(conn net.Conn) {
 	}
 	conn.Write(data)
 
-	keepAlive := 30 * time.Second
+	keepAlive := 60 * time.Second
 
 	for {
 		select {
 		case <-s._done:
 			return
-		case msg := <-s._chanGroup.InternalCommandSend:
-			packet := &schema.InternalDataPacket{DataLength: uint16(len(msg)), Data: msg, DataType: schema.JsonData}
-			logger.Debug("receive command    ")
-			data, err := packet.Pack()
-			if err != nil {
-				logger.Error(err)
-				break
-			}
-			_, err = conn.Write(data)
-			if err != nil {
-				logger.Debug(err)
-				return
-			}
+
 		case <-time.After(keepAlive):
 			cmd := schema.InternalCommand{CommandType: schema.KeepLive, Data: nil}
 			logger.Debug("send keep live to server")
@@ -134,4 +137,32 @@ func (s *InternalMasterService) Handler(conn net.Conn) {
 			}
 		}
 	}
+}
+func (s *InternalMasterService) SendCommand(cmd *schema.InternalCommand) error {
+	logger.Debug("receive command    ")
+	msg, err := json.Marshal(cmd)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+	packet := &schema.InternalDataPacket{DataLength: uint16(len(msg)), Data: msg, DataType: schema.JsonData}
+
+	data, err := packet.Pack()
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+
+	s._lock.Lock()
+
+	for _, conn := range s._activeConn {
+		_, err = conn.Write(data)
+		if err != nil {
+			logger.Debug(err)
+			return err
+		}
+	}
+	s._lock.Unlock()
+	logger.Debug("send command")
+	return nil
 }

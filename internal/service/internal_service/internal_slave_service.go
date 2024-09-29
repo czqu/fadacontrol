@@ -3,6 +3,7 @@ package internal_service
 import (
 	"encoding/json"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/schema"
 	"fadacontrol/internal/schema/custom_command_schema"
@@ -22,7 +23,7 @@ type InternalSlaveService struct {
 	co   *control_pc.ControlPCService
 }
 
-func NewInternalSlaveService(cu *custom_command_service.CustomCommandService, co *control_pc.ControlPCService, _chanGroup *conf.ChanGroup, conf *conf.Conf) *InternalSlaveService {
+func NewInternalSlaveService(cu *custom_command_service.CustomCommandService, co *control_pc.ControlPCService, conf *conf.Conf) *InternalSlaveService {
 	return &InternalSlaveService{cu: cu, co: co, conf: conf, _done: make(chan bool)}
 }
 func (s *InternalSlaveService) Start() {
@@ -85,6 +86,7 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 			}
 			logger.Debug("recv a packet from server")
 			if packet.DataType == schema.JsonData {
+				logger.Debug("JsonData")
 				err := s.JsonDataHandler(conn, packet)
 				if err != nil {
 					logger.Warnf("JsonDataHandler err: %v", err)
@@ -117,7 +119,13 @@ func (s *InternalSlaveService) JsonDataHandler(conn net.Conn, packet *schema.Int
 	if cmd.CommandType == schema.LockPC {
 		logger.Debug("Lock PC")
 		err := s.co.LockWindows(false)
-		return err
+
+		if !err.Equal(exception.ErrSuccess) {
+			logger.Warnf("LockWindows err: %v", err)
+			return err
+		}
+		return nil
+
 	}
 	if cmd.CommandType == schema.Hello {
 		logger.Debug("Hello from server")

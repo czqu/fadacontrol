@@ -129,7 +129,7 @@ func (d *DiscoverService) udpBroadcast() {
 	}
 	for _, iface := range interfaces {
 		for _, ipnet := range iface.IPAddresses {
-			go d.sendUdp(ipnet)
+			d.sendUdp(ipnet)
 		}
 	}
 
@@ -149,7 +149,6 @@ func (d *DiscoverService) sendUdp(ip net.IP) {
 	var lddr *net.UDPAddr
 
 	if !ip.Equal(net.IPv4bcast) {
-		logger.Debug("use set addr")
 		subnet := ip.DefaultMask()
 		broadcastIP = make(net.IP, len(ip))
 		for i := range broadcastIP {
@@ -160,13 +159,8 @@ func (d *DiscoverService) sendUdp(ip net.IP) {
 			Port: 0,
 		}
 	} else {
-		logger.Debug("use broadcast addr")
 		broadcastIP = ip
 		lddr = nil
-	}
-
-	if lddr != nil {
-		logger.Debugf(lddr.String())
 	}
 
 	conn, err := net.DialUDP("udp", lddr, &net.UDPAddr{
@@ -181,16 +175,6 @@ func (d *DiscoverService) sendUdp(ip net.IP) {
 		if lddr != nil {
 			logger.Debugf(lddr.String())
 		}
-
-		conn, err = net.DialUDP("udp", nil, &net.UDPAddr{
-			IP:   broadcastIP,
-			Port: port,
-		})
-
-		if err != nil {
-			logger.Debug(err)
-		}
-		logger.Debug("use default addr")
 
 		return
 	}

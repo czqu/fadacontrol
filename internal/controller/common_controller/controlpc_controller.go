@@ -45,7 +45,7 @@ func (o *ControlPCController) ControlPC(c *gin.Context) {
 	if err != nil {
 		delaySec = 5
 	}
-	var ret *exception.Exception
+	var ret error
 	switch action {
 	case "shutdown":
 

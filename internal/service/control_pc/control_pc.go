@@ -1,23 +1,22 @@
 package control_pc
 
 import (
-	"encoding/json"
-	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/exception"
+	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/entity"
 	"fadacontrol/internal/schema"
 	"fadacontrol/pkg/sys"
 	"gorm.io/gorm"
-	"time"
 )
 
 type ControlPCService struct {
-	_db          *gorm.DB
-	commandGroup *conf.ChanGroup
+	_db *gorm.DB
+
+	_cmdSender func(cmd *schema.InternalCommand) error
 }
 
-func NewControlPCService(_db *gorm.DB, commandGroup *conf.ChanGroup) *ControlPCService {
-	return &ControlPCService{_db: _db, commandGroup: commandGroup}
+func NewControlPCService(_db *gorm.DB) *ControlPCService {
+	return &ControlPCService{_db: _db}
 
 }
 
@@ -28,24 +27,28 @@ func (control *ControlPCService) Standby() *exception.Exception {
 func (control *ControlPCService) Shutdown(tpe sys.ShutdownType) *exception.Exception {
 	return sys.Shutdown(tpe)
 }
+func (control *ControlPCService) SetCommandSender(f func(cmd *schema.InternalCommand) error) {
+	control._cmdSender = f
+
+}
 func (control *ControlPCService) LockWindows(useAgent bool) *exception.Exception {
 
+	logger.Debug("lock windows")
 	if !useAgent {
 		return sys.LockWindows()
 	}
-	cmd := &schema.InternalCommand{CommandType: schema.LockPC, Data: nil}
-	cmdStr, err := json.Marshal(cmd)
-	if err != nil {
+	if control._cmdSender == nil {
 		return exception.ErrSystemUnknownException
 	}
-	select {
-	case control.commandGroup.InternalCommandSend <- cmdStr:
-		break
-	case <-time.After(time.Second * 2):
-		break
-	}
-	//todo always return success
 
+	cmd := &schema.InternalCommand{CommandType: schema.LockPC, Data: nil}
+	err := control._cmdSender(cmd)
+	if err != nil {
+		logger.Warn("lock windows marshal failed")
+		return exception.ErrSystemUnknownException
+	}
+
+	logger.Debug("lock windows succ")
 	return exception.ErrSuccess
 
 }

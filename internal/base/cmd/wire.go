@@ -31,7 +31,7 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	wire.Build(NewDesktopServiceApp, bootstrap.NewBleUnlockBootstrap, bootstrap.NewHttpBootstrap, bootstrap.NewDiscoverBootstrap,
 		bootstrap.NewLegacyBootstrap, logger.NewLogger, unlock.NewUnLockService, data.NewDB, common_router.NewCommonRouter, admin_router.NewAdminRouter, bootstrap.NewDesktopMasterServiceBootstrap,
 		control_pc.NewLegacyControlService, control_pc.NewControlPCService, data.NewData, common_controller.NewControlPCController, common_controller.NewUnlockController,
-		conf.NewChanGroup, common_controller.NewCustomCommandController, internal_service.NewInternalMasterService,
+		common_controller.NewCustomCommandController, internal_service.NewInternalMasterService,
 		custom_command_service.NewCustomCommandService, remote_service.NewRemoteService,
 		admin_controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, admin_controller.NewDiscoverController, credential_provider_service.NewCredentialProviderService,
 		bootstrap.NewDataInitBootstrap, data.NewAdapterByDB, data.NewEnforcer, common_controller.NewAuthController,
@@ -43,7 +43,7 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 func initDesktopDaemonApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopSlaveServiceApp, error) {
 	wire.Build(NewDesktopSlaveServiceApp, bootstrap.NewDesktopSlaveServiceBootstrap, internal_service.NewInternalSlaveService,
 		custom_command_service.NewCustomCommandService, logger.NewLogger, bootstrap.NewDataInitBootstrap, data.NewDB, control_pc.NewControlPCService,
-		data.NewAdapterByDB, data.NewEnforcer, conf.NewChanGroup)
+		data.NewAdapterByDB, data.NewEnforcer)
 
 	return &DesktopSlaveServiceApp{}, nil
 }

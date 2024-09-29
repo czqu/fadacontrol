@@ -148,10 +148,7 @@ func (l *Logger) Init(logPath string, loglevel Loglevel) error {
 		MaxAge:     30,
 		Compress:   false,
 	}
-	flushInterval := 2 * time.Second
-	if logger.r.Debug == true {
-		flushInterval = 1 * time.Second
-	}
+	flushInterval := 1 * time.Second
 	bufferedWriteSyncer := zapcore.AddSync(&zapcore.BufferedWriteSyncer{
 		WS:            zapcore.AddSync(&logHook),
 		Size:          256 * 1024, // 256 KB buffer size
