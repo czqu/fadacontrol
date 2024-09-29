@@ -148,7 +148,7 @@ func (l *Logger) Init(logPath string, loglevel Loglevel) error {
 		MaxAge:     30,
 		Compress:   false,
 	}
-	flushInterval := 30 * time.Second
+	flushInterval := 2 * time.Second
 	if logger.r.Debug == true {
 		flushInterval = 1 * time.Second
 	}
@@ -199,6 +199,7 @@ func (l *Logger) Info(args ...interface{}) {
 func (l *Logger) Error(args ...interface{}) {
 
 	l.sugar.Error(args)
+	l.logger.Sync()
 }
 
 var loglevel Loglevel = InfoLevel
@@ -237,6 +238,7 @@ func (l *Logger) Infof(format string, v ...interface{}) {
 func (l *Logger) Errorf(format string, v ...interface{}) {
 
 	l.sugar.Errorf(format, v...)
+	l.logger.Sync()
 }
 
 func (l *Logger) Warnf(format string, v ...interface{}) {
@@ -278,6 +280,7 @@ func Error(args ...interface{}) {
 		return
 	}
 	logger.Error(args...)
+	logger.Sync()
 }
 
 func Infof(format string, v ...interface{}) {
@@ -307,6 +310,7 @@ func Errorf(format string, v ...interface{}) {
 		return
 	}
 	logger.Errorf(format, v...)
+	logger.Sync()
 
 }
 

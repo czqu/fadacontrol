@@ -41,6 +41,7 @@ const (
 )
 
 func (s *InternalSlaveService) connectToServer(addr string) {
+	logger.Info("connect to server")
 	backoff := initialBackoff
 
 	for {
@@ -53,7 +54,7 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 			break
 		}
 		if err != nil || conn == nil {
-			logger.Debugf("Error connecting to server: %v\n", err)
+			logger.Infof("Error connecting to server: %v\n", err)
 
 			// Wait for the backoff time and try again
 			time.Sleep(backoff)

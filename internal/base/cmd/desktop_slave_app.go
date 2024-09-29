@@ -47,7 +47,7 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 	c.Debug = false
 	c.StartMode = mode
 	c.SetWorkdir(workDir)
-	logger.InitLog(c)
+
 	err := c.ReadConfigFromYml(workDir + "/config.yml")
 	if err != nil {
 		err = c.ReadConfigFromYml("config.yml")
@@ -57,6 +57,11 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 		}
 
 	}
+	c.Debug = c.Debug || debug
+	if c.Debug {
+		c.LogLevel = "debug"
+	}
+	logger.InitLog(c)
 	dbFile := workDir + "/data/config.db"
 	dbFile, err = filepath.Abs(dbFile)
 	if err != nil {
@@ -84,10 +89,6 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 
 	connection := "file:" + dbFile + "?cache=shared&mode=rwc&_journal_mode=WAL"
 
-	c.Debug = c.Debug || debug
-	if c.Debug {
-		c.LogLevel = "debug"
-	}
 	app, _ := initDesktopServiceApplication(c, &conf.DatabaseConf{Driver: "sqlite", Connection: connection, MaxIdleConnection: 10, MaxOpenConnection: 100, Debug: c.Debug})
 	appDesktopService = app
 	app.Start()

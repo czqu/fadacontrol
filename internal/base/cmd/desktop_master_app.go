@@ -45,7 +45,7 @@ func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
 	c.Debug = false
 	c.StartMode = mode
 	c.SetWorkdir(workDir)
-	logger.InitLog(c)
+
 	err := c.ReadConfigFromYml(workDir + "/config.yml")
 	if err != nil {
 		err = c.ReadConfigFromYml("config.yml")
@@ -55,6 +55,11 @@ func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
 		}
 
 	}
+	c.Debug = c.Debug || debug
+	if c.Debug {
+		c.LogLevel = "debug"
+	}
+	logger.InitLog(c)
 	dbFile := workDir + "/data/config.db"
 	dbFile, err = filepath.Abs(dbFile)
 	if err != nil {
