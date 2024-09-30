@@ -120,6 +120,10 @@ var (
 		Msg:  "Unlock not in lock screen state",
 	}
 
+	ErrUserTooManyRequests = &Exception{
+		Code: 11205,
+		Msg:  "Too many requests",
+	}
 	//2xx
 
 	ErrSystemInsufficientMemory = &Exception{

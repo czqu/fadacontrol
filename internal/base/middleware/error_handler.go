@@ -41,6 +41,8 @@ func ErrorHandler() gin.HandlerFunc {
 				status = http.StatusBadRequest
 			} else if code == exception.ErrSuccess.Code {
 				status = http.StatusOK
+			} else if code == exception.ErrUserTooManyRequests.Code {
+				status = http.StatusTooManyRequests
 			} else {
 
 			}

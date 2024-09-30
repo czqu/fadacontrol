@@ -42,3 +42,6 @@ func (e *Exception) GetCode() int {
 func (e *Exception) ToString() string {
 	return fmt.Sprintf("%d: %s", e.GetCode(), e.GetMsg())
 }
+func (e *Exception) SetMsg(msg string) *Exception {
+	return &Exception{Code: e.Code, Msg: msg}
+}
