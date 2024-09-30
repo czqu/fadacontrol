@@ -271,7 +271,7 @@ func startHttpServer(host string, port int, cert tls.Certificate, router *gin.En
 	}
 
 	if err != nil {
-		logger.Errorf("server errors: %s", err)
+		logger.Warn("server errors: %s", err)
 	}
 
 }
