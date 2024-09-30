@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"fadacontrol/internal/base/conf"
-	"fmt"
+	"fadacontrol/internal/base/logger"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -47,7 +47,7 @@ var rootCmd = &cobra.Command{
 			return
 		}
 		if slaveMode {
-			fmt.Println("slave mode")
+			logger.Info("slave service start")
 			DesktopSlaveAppMain(debugMode, conf.SlaveMode, workDir)
 			return
 		}
@@ -60,7 +60,7 @@ var rootCmd = &cobra.Command{
 
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
-		fmt.Println("error:", err)
+		logger.Error(err)
 		os.Exit(1)
 	}
 }

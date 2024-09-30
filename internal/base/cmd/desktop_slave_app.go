@@ -5,7 +5,6 @@ import (
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/pkg/utils"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -52,8 +51,7 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 	if err != nil {
 		err = c.ReadConfigFromYml("config.yml")
 		if err != nil {
-			fmt.Println(err)
-
+			logger.Info("no config file found,use default config")
 		}
 
 	}
@@ -65,24 +63,24 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 	dbFile := workDir + "/data/config.db"
 	dbFile, err = filepath.Abs(dbFile)
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorf("get db file err %v", err)
 		return
 	}
 	dbFile, err = filepath.Abs(dbFile)
 	if err != nil {
-		fmt.Println(err)
+		logger.Errorf("get db file err %v", err)
 		return
 	}
 
 	if !utils.FileExists(dbFile) {
 		if err := os.MkdirAll(filepath.Dir(dbFile), os.ModePerm); err != nil {
-			fmt.Println(err)
+			logger.Errorf("create db file err %v", err)
 			return
 		}
 
 		_, err = os.Create(dbFile)
 		if err != nil {
-			fmt.Println(err)
+			logger.Errorf("create db file err %v", err)
 			return
 		}
 	}

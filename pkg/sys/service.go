@@ -1,7 +1,9 @@
 package sys
 
+import "fadacontrol/internal/base/constants"
+
 const (
-	ServiceName = "FadaControlService"
+	ServiceName = constants.ServiceName
 	Description = "FadaControl Service"
 )
 

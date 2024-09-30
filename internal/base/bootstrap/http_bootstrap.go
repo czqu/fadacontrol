@@ -5,6 +5,7 @@ import (
 	"fadacontrol/internal/router/admin_router"
 	"fadacontrol/internal/router/common_router"
 	"fadacontrol/internal/service/http_service"
+	"fadacontrol/pkg/goroutine"
 )
 
 type HttpBootstrap struct {
@@ -20,9 +21,16 @@ func NewHttpBootstrap(_conf *conf.Conf, _http *http_service.HttpService, _common
 
 func (s *HttpBootstrap) Start() error {
 
-	go s._http.StartServer(s._common, HttpServiceApi)
-	go s._http.StartServer(s._common, HttpsServiceApi)
-	go s._http.StartServer(s._adr, HttpServiceAdmin)
+	goroutine.RecoverGO(func() {
+		s._http.StartServer(s._common, HttpServiceApi)
+	})
+	goroutine.RecoverGO(func() {
+		s._http.StartServer(s._common, HttpsServiceApi)
+	})
+	goroutine.RecoverGO(func() {
+		s._http.StartServer(s._adr, HttpServiceAdmin)
+	})
+
 	return nil
 
 }

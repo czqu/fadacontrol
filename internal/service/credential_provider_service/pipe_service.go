@@ -6,6 +6,7 @@ import (
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/entity"
+	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/sys"
 	"github.com/skip2/go-qrcode"
 	"golang.org/x/image/bmp"
@@ -70,12 +71,13 @@ func (p *CredentialProviderService) SetQrCode(contents string, size, borderSize 
 	return nil
 }
 func (p *CredentialProviderService) Connect() {
-	go func() {
+
+	goroutine.RecoverGO(func() {
 		err := sys.ListenNamedPipeWithHandler(DataPipeName, p.PipeHandler, pipeCacheSize, pipeCacheSize)
 		if err != nil {
 			logger.Error(err.Error())
 		}
-	}()
+	})
 
 }
 
@@ -142,28 +144,20 @@ func (p *CredentialProviderService) getResp() *exception.Exception {
 }
 
 func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
-	//go func() {
-	//	time.Sleep(5 * time.Second)
-	//	p.pipe = conn
-	//	logger.Debug("connect pipe")
-	//	err := p.SetQrCode("test", 256)
-	//	if err != nil {
-	//		logger.Error(err.Error())
-	//	}
-	//	err = p.SetCommandLinkText("test")
-	//	if err != nil {
-	//		logger.Error(err.Error())
-	//	}
-	//}()
 
 	defer conn.Close()
 	p.pipe = conn
 	logger.Debug("connect pipe")
-	go func() {
+	goroutine.RecoverGO(func() {
 		time.Sleep(1 * time.Second)
-		go p.SetText(entity.SetLargeText, "RemoteFingerUnlock")
-		go p.SetText(entity.SetCommandClickText, "use your phone to unlock")
-	}()
+		goroutine.RecoverGO(func() {
+			p.SetText(entity.SetLargeText, "RemoteFingerUnlock")
+		})
+
+		goroutine.RecoverGO(func() {
+			p.SetText(entity.SetCommandClickText, "use your phone to unlock")
+		})
+	})
 
 	logger.Debug("connect pipe")
 	for {
@@ -213,11 +207,11 @@ func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
 				clientId = rc.ClientId
 			}
 			text := hostname + ";" + clientId + ";"
-			go func() {
+			goroutine.RecoverGO(func() {
 				logger.Debug("set text", text)
 				//p.SetQrCode(text, 256, 5)
 
-			}()
+			})
 
 			break
 			logger.Debug("over")

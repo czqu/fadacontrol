@@ -6,6 +6,7 @@ import (
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/pkg/goroutine"
 
 	"fadacontrol/internal/entity"
 	"fadacontrol/internal/router"
@@ -192,7 +193,9 @@ func (s *HttpService) StartServer(r router.FadaControlRouter, serviceName string
 		_router := r.GetRouter()
 		sign := make(chan interface{})
 		s.signalChanMap[config.ServiceName] = sign
-		go startHttpServer(config.Host, config.Port, cert, _router, enableQuic, sign)
+		goroutine.RecoverGO(func() {
+			startHttpServer(config.Host, config.Port, cert, _router, enableQuic, sign)
+		})
 		return nil
 	}
 
@@ -230,12 +233,12 @@ func startHttpServer(host string, port int, cert tls.Certificate, router *gin.En
 			}
 			logger.Info("start http3 server at ", port)
 
-			go func() {
+			goroutine.RecoverGO(func() {
 				err := http3Server.ListenAndServe()
 				if err != nil {
 					logger.Error(err)
 				}
-			}()
+			})
 
 		}
 
@@ -247,7 +250,7 @@ func startHttpServer(host string, port int, cert tls.Certificate, router *gin.En
 		logger.Info("start secure server at ", port)
 
 	}
-	go func() {
+	goroutine.RecoverGO(func() {
 		<-sign
 		if err := srv.Shutdown(nil); err != nil {
 			logger.Errorf("server Shutdown: %s", err)
@@ -258,7 +261,7 @@ func startHttpServer(host string, port int, cert tls.Certificate, router *gin.En
 			logger.Errorf("http3 server Close Err: %s", err)
 			return
 		}
-	}()
+	})
 	var err error
 	if tlsFlag || enableEnableHttp3 {
 		err = srv.ListenAndServeTLS("", "")

@@ -5,7 +5,6 @@ import (
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/pkg/utils"
-	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -50,8 +49,7 @@ func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
 	if err != nil {
 		err = c.ReadConfigFromYml("config.yml")
 		if err != nil {
-			fmt.Println(err)
-
+			logger.Info("no config file found,use default config")
 		}
 
 	}
@@ -63,25 +61,25 @@ func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
 	dbFile := workDir + "/data/config.db"
 	dbFile, err = filepath.Abs(dbFile)
 	if err != nil {
-		fmt.Println(err)
+		logger.Error(err)
 		return
 	}
 
 	dbFile, err = filepath.Abs(dbFile)
 	if err != nil {
-		fmt.Println(err)
+		logger.Error(err)
 		return
 	}
 
 	if !utils.FileExists(dbFile) {
 		if err := os.MkdirAll(filepath.Dir(dbFile), os.ModePerm); err != nil {
-			fmt.Println(err)
+			logger.Error(err)
 			return
 		}
 
 		_, err = os.Create(dbFile)
 		if err != nil {
-			fmt.Println(err)
+			logger.Error(err)
 			return
 		}
 	}

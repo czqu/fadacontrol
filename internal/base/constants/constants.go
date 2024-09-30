@@ -14,3 +14,4 @@ const (
 	LanguageCodeEN LanguageCode = "en"
 	LanguageCodeCN LanguageCode = "cn"
 )
+const ServiceName = "FadaControlService"

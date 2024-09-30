@@ -5,6 +5,7 @@ import (
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/schema"
 	"fadacontrol/internal/service/control_pc"
+	"fadacontrol/pkg/goroutine"
 	"net"
 	"strconv"
 	"sync"
@@ -24,7 +25,10 @@ func NewInternalMasterService(cp *control_pc.ControlPCService) *InternalMasterSe
 }
 func (s *InternalMasterService) Start() error {
 	s.cp.SetCommandSender(s.SendCommand)
-	go s.StartServer()
+	goroutine.RecoverGO(func() {
+		s.StartServer()
+	})
+
 	return nil
 
 }
@@ -46,13 +50,13 @@ func (s *InternalMasterService) StartServer() error {
 
 	logger.Infof("Starting Socket server on %s:%d", host, port)
 	done := make(chan struct{})
-	go func() {
+	goroutine.RecoverGO(func() {
 		<-s._done
 		listener.Close()
 		done <- struct{}{}
 		close(done)
 		logger.Info("socket close at", port)
-	}()
+	})
 	for {
 
 		conn, err := listener.Accept()
@@ -70,7 +74,9 @@ func (s *InternalMasterService) StartServer() error {
 			logger.Errorf("failed to accept connection: %v", err)
 			continue
 		}
-		go s.Handler(conn)
+		goroutine.RecoverGO(func() {
+			s.Handler(conn)
+		})
 	}
 
 }

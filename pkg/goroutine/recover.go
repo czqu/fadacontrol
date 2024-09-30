@@ -1,15 +1,15 @@
-package utils
+package goroutine
 
 import (
+	"fadacontrol/internal/base/logger"
 	"fmt"
-	"github.com/pkg/errors"
 )
 
 func RecoverGO(f func()) {
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
-				fmt.Printf("%+v", errors.Errorf("%+v", r))
+				logger.Errorf(fmt.Sprintf("recover from panic: %v", r))
 			}
 		}()
 		f()

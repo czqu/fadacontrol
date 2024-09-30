@@ -9,8 +9,8 @@ import (
 	"fadacontrol/internal/schema"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/pkg/secure"
+	"fadacontrol/pkg/syncer"
 	"fadacontrol/pkg/sys"
-	"fadacontrol/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -119,7 +119,7 @@ func (s *SystemController) GetLog(c *gin.Context) {
 
 		ctx := c.Request.Context()
 
-		w := utils.AddResponseSyncer(c.Writer)
+		w := syncer.AddResponseSyncer(c.Writer)
 		id := log.AddReader(w)
 
 		<-ctx.Done()

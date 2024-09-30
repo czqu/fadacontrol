@@ -3,6 +3,7 @@ package cmd
 import (
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/sys"
 )
 
@@ -10,13 +11,15 @@ type program struct {
 }
 
 func (p *program) Start(s sys.Svc) error {
-	go p.run()
+	logger.Info("start service")
+	goroutine.RecoverGO(p.run)
 	return nil
 }
 func (p *program) run() {
 	DesktopServiceMain(false, conf.ServiceMode, workDir)
 }
 func (p *program) Stop(s sys.Svc) error {
+	logger.Info("stop service")
 	StopDesktopService()
 	return nil
 }

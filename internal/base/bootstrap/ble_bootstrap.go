@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/service/unlock"
+	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/sys/bluetooth"
 
 	"net"
@@ -47,7 +48,10 @@ func (d *BleUnlockBootstrap) StartServer() error {
 			return err
 		}
 
-		go d.handleConnection(conn)
+		goroutine.RecoverGO(
+			func() {
+				d.handleConnection(conn)
+			})
 	}
 }
 func (d *BleUnlockBootstrap) handleConnection(conn net.Conn) {

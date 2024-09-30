@@ -3,7 +3,8 @@ package logger
 import (
 	"errors"
 	"fadacontrol/internal/base/conf"
-	"fadacontrol/pkg/utils"
+	"fadacontrol/pkg/syncer"
+	"fadacontrol/pkg/sys/log"
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -57,7 +58,7 @@ type Logger struct {
 	r               *conf.Conf
 	logPath         string
 	logLevel        string
-	logOutputSyncer *utils.MultiBufferSyncWriteSyncer
+	logOutputSyncer *syncer.MultiBufferSyncWriteSyncer
 }
 
 var once sync.Once
@@ -68,7 +69,7 @@ func NewLogger(r *conf.Conf) *Logger {
 
 func (l *Logger) AddReader(reader io.Writer) int {
 
-	return l.logOutputSyncer.AddSyncerAndFlushBuf(utils.AddSync(reader))
+	return l.logOutputSyncer.AddSyncerAndFlushBuf(syncer.AddSync(reader))
 
 }
 func (l *Logger) RemoveWriter(id int) {
@@ -83,7 +84,7 @@ func InitLog(c *conf.Conf) {
 		l := new(Logger)
 		logger = l
 		l.r = c
-		l.logOutputSyncer = utils.NewMultiBufferSyncWriteSyncer(100)
+		l.logOutputSyncer = syncer.NewMultiBufferSyncWriteSyncer(100)
 		var err error
 		logger.logLevel = l.r.LogLevel
 		logger.logPath, err = filepath.Abs(l.r.GetWorkdir() + "/log/" + l.r.LogName)
@@ -251,6 +252,7 @@ func Sync() {
 func Warn(args ...interface{}) {
 	if logger == nil {
 		fmt.Println(args...)
+		log.Warnf(nil, fmt.Sprintf("%v", args...))
 		return
 	}
 	logger.Warn(args...)
@@ -259,6 +261,7 @@ func Warn(args ...interface{}) {
 func Debug(args ...interface{}) {
 	if logger == nil {
 		fmt.Println(args...)
+		log.Debugf(nil, fmt.Sprintf("%v", args...))
 		return
 	}
 	logger.Debug(args...)
@@ -267,6 +270,7 @@ func Debug(args ...interface{}) {
 func Info(args ...interface{}) {
 	if logger == nil {
 		fmt.Println(args...)
+		log.Infof(nil, fmt.Sprintf("%v", args...))
 		return
 	}
 	logger.Info(args...)
@@ -274,15 +278,18 @@ func Info(args ...interface{}) {
 func Error(args ...interface{}) {
 	if logger == nil {
 		fmt.Println(args...)
+		log.Errorf(nil, fmt.Sprintf("%v", args...))
 		return
 	}
 	logger.Error(args...)
 	logger.Sync()
+	log.Errorf(nil, fmt.Sprintf("%v", args...))
 }
 
 func Infof(format string, v ...interface{}) {
 	if logger == nil {
 		fmt.Printf(format, v...)
+		log.Infof(nil, format, v...)
 		return
 	}
 	logger.Infof(format, v...)
@@ -290,6 +297,7 @@ func Infof(format string, v ...interface{}) {
 func Warnf(format string, v ...interface{}) {
 	if logger == nil {
 		fmt.Printf(format, v...)
+		log.Warnf(nil, format, v...)
 		return
 	}
 	logger.Warnf(format, v...)
@@ -297,6 +305,7 @@ func Warnf(format string, v ...interface{}) {
 func Debugf(format string, v ...interface{}) {
 	if logger == nil {
 		fmt.Printf(format, v...)
+		log.Debugf(nil, format, v...)
 		return
 	}
 	logger.Debugf(format, v...)
@@ -304,10 +313,12 @@ func Debugf(format string, v ...interface{}) {
 func Errorf(format string, v ...interface{}) {
 	if logger == nil {
 		fmt.Printf(format, v...)
+		log.Errorf(nil, format, v...)
 		return
 	}
 	logger.Errorf(format, v...)
 	logger.Sync()
+	log.Errorf(nil, format, v...)
 
 }
 

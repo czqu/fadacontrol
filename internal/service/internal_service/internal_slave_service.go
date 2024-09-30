@@ -9,6 +9,7 @@ import (
 	"fadacontrol/internal/schema/custom_command_schema"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/custom_command_service"
+	"fadacontrol/pkg/goroutine"
 	"github.com/mitchellh/mapstructure"
 	"net"
 	"strconv"
@@ -30,7 +31,10 @@ func (s *InternalSlaveService) Start() {
 	port := 2095
 	host := "127.0.0.1"
 	addr := host + ":" + strconv.Itoa(port)
-	go s.connectToServer(addr)
+	goroutine.RecoverGO(func() {
+		s.connectToServer(addr)
+	})
+
 }
 func (s *InternalSlaveService) Stop() {
 	s._done <- true

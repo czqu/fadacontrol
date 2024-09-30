@@ -4,6 +4,7 @@ import (
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/controller"
 	"fadacontrol/internal/service/control_pc"
+	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/sys"
 	"fadacontrol/pkg/utils"
 	"strconv"
@@ -28,7 +29,7 @@ func NewControlPCController(p *control_pc.ControlPCService) *ControlPCController
 //			@Accept			json
 //			@Produce		json
 //			@Param			action	path		string					true	"The type of operation（shutdown、standby、lock）"	Enums(shutdown, standby, lock)
-//	     @Param			delay		query		string	false	"Delay time in seconds"
+//	     @Param			delay		query		string	false	"Delay time in seconds,only valid when the action is shutdown、standby"
 //		    @Param			shutdown_type	query		string	false	"The type of shutdown"	sys.ShutdownType
 //			@Success		200		{object}	schema.ResponseData	"success"
 //			@Failure		400		{object}	schema.ResponseData	"Invalid action type"
@@ -55,17 +56,18 @@ func (o *ControlPCController) ControlPC(c *gin.Context) {
 			c.Error(exception.ErrUserParameterError)
 			return
 		}
-		go func() {
+		goroutine.RecoverGO(func() {
 			time.Sleep(time.Duration(delaySec) * time.Second)
 			ret = o.p.Shutdown(sys.ShutdownType(shutdownType))
-		}()
+		})
+
 		c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 
 	case "standby":
-		go func() {
+		goroutine.RecoverGO(func() {
 			time.Sleep(time.Duration(delaySec) * time.Second)
 			ret = o.p.Standby()
-		}()
+		})
 		c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 
 	case "lock":

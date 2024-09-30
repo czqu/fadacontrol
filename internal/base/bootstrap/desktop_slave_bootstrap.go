@@ -5,6 +5,7 @@ import (
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/internal_service"
+	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/sys"
 	"time"
 )
@@ -46,10 +47,10 @@ func (r *DesktopSlaveServiceBootstrap) Stop() {
 	logger.Sync()
 
 	logger.Debug("stopping root bootstrap")
-	go func() {
+	goroutine.RecoverGO(func() {
 		r.slave.Stop()
 		time.Sleep(5 * time.Second)
-	}()
+	})
 
 	r.done <- struct{}{}
 }

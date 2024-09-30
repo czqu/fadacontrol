@@ -7,6 +7,7 @@ import (
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/credential_provider_service"
 	"fadacontrol/internal/service/internal_service"
+	"fadacontrol/pkg/goroutine"
 )
 
 type DesktopMasterServiceBootstrap struct {
@@ -33,27 +34,34 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 	r.di.Start()
 
 	r._co.RunPowerSavingMode()
-	go r.discover.Start()
+
 	r.master.Start()
 	r._http.Start()
 	r.legacy_.Start()
 	r.ble.Start()
 	r.rcb.Start()
-	go r.cp.Connect()
+	goroutine.RecoverGO(func() {
+		r.discover.Start()
+	})
+	goroutine.RecoverGO(func() {
+		r.cp.Connect()
+
+	})
+
 	r.Wait()
 }
 func (r *DesktopMasterServiceBootstrap) Stop() {
 
 	logger.Debug("stopping root bootstrap")
 	logger.Sync()
-	go func() {
+	goroutine.RecoverGO(func() {
 		r.ble.Stop()
 		r.discover.Stop()
 		r._http.Stop()
 		r.legacy_.Stop()
 		r.rcb.Stop()
 		r.master.Stop()
-	}()
+	})
 
 	r.done <- struct{}{}
 }

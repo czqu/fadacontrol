@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/service/remote_service"
+	"fadacontrol/pkg/goroutine"
 	"golang.org/x/sys/windows"
 	"gorm.io/gorm"
 	"strconv"
@@ -35,7 +36,10 @@ func (r *RemoteConnectBootstrap) Start() error {
 		})
 	}
 
-	go r.re.StartService()
+	goroutine.RecoverGO(func() {
+		r.re.StartService()
+	})
+
 	return nil
 }
 func (r *RemoteConnectBootstrap) Stop() error {

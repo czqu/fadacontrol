@@ -4,6 +4,7 @@ import (
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/entity"
 	"fadacontrol/internal/schema"
+	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/utils"
 	"gorm.io/gorm"
 	"net"
@@ -105,8 +106,10 @@ func (d *DiscoverService) StartBroadcast() {
 		d.StopBroadcast()
 		return
 	}
-	go d.listenAndSend(4085)
-	go func() {
+	goroutine.RecoverGO(func() {
+		d.listenAndSend(4085)
+	})
+	goroutine.RecoverGO(func() {
 		logger.Debug("Sending UDP Broadcast ")
 		for {
 
@@ -116,7 +119,7 @@ func (d *DiscoverService) StartBroadcast() {
 			d.udpBroadcast()
 			time.Sleep(2 * time.Second)
 		}
-	}()
+	})
 
 }
 func (d *DiscoverService) udpBroadcast() {

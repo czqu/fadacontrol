@@ -8,6 +8,7 @@ import "C"
 import (
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/pkg/goroutine"
 	"fmt"
 	"github.com/Microsoft/go-winio"
 	"net"
@@ -190,7 +191,10 @@ func ListenNamedPipeWithHandler(pipeName string, handler func(conn net.Conn), in
 		}
 
 		logger.Debugf("new pipe accepted")
-		go handler(conn)
+		goroutine.RecoverGO(func() {
+			handler(conn)
+		})
+
 	}
 
 }

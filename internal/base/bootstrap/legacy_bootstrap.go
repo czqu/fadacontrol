@@ -7,6 +7,7 @@ import (
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/unlock"
+	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/secure"
 
 	"fadacontrol/internal/entity"
@@ -71,7 +72,10 @@ func (s *LegacyBootstrap) StartServer() error {
 				Certificates: []tls.Certificate{cert},
 				MinVersion:   tls.VersionTLS13,
 			}
-			go s.startSocketServer(config.Host, config.Port, sign, tlsConfig, s.u.HandleUnlockConnection)
+			goroutine.RecoverGO(func() {
+				s.startSocketServer(config.Host, config.Port, sign, tlsConfig, s.u.HandleUnlockConnection)
+			})
+
 		}
 		if config.ServiceName == ControlService {
 			logger.Infof("Starting Socket server on %s:%d", config.Host, config.Port)
@@ -86,7 +90,10 @@ func (s *LegacyBootstrap) StartServer() error {
 				Certificates: []tls.Certificate{cert},
 				MinVersion:   tls.VersionTLS13,
 			}
-			go s.startSocketServer(config.Host, config.Port, sign, tlsConfig, s.l.HandleControlConnection)
+
+			goroutine.RecoverGO(func() {
+				s.startSocketServer(config.Host, config.Port, sign, tlsConfig, s.l.HandleControlConnection)
+			})
 		}
 	}
 	return nil
@@ -101,11 +108,11 @@ func (s *LegacyBootstrap) startSocketServer(host string, port int, sign chan int
 	}
 	defer listener.Close()
 
-	go func() {
+	goroutine.RecoverGO(func() {
 		<-sign
 		listener.Close()
 		logger.Info("socket close at", port)
-	}()
+	})
 	logger.Info("socket wait for connection...")
 	for {
 
@@ -115,7 +122,9 @@ func (s *LegacyBootstrap) startSocketServer(host string, port int, sign chan int
 
 			return
 		}
-		go handler(conn)
+		goroutine.RecoverGO(func() {
+			handler(conn)
+		})
 		time.Sleep(500 * time.Millisecond)
 	}
 }
