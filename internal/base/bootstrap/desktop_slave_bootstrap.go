@@ -7,7 +7,9 @@ import (
 	"fadacontrol/internal/service/internal_service"
 	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/sys"
-	"time"
+	"os"
+	"os/signal"
+	"syscall"
 )
 
 type DesktopSlaveServiceBootstrap struct {
@@ -17,14 +19,18 @@ type DesktopSlaveServiceBootstrap struct {
 	done  chan interface{}
 	di    *DataInitBootstrap
 	_co   *control_pc.ControlPCService
+	pf    *ProfilingBootstrap
 }
 
-func NewDesktopSlaveServiceBootstrap(_co *control_pc.ControlPCService, di *DataInitBootstrap, _conf *conf.Conf, lo *logger.Logger, slave *internal_service.InternalSlaveService) *DesktopSlaveServiceBootstrap {
-	return &DesktopSlaveServiceBootstrap{_co: _co, di: di, _conf: _conf, lo: lo, slave: slave, done: make(chan interface{})}
+func NewDesktopSlaveServiceBootstrap(pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, _conf *conf.Conf, lo *logger.Logger, slave *internal_service.InternalSlaveService) *DesktopSlaveServiceBootstrap {
+	return &DesktopSlaveServiceBootstrap{pf: pf, _co: _co, di: di, _conf: _conf, lo: lo, slave: slave, done: make(chan interface{})}
 }
 
 func (r *DesktopSlaveServiceBootstrap) Start() {
 
+	goroutine.RecoverGO(func() {
+		r.pf.Start()
+	})
 	r.di.Start()
 
 	r._co.RunPowerSavingMode()
@@ -33,6 +39,17 @@ func (r *DesktopSlaveServiceBootstrap) Start() {
 		logger.Debug("set power saving mode")
 	}
 	r.slave.Start()
+	goroutine.RecoverGO(
+		func() {
+			sChan := make(chan os.Signal, 1)
+			signal.Notify(sChan,
+				syscall.SIGINT,
+				syscall.SIGTERM,
+				syscall.SIGQUIT)
+			<-sChan
+			logger.Debug("stopping...")
+			r.Stop()
+		})
 	r.Wait()
 	return
 
@@ -44,13 +61,13 @@ func (r *DesktopSlaveServiceBootstrap) Wait() {
 	}
 }
 func (r *DesktopSlaveServiceBootstrap) Stop() {
+	r.pf.Stop()
 	logger.Sync()
 
 	logger.Debug("stopping root bootstrap")
-	goroutine.RecoverGO(func() {
-		r.slave.Stop()
-		time.Sleep(5 * time.Second)
-	})
 
+	r.slave.Stop()
+
+	logger.Sync()
 	r.done <- struct{}{}
 }

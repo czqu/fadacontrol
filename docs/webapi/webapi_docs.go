@@ -20,59 +20,6 @@ const docTemplatewebapi = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/control-pc/interface": {
-            "get": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Based on the specified IP version type, a list of valid network interfaces is returned",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Network interfaces"
-                ],
-                "summary": "Returns a valid network interface",
-                "parameters": [
-                    {
-                        "enum": [
-                            "4",
-                            "6"
-                        ],
-                        "type": "string",
-                        "default": "4",
-                        "description": "IP Version Type (4 or 6)",
-                        "name": "type",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "A list of valid network interfaces is successfully returned",
-                        "schema": {
-                            "$ref": "#/definitions/schema.ResponseData"
-                        }
-                    },
-                    "400": {
-                        "description": "The request parameter is incorrect",
-                        "schema": {
-                            "$ref": "#/definitions/schema.ResponseData"
-                        }
-                    },
-                    "500": {
-                        "description": "Server internal error",
-                        "schema": {
-                            "$ref": "#/definitions/schema.ResponseData"
-                        }
-                    }
-                }
-            }
-        },
         "/control-pc/{action}/": {
             "post": {
                 "security": [
@@ -170,6 +117,59 @@ const docTemplatewebapi = `{
                 }
             }
         },
+        "/interface": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Based on the specified IP version type, a list of valid network interfaces is returned",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Network interfaces"
+                ],
+                "summary": "Returns a valid network interface",
+                "parameters": [
+                    {
+                        "enum": [
+                            "4",
+                            "6"
+                        ],
+                        "type": "string",
+                        "default": "4",
+                        "description": "IP Version Type (4 or 6)",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "A list of valid network interfaces is successfully returned",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "400": {
+                        "description": "The request parameter is incorrect",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Server internal error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
         "/interface/{ip}": {
             "get": {
                 "security": [
@@ -181,6 +181,15 @@ const docTemplatewebapi = `{
                     "application/json"
                 ],
                 "summary": "Obtain the MAC address based on the IP address",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "IP address",
+                        "name": "ip",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "success",
@@ -214,6 +223,15 @@ const docTemplatewebapi = `{
                     "application/json"
                 ],
                 "summary": "Obtain the interface information based on the IP address",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "IP address",
+                        "name": "ip",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "success"

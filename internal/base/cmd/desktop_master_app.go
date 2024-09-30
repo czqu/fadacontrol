@@ -10,28 +10,30 @@ import (
 	"runtime"
 )
 
-type DesktopSlaveServiceApp struct {
-	_conf  *conf.Conf
-	db     *conf.DatabaseConf
-	root   *bootstrap.DesktopSlaveServiceBootstrap
+type DesktopServiceApp struct {
+	_conf *conf.Conf
+	db    *conf.DatabaseConf
+
 	logger *logger.Logger
+	root   *bootstrap.DesktopMasterServiceBootstrap
+	debug  bool
 }
 
-func NewDesktopSlaveServiceApp(lo *logger.Logger, _conf *conf.Conf, db *conf.DatabaseConf, root *bootstrap.DesktopSlaveServiceBootstrap) *DesktopSlaveServiceApp {
-	return &DesktopSlaveServiceApp{logger: lo, _conf: _conf, db: db, root: root}
+func NewDesktopServiceApp(lo *logger.Logger, _conf *conf.Conf, db *conf.DatabaseConf, root *bootstrap.DesktopMasterServiceBootstrap) *DesktopServiceApp {
+	return &DesktopServiceApp{logger: lo, _conf: _conf, db: db, root: root}
 }
-func (app *DesktopSlaveServiceApp) Stop() {
+func (app *DesktopServiceApp) Stop() {
 
 	app.root.Stop()
 }
-func (app *DesktopSlaveServiceApp) Start() {
+func (app *DesktopServiceApp) Start() {
 
 	app.root.Start()
 }
 
-var appDesktopDaemon *DesktopSlaveServiceApp
+var appDesktopService *DesktopServiceApp
 
-func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
+func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
 	if utils.DirCanWrite(workDir) {
 		workDir, _ = filepath.Abs(workDir)
@@ -39,64 +41,60 @@ func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
 		workDir = "./"
 	}
 	c := &conf.Conf{}
-	c.LogName = conf.DefaultSlaveLogName
+	c.LogName = conf.DefaultMasterLogName
 	c.LogLevel = conf.DefaultLogLevel
 	c.Debug = false
 	c.StartMode = mode
 	c.SetWorkdir(workDir)
 
-	err := c.ReadConfigFromYml(workDir + "/config.yml")
+	configPath, err := c.ReadConfigFromYml(filepath.Join(workDir, "config.yml"))
 	if err != nil {
-		err = c.ReadConfigFromYml("config.yml")
+		configPath, err = c.ReadConfigFromYml("config.yml")
 		if err != nil {
 			logger.Info("no config file found,use default config")
 		}
 
 	}
+	c.SetPath(configPath)
 	c.Debug = c.Debug || debug
 	if c.Debug {
 		c.LogLevel = "debug"
 	}
 	logger.InitLog(c)
-	dbFile := workDir + "/data/config.db"
+	dbFile := filepath.Join(workDir, "data", "config.db")
 	dbFile, err = filepath.Abs(dbFile)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("get db file err %v", err)
 		return
 	}
-
 	dbFile, err = filepath.Abs(dbFile)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("get db file err %v", err)
 		return
 	}
 
 	if !utils.FileExists(dbFile) {
 		if err := os.MkdirAll(filepath.Dir(dbFile), os.ModePerm); err != nil {
-			logger.Error(err)
+			logger.Errorf("create db file err %v", err)
 			return
 		}
 
 		_, err = os.Create(dbFile)
 		if err != nil {
-			logger.Error(err)
+			logger.Errorf("create db file err %v", err)
 			return
 		}
 	}
 
 	connection := "file:" + dbFile + "?cache=shared&mode=rwc&_journal_mode=WAL"
 
-	c.Debug = c.Debug || debug
-	if c.Debug {
-		c.LogLevel = "debug"
-	}
-	app, _ := initDesktopDaemonApplication(c, &conf.DatabaseConf{Driver: "sqlite", Connection: connection, MaxIdleConnection: 10, MaxOpenConnection: 100, Debug: c.Debug})
-	appDesktopDaemon = app
+	app, _ := initDesktopServiceApplication(c, &conf.DatabaseConf{Driver: "sqlite", Connection: connection, MaxIdleConnection: 10, MaxOpenConnection: 100, Debug: c.Debug})
+	appDesktopService = app
 	app.Start()
 }
-func StopDesktopDaemon() {
-	if appDesktopDaemon != nil {
-		appDesktopDaemon.Stop()
+func StopDesktopService() {
+	if appDesktopService != nil {
+		appDesktopService.Stop()
 	}
 
 }

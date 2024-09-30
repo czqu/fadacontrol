@@ -83,7 +83,28 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Control  computer
-  /control-pc/interface:
+  /info:
+    get:
+      consumes:
+      - application/json
+      description: Get the software version information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Server internal error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Get Software Info
+      tags:
+      - System
+  /interface:
     get:
       consumes:
       - application/json
@@ -118,29 +139,14 @@ paths:
       summary: Returns a valid network interface
       tags:
       - Network interfaces
-  /info:
-    get:
-      consumes:
-      - application/json
-      description: Get the software version information
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: success
-          schema:
-            $ref: '#/definitions/schema.ResponseData'
-        "500":
-          description: Server internal error
-          schema:
-            $ref: '#/definitions/schema.ResponseData'
-      security:
-      - ApiKeyAuth: []
-      summary: Get Software Info
-      tags:
-      - System
   /interface/{ip}:
     get:
+      parameters:
+      - description: IP address
+        in: path
+        name: ip
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -161,6 +167,12 @@ paths:
       summary: Obtain the MAC address based on the IP address
   /interface/{ip}/all:
     get:
+      parameters:
+      - description: IP address
+        in: path
+        name: ip
+        required: true
+        type: string
       produces:
       - application/json
       responses:

@@ -33,6 +33,7 @@ import (
 
 func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopServiceApp, error) {
 	loggerLogger := logger.NewLogger(_conf)
+	profilingBootstrap := bootstrap.NewProfilingBootstrap(_conf)
 	gormDB, err := data.NewDB(db)
 	if err != nil {
 		return nil, err
@@ -75,13 +76,14 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	httpBootstrap := bootstrap.NewHttpBootstrap(_conf, httpService, commonRouter, adminRouter)
 	legacyControlService := control_pc.NewLegacyControlService(controlPCService, unLockService)
 	legacyBootstrap := bootstrap.NewLegacyBootstrap(unLockService, gormDB, legacyControlService)
-	desktopMasterServiceBootstrap := bootstrap.NewDesktopMasterServiceBootstrap(controlPCService, dataInitBootstrap, credentialProviderService, remoteConnectBootstrap, internalMasterService, _conf, dataData, loggerLogger, bleUnlockBootstrap, discoverBootstrap, httpBootstrap, legacyBootstrap)
+	desktopMasterServiceBootstrap := bootstrap.NewDesktopMasterServiceBootstrap(profilingBootstrap, controlPCService, dataInitBootstrap, credentialProviderService, remoteConnectBootstrap, internalMasterService, _conf, dataData, loggerLogger, bleUnlockBootstrap, discoverBootstrap, httpBootstrap, legacyBootstrap)
 	desktopServiceApp := NewDesktopServiceApp(loggerLogger, _conf, db, desktopMasterServiceBootstrap)
 	return desktopServiceApp, nil
 }
 
 func initDesktopDaemonApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopSlaveServiceApp, error) {
 	loggerLogger := logger.NewLogger(_conf)
+	profilingBootstrap := bootstrap.NewProfilingBootstrap(_conf)
 	gormDB, err := data.NewDB(db)
 	if err != nil {
 		return nil, err
@@ -98,7 +100,7 @@ func initDesktopDaemonApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*Des
 	dataInitBootstrap := bootstrap.NewDataInitBootstrap(adapter, enforcer, gormDB)
 	customCommandService := custom_command_service.NewCustomCommandService(_conf)
 	internalSlaveService := internal_service.NewInternalSlaveService(customCommandService, controlPCService, _conf)
-	desktopSlaveServiceBootstrap := bootstrap.NewDesktopSlaveServiceBootstrap(controlPCService, dataInitBootstrap, _conf, loggerLogger, internalSlaveService)
+	desktopSlaveServiceBootstrap := bootstrap.NewDesktopSlaveServiceBootstrap(profilingBootstrap, controlPCService, dataInitBootstrap, _conf, loggerLogger, internalSlaveService)
 	desktopSlaveServiceApp := NewDesktopSlaveServiceApp(loggerLogger, _conf, db, desktopSlaveServiceBootstrap)
 	return desktopSlaveServiceApp, nil
 }

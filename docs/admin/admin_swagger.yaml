@@ -112,41 +112,6 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Control  computer
-  /control-pc/interface:
-    get:
-      consumes:
-      - application/json
-      description: Based on the specified IP version type, a list of valid network
-        interfaces is returned
-      parameters:
-      - default: "4"
-        description: IP Version Type (4 or 6)
-        enum:
-        - "4"
-        - "6"
-        in: query
-        name: type
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: A list of valid network interfaces is successfully returned
-          schema:
-            $ref: '#/definitions/schema.ResponseData'
-        "400":
-          description: The request parameter is incorrect
-          schema:
-            $ref: '#/definitions/schema.ResponseData'
-        "500":
-          description: Server internal error
-          schema:
-            $ref: '#/definitions/schema.ResponseData'
-      security:
-      - ApiKeyAuth: []
-      summary: Returns a valid network interface
-      tags:
-      - Network interfaces
   /discovery/config:
     get:
       consumes:
@@ -373,8 +338,49 @@ paths:
       summary: Get Software Info
       tags:
       - System
+  /interface:
+    get:
+      consumes:
+      - application/json
+      description: Based on the specified IP version type, a list of valid network
+        interfaces is returned
+      parameters:
+      - default: "4"
+        description: IP Version Type (4 or 6)
+        enum:
+        - "4"
+        - "6"
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: A list of valid network interfaces is successfully returned
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "400":
+          description: The request parameter is incorrect
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Server internal error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Returns a valid network interface
+      tags:
+      - Network interfaces
   /interface/{ip}:
     get:
+      parameters:
+      - description: IP address
+        in: path
+        name: ip
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -395,6 +401,12 @@ paths:
       summary: Obtain the MAC address based on the IP address
   /interface/{ip}/all:
     get:
+      parameters:
+      - description: IP address
+        in: path
+        name: ip
+        required: true
+        type: string
       produces:
       - application/json
       responses:

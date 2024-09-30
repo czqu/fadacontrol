@@ -78,7 +78,7 @@ func (o *ControlPCController) ControlPC(c *gin.Context) {
 		return
 	}
 
-	if ret != nil {
+	if ret != nil && exception.ErrSuccess.NotEqual(ret) {
 		c.Error(ret)
 		return
 	}
@@ -97,7 +97,7 @@ func (o *ControlPCController) ControlPC(c *gin.Context) {
 // @Success 200 {object} schema.ResponseData "A list of valid network interfaces is successfully returned"
 // @Failure 400 {object} schema.ResponseData "The request parameter is incorrect"
 // @Failure 500 {object} schema.ResponseData "Server internal error"
-// @Router /control-pc/interface [get]
+// @Router /interface [get]
 func (o *ControlPCController) GetInterface(c *gin.Context) {
 	typeParam := c.DefaultQuery("type", "4")
 	t := utils.IPV4
@@ -121,6 +121,7 @@ func (o *ControlPCController) GetInterface(c *gin.Context) {
 // @Success	200	{object}	schema.ResponseData			"success"
 // @Failure	400	{object}	schema.ResponseData				"The request is incorrect"
 // @Failure	500	{object}	schema.ResponseData						"Internal errors"
+// @Param		ip								path		string	true	"IP address"
 // @Router		/interface/{ip} [get]
 func (o *ControlPCController) GetInterfaceByIP(c *gin.Context) {
 	o.getInterfaceOld(c, false)
@@ -133,6 +134,7 @@ func (o *ControlPCController) GetInterfaceByIP(c *gin.Context) {
 // @Success	200								"success"
 // @Failure	400				"The request is incorrect"
 // @Failure	500							"Internal errors"
+// @Param		ip								path		string	true	"IP address"
 // @Router		/interface/{ip}/all [get]
 func (o *ControlPCController) GetInterfaceByIPAll(c *gin.Context) {
 	o.getInterfaceOld(c, true)

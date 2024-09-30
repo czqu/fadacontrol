@@ -16,24 +16,26 @@ const (
 )
 
 type Conf struct {
-	workdir   string
-	Debug     bool   `yaml:"debug"`
-	LogName   string `yaml:"log_name"`
-	LogLevel  string `yaml:"log_level"`
-	StartMode StartMode
+	workdir         string
+	Debug           bool   `yaml:"debug"`
+	LogName         string `yaml:"log_name"`
+	LogLevel        string `yaml:"log_level"`
+	EnableProfiling bool   `yaml:"enable_profiling"`
+	StartMode       StartMode
+	path            string
 }
 
-func (c *Conf) ReadConfigFromYml(filePath string) error {
+func (c *Conf) ReadConfigFromYml(filePath string) (string, error) {
 
 	bytes, err := os.ReadFile(filePath)
 	if err != nil {
-		return err
+		return "", err
 	}
 	err = yaml.Unmarshal(bytes, &c)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	return filePath, nil
 }
 func (c *Conf) SetWorkdir(path string) {
 	var err error
@@ -45,4 +47,7 @@ func (c *Conf) SetWorkdir(path string) {
 }
 func (c *Conf) GetWorkdir() string {
 	return c.workdir
+}
+func (c *Conf) SetPath(path string) {
+	c.path = path
 }

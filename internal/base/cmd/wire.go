@@ -36,13 +36,13 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 		admin_controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, admin_controller.NewDiscoverController, credential_provider_service.NewCredentialProviderService,
 		bootstrap.NewDataInitBootstrap, data.NewAdapterByDB, data.NewEnforcer, common_controller.NewAuthController,
 		middleware.NewJwtMiddleware, jwt_service.NewJwtService, auth_service.NewAuthService, user_service.NewUserService, discovery_service.NewDiscoverService,
-		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService,
+		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap,
 	)
 	return &DesktopServiceApp{_conf: _conf, db: db}, nil
 }
 func initDesktopDaemonApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopSlaveServiceApp, error) {
 	wire.Build(NewDesktopSlaveServiceApp, bootstrap.NewDesktopSlaveServiceBootstrap, internal_service.NewInternalSlaveService,
-		custom_command_service.NewCustomCommandService, logger.NewLogger, bootstrap.NewDataInitBootstrap, data.NewDB, control_pc.NewControlPCService,
+		custom_command_service.NewCustomCommandService, logger.NewLogger, bootstrap.NewDataInitBootstrap, data.NewDB, control_pc.NewControlPCService, bootstrap.NewProfilingBootstrap,
 		data.NewAdapterByDB, data.NewEnforcer)
 
 	return &DesktopSlaveServiceApp{}, nil
