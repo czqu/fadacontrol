@@ -71,9 +71,9 @@ func (d *DataInitBootstrap) initSysConfig() {
 			}
 			_, err = client.Get("https://www.google.com/")
 			if err != nil {
-				sysConfig.Region = int16(version.RegionCN)
+				sysConfig.Region = int(version.RegionCN)
 			} else {
-				sysConfig.Region = int16(version.RegionGlobal)
+				sysConfig.Region = int(version.RegionGlobal)
 			}
 			d._db.Save(&sysConfig)
 		})

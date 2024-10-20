@@ -5,6 +5,6 @@ import "gorm.io/gorm"
 type SysConfig struct {
 	gorm.Model
 	PowerSavingMode bool   `gorm:"default:false"`
-	Region          int16  `gorm:"not null;default:'0'"`
+	Region          int    `gorm:"not null;default:0"`
 	Language        string `gorm:"not null;default:'en'"`
 }

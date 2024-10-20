@@ -26,14 +26,14 @@ const (
 	EditionNightly ProductEdition = "nightly"
 )
 
-func GetRegionName(region ProductRegion) string {
-	if name, ok := regionNameMap[region]; ok {
+func (p ProductRegion) String() string {
+	if name, ok := regionNameMap[p]; ok {
 		return name
 	} else {
 		return "global"
 	}
 }
-func GetRegionFromCode(code int16) ProductRegion {
+func GetRegionFromCode(code int) ProductRegion {
 	switch code {
 	case 1:
 		return RegionCN
@@ -64,7 +64,7 @@ func GetVersion() string {
 	}
 	t, err := GetBuildDate()
 	if err != nil {
-		return ""
+		return "24102000"
 	}
 	return t.Format("060102") + GetEditionCode()
 }
@@ -88,10 +88,10 @@ func GetEditionCode() string {
 	case "canary":
 		return "07"
 	case "nightly":
-		return "08"
+		return "09"
 
 	default:
-		return "08"
+		return "09"
 	}
 }
 func GetEdition() ProductEdition {

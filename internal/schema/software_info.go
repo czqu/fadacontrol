@@ -11,6 +11,8 @@ type SoftwareInfo struct {
 	AlgorithmInfo []AlgorithmInfo `json:"algorithm_info"`
 	BuildInfo     string          `json:"build_info"`
 	AuthorEmail   string          `json:"author_email"`
+	Language      string          `json:"language"`
+	Region        string          `json:"region"`
 }
 type ServiceInfo struct {
 	ServiceName string `json:"service_name"`

@@ -2,6 +2,7 @@ package update_service
 
 import (
 	"encoding/json"
+	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/base/version"
 	"fadacontrol/internal/entity"
@@ -25,21 +26,38 @@ func (u *UpdateService) SetRegion(region version.ProductRegion) error {
 	if err := u._db.First(&config).Error; err != nil {
 		return err
 	}
-	config.Region = int16(region)
+	config.Region = int(region)
 	return u._db.Save(&config).Error
 }
 func (u *UpdateService) GetRegion() string {
 	var config entity.SysConfig
 
 	if err := u._db.First(&config).Error; err != nil {
-		return version.GetRegionName(version.RegionGlobal)
+		return version.RegionGlobal.String()
 	}
-	return version.GetRegionName(version.ProductRegion(config.Region))
+	return version.ProductRegion(config.Region).String()
 }
 
 const updateUrl = "https://update.czqu.net/"
 
-func (u *UpdateService) CheckUpdate() (*schema.UpdateInfoClientResp, error) {
+func (u *UpdateService) GetI18nInfo() *schema.I18nInfo {
+	config := entity.SysConfig{}
+	lang := conf.LanguageEnglish.String()
+	if err := u._db.First(&config).Error; err != nil {
+		logger.Errorf("failed to get config %v", err)
+	} else {
+		//todo
+	}
+	region := u.GetRegion()
+
+	return &schema.I18nInfo{
+		Region:   region,
+		Language: lang,
+	}
+
+}
+
+func (u *UpdateService) CheckUpdate(lang string) (*schema.UpdateInfoClientResp, error) {
 
 	client, err := utils.NewClientBuilder().SetTimeout(5 * time.Second).Build()
 	if err != nil {
@@ -49,15 +67,14 @@ func (u *UpdateService) CheckUpdate() (*schema.UpdateInfoClientResp, error) {
 	config := entity.SysConfig{}
 
 	region := version.RegionGlobal
-	language := "en"
+	productLang := conf.ProductLanguageFromString(lang)
 	if err := u._db.First(&config).Error; err != nil {
 		logger.Errorf("failed to get config %v", err)
 	} else {
 		region = version.GetRegionFromCode(config.Region)
-		language = config.Language
 	}
 
-	url = url + version.ProductName + "/" + version.GetRegionName(region) + "/" + language + "/" + "info.json"
+	url = url + version.ProductName + "/" + region.String() + "/" + productLang.String() + "/" + "info.json"
 
 	resp, err := client.Get(url)
 	if err != nil {
@@ -83,7 +100,7 @@ func (u *UpdateService) CheckUpdate() (*schema.UpdateInfoClientResp, error) {
 	}
 	versionCode := version.GetVersion()
 	ret := &schema.UpdateInfoClientResp{
-		CanUpdate:   u.CanUpdate(versionCode, info.Version),
+		CanUpdate:   u.CanUpdate(versionCode, strconv.Itoa(info.VersionCode)),
 		Channel:     string(edition),
 		Version:     info.Version,
 		VersionCode: info.VersionCode,
@@ -108,10 +125,8 @@ func (u *UpdateService) CanUpdate(oldVersion, newVersion string) bool {
 	if err != nil {
 		return false
 	}
-	if newVersionCode > oldVersionCode {
-		return true
-	}
-	return false
+	return newVersionCode > oldVersionCode
+
 }
 func (u *UpdateService) ShouldUpdateEdition(info *schema.UpdateInfoResponse) version.ProductEdition {
 	nowVersionCode := version.GetVersion()
@@ -121,7 +136,7 @@ func (u *UpdateService) ShouldUpdateEdition(info *schema.UpdateInfoResponse) ver
 	case version.EditionRelease:
 		return version.EditionRelease
 	default:
-		if u.CanUpdate(nowVersionCode, info.Release.Version) {
+		if u.CanUpdate(nowVersionCode, strconv.Itoa(info.Release.VersionCode)) {
 			return version.EditionRelease
 		} else {
 			return nowEdition

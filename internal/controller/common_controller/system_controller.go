@@ -43,6 +43,7 @@ func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
 		supportAlgo = append(supportAlgo, schema.AlgorithmInfo{AlgorithmName: secure.AlgorithmNames[algo]})
 	}
 
+	i18nInfo := s._up.GetI18nInfo()
 	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c,
 		schema.SoftwareInfo{
 			Version:    ver,
@@ -54,6 +55,8 @@ func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
 					ServiceName: sys.ServiceName,
 				},
 			},
+			Language:      i18nInfo.Language,
+			Region:        i18nInfo.Region,
 			WorkDir:       s._conf.GetWorkdir(),
 			LogLevel:      logger.GetLogLevel(),
 			LogPath:       logger.GetLogPath(),
@@ -136,11 +139,13 @@ func (s *SystemController) GetLog(c *gin.Context) {
 // @Tags System
 // @Produce  json
 // @Security ApiKeyAuth
+// @Param lang query string false "Language for the update information (default: en)" default(en)
 // @Success 200 {object} schema.ResponseData "Successfully retrieved update information."
 // @Failure 500 {object} schema.ResponseData "Internal Server Error"
 // @Router /info/check_update [get]
 func (s *SystemController) CheckUpdate(c *gin.Context) {
-	ret, err := s._up.CheckUpdate()
+	lang := c.DefaultQuery("lang", conf.LanguageEnglish.String())
+	ret, err := s._up.CheckUpdate(lang)
 	if err != nil {
 		c.Error(err)
 		return

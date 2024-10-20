@@ -50,10 +50,10 @@ case $last_digit in
 esac
 
 # x64
-build_exe $author_email $build_version $build_edition $build_os  amd64 x86_64-w64-mingw32-gcc x86_64-w64-mingw32-g++ ./out/core-service-x64.exe $go_args
+build_exe $build_version $author_email $build_edition $build_os  amd64 x86_64-w64-mingw32-gcc x86_64-w64-mingw32-g++ ./out/core-service-x64.exe $go_args
 
 # arm64
-build_exe $author_email $build_version  $build_edition $build_os  arm64 aarch64-w64-mingw32-gcc aarch64-w64-mingw32-g++ ./out/core-service-arm64.exe $go_args
+build_exe $build_version $author_email  $build_edition $build_os  arm64 aarch64-w64-mingw32-gcc aarch64-w64-mingw32-g++ ./out/core-service-arm64.exe $go_args
 
 # x86
-build_exe $author_email $build_version  $build_edition $build_os  386 i686-w64-mingw32-gcc i686-w64-mingw32-g++ ./out/core-service-x86.exe $go_args
+build_exe $build_version $author_email  $build_edition $build_os  386 i686-w64-mingw32-gcc i686-w64-mingw32-g++ ./out/core-service-x86.exe $go_args

@@ -37,6 +37,7 @@ var rootCmd = &cobra.Command{
 func init() {
 	rootCmd.PersistentFlags().BoolVarP(&installServiceMode, "install", "i", false, "install service")
 	rootCmd.PersistentFlags().BoolVarP(&unInstallServiceMode, "uninstall", "u", false, "uninstall service")
+	rootCmd.PersistentFlags().StringVarP(&workDir, "workdir", "w", "", "working directory")
 }
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {

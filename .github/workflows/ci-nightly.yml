@@ -29,10 +29,12 @@ jobs:
         run: |
           export LLVM_PATH=$GITHUB_WORKSPACE/llvm-mingw-20240917-ucrt-ubuntu-20.04-x86_64/bin
           export PATH=$LLVM_PATH:$PATH
-          cd cmd/core-service
-          bash  build-windows.sh 4.0.0.9 ${{secrets.ME_MAIL}}  windows
-          cd ../install-service
+          cd cmd/install-service
           bash build-windows.sh
+          cd ../core-service
+          bash  build-windows.sh 3.9.9.9 ${{secrets.ME_MAIL}}  windows
+         
+
       - name: Upload release
         uses: softprops/action-gh-release@v2
         with:

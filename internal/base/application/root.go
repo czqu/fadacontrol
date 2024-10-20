@@ -3,7 +3,6 @@ package application
 import (
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
-	"fadacontrol/internal/base/service"
 	"github.com/spf13/cobra"
 	"os"
 )
@@ -30,7 +29,7 @@ var rootCmd = &cobra.Command{
 			if debugMode {
 				DesktopServiceMain(debugMode, conf.ServiceMode, workDir)
 			} else {
-				service.StartService()
+				StartService()
 			}
 
 			return
