@@ -1,6 +1,7 @@
 package bootstrap
 
 import (
+	"context"
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/service/control_pc"
@@ -10,20 +11,22 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 type DesktopSlaveServiceBootstrap struct {
-	_conf *conf.Conf
-	lo    *logger.Logger
-	slave *internal_service.InternalSlaveService
-	done  chan interface{}
-	di    *DataInitBootstrap
-	_co   *control_pc.ControlPCService
-	pf    *ProfilingBootstrap
+	_conf       *conf.Conf
+	lo          *logger.Logger
+	slave       *internal_service.InternalSlaveService
+	done        chan interface{}
+	di          *DataInitBootstrap
+	_co         *control_pc.ControlPCService
+	pf          *ProfilingBootstrap
+	_exitSignal *conf.ExitChanStruct
 }
 
-func NewDesktopSlaveServiceBootstrap(pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, _conf *conf.Conf, lo *logger.Logger, slave *internal_service.InternalSlaveService) *DesktopSlaveServiceBootstrap {
-	return &DesktopSlaveServiceBootstrap{pf: pf, _co: _co, di: di, _conf: _conf, lo: lo, slave: slave, done: make(chan interface{})}
+func NewDesktopSlaveServiceBootstrap(_exitSignal *conf.ExitChanStruct, pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, _conf *conf.Conf, lo *logger.Logger, slave *internal_service.InternalSlaveService) *DesktopSlaveServiceBootstrap {
+	return &DesktopSlaveServiceBootstrap{_exitSignal: _exitSignal, pf: pf, _co: _co, di: di, _conf: _conf, lo: lo, slave: slave, done: make(chan interface{})}
 }
 
 func (r *DesktopSlaveServiceBootstrap) Start() {
@@ -50,6 +53,12 @@ func (r *DesktopSlaveServiceBootstrap) Start() {
 			logger.Debug("stopping...")
 			r.Stop()
 		})
+	goroutine.RecoverGO(
+		func() {
+			<-r._exitSignal.ExitChan
+			logger.Debug("stopping...")
+			r.Stop()
+		})
 	r.Wait()
 	return
 
@@ -61,13 +70,23 @@ func (r *DesktopSlaveServiceBootstrap) Wait() {
 	}
 }
 func (r *DesktopSlaveServiceBootstrap) Stop() {
-	r.pf.Stop()
-	logger.Sync()
-
+	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+	defer cancel()
+	stopCh := make(chan struct{}, 1)
 	logger.Debug("stopping root bootstrap")
+	goroutine.RecoverGO(
+		func() {
+			r.pf.Stop()
+			logger.Sync()
+			r.slave.Stop()
+		})
 
-	r.slave.Stop()
+	select {
+	case <-stopCh:
 
+	case <-ctx.Done():
+
+	}
 	logger.Sync()
 	r.done <- struct{}{}
 }

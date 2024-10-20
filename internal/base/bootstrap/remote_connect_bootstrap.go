@@ -56,12 +56,12 @@ var (
 	onNetworkChangeCallback     func()
 )
 
-type context struct{}
+type networkContext struct{}
 
 func SetNetworkChangeCallback(callback func()) error {
 	onNetworkChangeCallback = callback
 
-	context := &context{}
+	context := &networkContext{}
 	interfaceChange := windows.Handle(0)
 	lastCalled = time.Now().Add(-time.Minute)
 	ret, _, err := procNotifyIpInterfaceChange.Call(syscall.AF_UNSPEC,

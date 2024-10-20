@@ -28,3 +28,10 @@ func DecodeBase58Key(encodedKey string) ([]byte, error) {
 
 	return decodedKey, nil
 }
+func RandomString(length int) (string, error) {
+	key, err := GenerateRandomBase58Key(length)
+	if err != nil {
+		return "", err
+	}
+	return key, nil
+}

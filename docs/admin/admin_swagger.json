@@ -447,6 +447,15 @@
                     "System"
                 ],
                 "summary": "Check for System Updates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "en",
+                        "description": "Language for the update information (default: en)",
+                        "name": "lang",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Successfully retrieved update information.",
@@ -906,6 +915,40 @@
                     "Remote"
                 ],
                 "summary": "Restart Remote Service",
+                "responses": {
+                    "200": {
+                        "description": "Service restarted successfully.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
+        "/sys/stop": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Exit the server",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "HTTP"
+                ],
+                "summary": "Exit Service",
                 "responses": {
                     "200": {
                         "description": "Service restarted successfully.",

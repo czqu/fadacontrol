@@ -1,6 +1,7 @@
 package common_controller
 
 import (
+	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/controller"
 	"fadacontrol/internal/service/control_pc"
@@ -15,11 +16,12 @@ import (
 )
 
 type ControlPCController struct {
-	p *control_pc.ControlPCService
+	p     *control_pc.ControlPCService
+	_conf *conf.Conf
 }
 
-func NewControlPCController(p *control_pc.ControlPCService) *ControlPCController {
-	return &ControlPCController{p: p}
+func NewControlPCController(_conf *conf.Conf, p *control_pc.ControlPCService) *ControlPCController {
+	return &ControlPCController{_conf: _conf, p: p}
 }
 
 // ControlPC Control computer interface
@@ -71,7 +73,11 @@ func (o *ControlPCController) ControlPC(c *gin.Context) {
 		c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 
 	case "lock":
-		ret = o.p.LockWindows(true)
+		if o._conf.StartMode == conf.ServiceMode {
+			ret = o.p.LockWindows(true)
+		} else {
+			ret = o.p.LockWindows(false)
+		}
 
 	default:
 		c.Error(exception.ErrUserParameterError)

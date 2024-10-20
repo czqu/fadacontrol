@@ -12,6 +12,8 @@ import (
 	"fadacontrol/pkg/goroutine"
 	"github.com/mitchellh/mapstructure"
 	"net"
+	"os"
+	"os/exec"
 	"strconv"
 	"time"
 )
@@ -19,13 +21,14 @@ import (
 type InternalSlaveService struct {
 	_done chan bool
 
-	conf *conf.Conf
-	cu   *custom_command_service.CustomCommandService
-	co   *control_pc.ControlPCService
+	conf        *conf.Conf
+	cu          *custom_command_service.CustomCommandService
+	co          *control_pc.ControlPCService
+	_exitSignal *conf.ExitChanStruct
 }
 
-func NewInternalSlaveService(cu *custom_command_service.CustomCommandService, co *control_pc.ControlPCService, conf *conf.Conf) *InternalSlaveService {
-	return &InternalSlaveService{cu: cu, co: co, conf: conf, _done: make(chan bool)}
+func NewInternalSlaveService(_exitSignal *conf.ExitChanStruct, cu *custom_command_service.CustomCommandService, co *control_pc.ControlPCService, conf *conf.Conf) *InternalSlaveService {
+	return &InternalSlaveService{_exitSignal: _exitSignal, cu: cu, co: co, conf: conf, _done: make(chan bool)}
 }
 func (s *InternalSlaveService) Start() {
 	port := 2095
@@ -42,14 +45,16 @@ func (s *InternalSlaveService) Stop() {
 
 const (
 	initialBackoff = 1 * time.Second
-	maxBackoff     = 16 * time.Second
+	maxBackoff     = 8 * time.Second
 )
 
 func (s *InternalSlaveService) connectToServer(addr string) {
 	logger.Info("connect to server")
 	backoff := initialBackoff
-
+	maxCnt := 1
+	cnt := 0
 	for {
+
 		conn, err := net.Dial("tcp", addr)
 
 		select {
@@ -67,9 +72,37 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 			// Increase the backoff time until maxBackoff is reached
 			if backoff < maxBackoff {
 				backoff *= 2
-				if backoff > maxBackoff {
+
+			}
+			if backoff >= maxBackoff {
+
+				logger.Debug("maxBackoff")
+
+				logger.Debug(cnt)
+				if cnt >= maxCnt {
+					s._exitSignal.ExitChan <- 0
+					<-s._done
 					return
 				}
+				backoff = initialBackoff
+				cnt++
+				logger.Info("try to start common mode")
+				exePath, err := os.Executable()
+				if err != nil {
+					logger.Error("Error getting executable path:", err)
+					continue
+				}
+				args := []string{"-w", s.conf.GetWorkdir()}
+				cmd := exec.Command(exePath, args...)
+				cmd.Start()
+				if err != nil {
+					logger.Error("Error starting command:", err)
+					continue
+				}
+				s._exitSignal.ExitChan <- 0
+				<-s._done
+				return
+
 			}
 			continue
 		}

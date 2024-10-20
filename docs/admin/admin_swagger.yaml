@@ -343,6 +343,12 @@ paths:
       description: Check if there are any updates available for the system. This endpoint
         returns the latest available update details, including the version, update
         URL, and release notes.
+      parameters:
+      - default: en
+        description: 'Language for the update information (default: en)'
+        in: query
+        name: lang
+        type: string
       produces:
       - application/json
       responses:
@@ -656,6 +662,27 @@ paths:
       summary: Restart Remote Service
       tags:
       - Remote
+  /sys/stop:
+    post:
+      consumes:
+      - application/json
+      description: Exit the server
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Service restarted successfully.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Exit Service
+      tags:
+      - HTTP
   /unlock:
     post:
       parameters:

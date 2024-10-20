@@ -99,3 +99,31 @@ func (c *Client) Get(url string) (string, error) {
 
 	return string(body), nil
 }
+
+// Post
+func (c *Client) Post(url string, contentType string, body io.Reader, headers map[string]string) (string, error) {
+
+	req, err := http.NewRequest(http.MethodPost, url, body)
+	if err != nil {
+		return "", err
+	}
+
+	req.Header.Set("Content-Type", contentType)
+
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	return string(bodyBytes), nil
+}

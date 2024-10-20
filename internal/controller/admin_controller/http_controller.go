@@ -1,22 +1,25 @@
 package admin_controller
 
 import (
+	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/controller"
 	"fadacontrol/internal/schema/http_schema"
 	"fadacontrol/internal/service/http_service"
+	"fadacontrol/pkg/goroutine"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"net/http"
 )
 
 type HttpController struct {
-	_db *gorm.DB
-	hs  *http_service.HttpService
+	_db         *gorm.DB
+	hs          *http_service.HttpService
+	_exitSignal *conf.ExitChanStruct
 }
 
-func NewHttpController(db *gorm.DB, hs *http_service.HttpService) *HttpController {
-	return &HttpController{_db: db, hs: hs}
+func NewHttpController(_exitSignal *conf.ExitChanStruct, db *gorm.DB, hs *http_service.HttpService) *HttpController {
+	return &HttpController{_exitSignal: _exitSignal, _db: db, hs: hs}
 }
 
 // @Summary Get HTTP Configuration
@@ -155,5 +158,22 @@ func (h *HttpController) RestartHttpService(c *gin.Context) {
 		return
 
 	}
+	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
+}
+
+// @Summary Exit Service
+// @Description Exit the server
+// @Tags HTTP
+// @Accept json
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} schema.ResponseData "Service restarted successfully."
+// @Failure 500 {object} schema.ResponseData "Internal Server Error"
+// @Router /sys/stop [post]
+func (h *HttpController) StopService(c *gin.Context) {
+	goroutine.RecoverGO(func() {
+		h._exitSignal.ExitChan <- 0
+	})
+
 	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 }

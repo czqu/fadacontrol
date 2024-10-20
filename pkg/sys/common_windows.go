@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"github.com/Microsoft/go-winio"
 	"net"
+	"os/user"
 	"strconv"
 	"syscall"
 	"unsafe"
@@ -173,8 +174,13 @@ func ReceiveFromNamedPipe(pipeName string, pipeCacheSize int) ([]byte, error) {
 }
 
 func ListenNamedPipeWithHandler(pipeName string, handler func(conn net.Conn), inputBufferSize, outputBufferSize int32) error {
+	securityDescriptor := "D:(A;;GA;;;S-1-5-32-544)(A;;GA;;;S-1-5-18)"
+	sid, err := getCurrentUserSid()
+	if err == nil {
+		securityDescriptor = fmt.Sprintf("D:(A;;GA;;;S-1-5-32-544)(A;;GA;;;S-1-5-18)(A;;GA;;;%s)", sid)
+	}
 	config := &winio.PipeConfig{
-		SecurityDescriptor: "D:(A;;GA;;;S-1-5-32-544)(A;;GA;;;S-1-5-18)", // Only administrators and system accounts have full control
+		SecurityDescriptor: securityDescriptor, // Only administrators and system accounts have full control
 		MessageMode:        false,
 		InputBufferSize:    inputBufferSize,
 		OutputBufferSize:   outputBufferSize,
@@ -198,7 +204,13 @@ func ListenNamedPipeWithHandler(pipeName string, handler func(conn net.Conn), in
 	}
 
 }
-
+func getCurrentUserSid() (string, error) {
+	currentUser, err := user.Current()
+	if err != nil {
+		return "", err
+	}
+	return currentUser.Uid, nil
+}
 func SetPowerSavingMode(enable bool) bool {
 	var cEnable C.bool
 	if enable {

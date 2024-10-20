@@ -73,6 +73,8 @@ func (d *AdminRouter) Register() {
 		apiv1.PUT("/http/config", d._http.UpdateHttpConfig)
 		apiv1.POST("/http/restart", d._http.RestartHttpService)
 
+		apiv1.POST("/sys/stop", d._http.StopService)
+
 		apiv1.POST("/login", d.auth.Login)
 	}
 
