@@ -4,12 +4,16 @@ import (
 	"encoding/base64"
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/internal/base/version"
 	"fadacontrol/internal/entity"
+	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/secure"
 	"fadacontrol/pkg/sys"
+	"fadacontrol/pkg/utils"
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"gorm.io/gorm"
+	"time"
 )
 
 type DataInitBootstrap struct {
@@ -56,9 +60,26 @@ func (d *DataInitBootstrap) initSysConfig() {
 	if cnt == 0 {
 		sysConfig := entity.SysConfig{
 			PowerSavingMode: true,
+			Language:        "en",
 		}
 		d._db.Create(&sysConfig)
+		goroutine.RecoverGO(func() {
+			client, err := utils.NewClientBuilder().SetTimeout(5 * time.Second).Build()
+			if err != nil {
+				logger.Errorf("failed to create client")
+				return
+			}
+			_, err = client.Get("https://www.google.com/")
+			if err != nil {
+				sysConfig.Region = int16(version.RegionCN)
+			} else {
+				sysConfig.Region = int16(version.RegionGlobal)
+			}
+			d._db.Save(&sysConfig)
+		})
+
 	}
+
 }
 func (d *DataInitBootstrap) initHttpConfig() {
 

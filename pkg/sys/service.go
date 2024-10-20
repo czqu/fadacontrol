@@ -11,7 +11,7 @@ type Svc interface {
 	Start() error
 	Run() error
 	Stop() error
-	Install(args ...string) error
+	Install(path string, args ...string) error
 	Uninstall() error
 }
 type SvcHandler interface {

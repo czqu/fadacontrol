@@ -1,4 +1,4 @@
-package cmd
+package application
 
 import (
 	"fadacontrol/internal/base/conf"
@@ -31,12 +31,13 @@ func StartService() {
 		logger.Error(err.Error())
 	}
 }
-func InstallService(args ...string) {
+
+func InstallService(path string, args ...string) {
 
 	var p program
 	s, _ := sys.New(&p)
 
-	err := s.Install(args...)
+	err := s.Install(path, args...)
 	if err != nil {
 		logger.Error(err.Error())
 	}

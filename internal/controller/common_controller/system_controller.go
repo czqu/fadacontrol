@@ -8,6 +8,7 @@ import (
 	"fadacontrol/internal/controller"
 	"fadacontrol/internal/schema"
 	"fadacontrol/internal/service/control_pc"
+	"fadacontrol/internal/service/update_service"
 	"fadacontrol/pkg/secure"
 	"fadacontrol/pkg/syncer"
 	"fadacontrol/pkg/sys"
@@ -18,10 +19,11 @@ import (
 type SystemController struct {
 	_conf *conf.Conf
 	_co   *control_pc.ControlPCService
+	_up   *update_service.UpdateService
 }
 
-func NewSystemController(_co *control_pc.ControlPCService, _conf *conf.Conf) *SystemController {
-	return &SystemController{_co: _co, _conf: _conf}
+func NewSystemController(_co *control_pc.ControlPCService, _conf *conf.Conf, _up *update_service.UpdateService) *SystemController {
+	return &SystemController{_co: _co, _conf: _conf, _up: _up}
 }
 
 // @Summary Get Software Info
@@ -45,7 +47,7 @@ func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
 		schema.SoftwareInfo{
 			Version:    ver,
 			BuildInfo:  version.GetBuildInfo(),
-			Edition:    version.GetEdition(),
+			Edition:    string(version.GetEdition()),
 			AppVersion: version.GetVersionName(),
 			ServiceInfo: []schema.ServiceInfo{
 				{
@@ -127,4 +129,21 @@ func (s *SystemController) GetLog(c *gin.Context) {
 
 	}
 	c.JSON(http.StatusOK, controller.GetGinError(c, exception.ErrUnknownException))
+}
+
+// @Summary Check for System Updates
+// @Description Check if there are any updates available for the system. This endpoint returns the latest available update details, including the version, update URL, and release notes.
+// @Tags System
+// @Produce  json
+// @Security ApiKeyAuth
+// @Success 200 {object} schema.ResponseData "Successfully retrieved update information."
+// @Failure 500 {object} schema.ResponseData "Internal Server Error"
+// @Router /info/check_update [get]
+func (s *SystemController) CheckUpdate(c *gin.Context) {
+	ret, err := s._up.CheckUpdate()
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c, ret))
 }

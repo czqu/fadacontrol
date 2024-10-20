@@ -4,7 +4,7 @@
 //go:build !wireinject
 // +build !wireinject
 
-package cmd
+package application
 
 import (
 	"fadacontrol/internal/base/bootstrap"
@@ -26,6 +26,7 @@ import (
 	"fadacontrol/internal/service/jwt_service"
 	"fadacontrol/internal/service/remote_service"
 	"fadacontrol/internal/service/unlock"
+	"fadacontrol/internal/service/update_service"
 	"fadacontrol/internal/service/user_service"
 )
 
@@ -58,7 +59,8 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	discoverService := discovery_service.NewDiscoverService(gormDB)
 	discoverBootstrap := bootstrap.NewDiscoverBootstrap(discoverService)
 	httpService := http_service.NewHttpService(gormDB, _conf)
-	systemController := common_controller.NewSystemController(controlPCService, _conf)
+	updateService := update_service.NewUpdateService(gormDB)
+	systemController := common_controller.NewSystemController(controlPCService, _conf, updateService)
 	jwtService := jwt_service.NewJwtService()
 	authService := auth_service.NewAuthService(enforcer)
 	jwtMiddleware := middleware.NewJwtMiddleware(jwtService, authService)

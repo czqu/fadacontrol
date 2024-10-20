@@ -1,4 +1,4 @@
-package cmd
+package application
 
 import (
 	"fadacontrol/internal/base/bootstrap"

@@ -31,10 +31,20 @@ jobs:
           export PATH=$LLVM_PATH:$PATH
           cd cmd/core-service
           bash  build-windows.sh 4.0.0.9 ${{secrets.ME_MAIL}}  windows
+          cd ../install-service
+          bash build-windows.sh
       - name: Upload release
         uses: softprops/action-gh-release@v2
         with:
           files: "cmd/core-service/out/*.exe"
+          prerelease: true
+          tag_name: nightly
+          token: ${{ secrets.GH_TOKEN }}
+          body_path: release_note.md
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "cmd/install-service/out/*.exe"
           prerelease: true
           tag_name: nightly
           token: ${{ secrets.GH_TOKEN }}

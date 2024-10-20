@@ -1,7 +1,7 @@
 package main
 
 import (
-	"fadacontrol/internal/base/cmd"
+	"fadacontrol/internal/base/application"
 	"fadacontrol/internal/base/logger"
 )
 
@@ -12,5 +12,5 @@ func main() {
 			logger.Sync()
 		}
 	}()
-	cmd.Execute()
+	application.Execute()
 }

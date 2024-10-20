@@ -338,6 +338,27 @@ paths:
       summary: Get Software Info
       tags:
       - System
+  /info/check_update:
+    get:
+      description: Check if there are any updates available for the system. This endpoint
+        returns the latest available update details, including the version, update
+        URL, and release notes.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved update information.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Check for System Updates
+      tags:
+      - System
   /interface:
     get:
       consumes:

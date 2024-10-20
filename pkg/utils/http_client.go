@@ -1,4 +1,4 @@
-package http_client
+package utils
 
 import (
 	"golang.org/x/net/proxy"

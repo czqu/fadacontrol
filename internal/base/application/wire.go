@@ -1,7 +1,7 @@
 //go:build wireinject
 // +build wireinject
 
-package cmd
+package application
 
 import (
 	"fadacontrol/internal/base/bootstrap"
@@ -23,6 +23,7 @@ import (
 	"fadacontrol/internal/service/jwt_service"
 	"fadacontrol/internal/service/remote_service"
 	"fadacontrol/internal/service/unlock"
+	"fadacontrol/internal/service/update_service"
 	"fadacontrol/internal/service/user_service"
 	"github.com/google/wire"
 )
@@ -36,7 +37,7 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 		admin_controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, admin_controller.NewDiscoverController, credential_provider_service.NewCredentialProviderService,
 		bootstrap.NewDataInitBootstrap, data.NewAdapterByDB, data.NewEnforcer, common_controller.NewAuthController,
 		middleware.NewJwtMiddleware, jwt_service.NewJwtService, auth_service.NewAuthService, user_service.NewUserService, discovery_service.NewDiscoverService,
-		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap,
+		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap, update_service.NewUpdateService,
 	)
 	return &DesktopServiceApp{_conf: _conf, db: db}, nil
 }

@@ -438,6 +438,37 @@ const docTemplateadmin = `{
                 }
             }
         },
+        "/info/check_update": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Check if there are any updates available for the system. This endpoint returns the latest available update details, including the version, update URL, and release notes.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Check for System Updates",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved update information.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
         "/interface": {
             "get": {
                 "security": [

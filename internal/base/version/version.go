@@ -4,6 +4,45 @@ import (
 	"time"
 )
 
+type ProductRegion int16
+
+const (
+	RegionGlobal ProductRegion = iota
+	RegionCN
+)
+
+var regionNameMap = map[ProductRegion]string{
+	RegionGlobal: "global",
+	RegionCN:     "cn",
+}
+
+type ProductEdition string
+
+const (
+	EditionRelease ProductEdition = "release"
+	EditionBeta    ProductEdition = "beta"
+	EditionDev     ProductEdition = "dev"
+	EditionCanary  ProductEdition = "canary"
+	EditionNightly ProductEdition = "nightly"
+)
+
+func GetRegionName(region ProductRegion) string {
+	if name, ok := regionNameMap[region]; ok {
+		return name
+	} else {
+		return "global"
+	}
+}
+func GetRegionFromCode(code int16) ProductRegion {
+	switch code {
+	case 1:
+		return RegionCN
+	default:
+		return RegionGlobal
+	}
+}
+
+var ProductName = "fadacontrol"
 var BuildDate string
 var Edition string
 var _VersionName string
@@ -27,7 +66,7 @@ func GetVersion() string {
 	if err != nil {
 		return ""
 	}
-	return t.Format("060102") + GetEdition()
+	return t.Format("060102") + GetEditionCode()
 }
 func GetBuildDate() (time.Time, error) {
 	layout := time.RFC3339
@@ -38,7 +77,7 @@ func GetBuildDate() (time.Time, error) {
 	return t, nil
 }
 
-func GetEdition() string {
+func GetEditionCode() string {
 	switch Edition {
 	case "release":
 		return "00"
@@ -52,6 +91,22 @@ func GetEdition() string {
 		return "08"
 
 	default:
-		return "09"
+		return "08"
+	}
+}
+func GetEdition() ProductEdition {
+	switch Edition {
+	case "release":
+		return EditionRelease
+	case "beta":
+		return EditionBeta
+	case "dev":
+		return EditionDev
+	case "canary":
+		return EditionCanary
+	case "nightly":
+		return EditionNightly
+	default:
+		return EditionNightly
 	}
 }

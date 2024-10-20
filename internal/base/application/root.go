@@ -1,15 +1,14 @@
-package cmd
+package application
 
 import (
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/internal/base/service"
 	"github.com/spf13/cobra"
 	"os"
 )
 
 var serviceMode bool
-var installServiceMode bool
-var unInstallServiceMode bool
 var workDir string
 var slaveMode bool
 var debugMode bool
@@ -31,21 +30,12 @@ var rootCmd = &cobra.Command{
 			if debugMode {
 				DesktopServiceMain(debugMode, conf.ServiceMode, workDir)
 			} else {
-				StartService()
+				service.StartService()
 			}
 
 			return
 		}
-		if installServiceMode {
 
-			InstallService("-s", "-w", workDir)
-
-			return
-		}
-		if unInstallServiceMode {
-			UninstallService()
-			return
-		}
 		if slaveMode {
 			logger.Info("slave service start")
 			DesktopSlaveAppMain(debugMode, conf.SlaveMode, workDir)
@@ -67,8 +57,6 @@ func Execute() {
 func init() {
 	//rootCmd.PersistentFlags().StringVarP(&cfgFile, "config", "f", "", "config file")
 	rootCmd.PersistentFlags().BoolVarP(&serviceMode, "service", "s", false, "service mode")
-	rootCmd.PersistentFlags().BoolVarP(&installServiceMode, "install", "i", false, "install service")
-	rootCmd.PersistentFlags().BoolVarP(&unInstallServiceMode, "uninstall", "u", false, "uninstall service")
 	rootCmd.PersistentFlags().StringVarP(&workDir, "workdir", "w", "", "working directory")
 	rootCmd.PersistentFlags().BoolVarP(&slaveMode, "slave", "", false, "slave-mode")
 	rootCmd.PersistentFlags().BoolVarP(&debugMode, "debug", "d", false, "debug mode")

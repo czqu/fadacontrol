@@ -1,4 +1,4 @@
-package entity
+package schema
 
 import "fadacontrol/internal/base/exception"
 
