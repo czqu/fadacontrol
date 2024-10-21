@@ -8,7 +8,6 @@ import (
 	"fadacontrol/internal/entity"
 	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/secure"
-	"fadacontrol/pkg/sys"
 	"fadacontrol/pkg/utils"
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
@@ -17,17 +16,18 @@ import (
 )
 
 type DataInitBootstrap struct {
-	_db      *gorm.DB
-	adapter  *gormadapter.Adapter
-	enforcer *casbin.Enforcer
+	_db         *gorm.DB
+	adapter     *gormadapter.Adapter
+	enforcer    *casbin.Enforcer
+	_exitSignal *conf.ExitChanStruct
 }
 
 const HttpServiceApi = "HTTP_SERVICE_API"
 const HttpsServiceApi = "HTTPS_SERVICE_API"
 const HttpServiceAdmin = "HTTP_SERVICE_ADMIN"
 
-func NewDataInitBootstrap(adapter *gormadapter.Adapter, enforcer *casbin.Enforcer, _db *gorm.DB) *DataInitBootstrap {
-	return &DataInitBootstrap{_db: _db, adapter: adapter, enforcer: enforcer}
+func NewDataInitBootstrap(_exitSignal *conf.ExitChanStruct, adapter *gormadapter.Adapter, enforcer *casbin.Enforcer, _db *gorm.DB) *DataInitBootstrap {
+	return &DataInitBootstrap{_exitSignal: _exitSignal, _db: _db, adapter: adapter, enforcer: enforcer}
 
 }
 func (d *DataInitBootstrap) Stop() error {
@@ -212,7 +212,11 @@ func (d *DataInitBootstrap) initUser() {
 		user.Password = secure.HashPasswordByKDFBase64(conf.RootPassword, salt)
 		user.Salt = salt
 		d._db.Save(&user)
-		sys.ShutDownMe(0)
+		logger.Info("root password reset")
+		goroutine.RecoverGO(
+			func() {
+				d._exitSignal.ExitChan <- 0
+			})
 	}
 
 }

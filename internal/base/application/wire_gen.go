@@ -49,7 +49,7 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	if err != nil {
 		return nil, err
 	}
-	dataInitBootstrap := bootstrap.NewDataInitBootstrap(adapter, enforcer, gormDB)
+	dataInitBootstrap := bootstrap.NewDataInitBootstrap(exitChanStruct, adapter, enforcer, gormDB)
 	credentialProviderService := credential_provider_service.NewCredentialProviderService(gormDB)
 	unLockService := unlock.NewUnLockService(credentialProviderService)
 	remoteService := remote_service.NewRemoteService(controlPCService, unLockService, _conf, gormDB)
@@ -101,7 +101,7 @@ func initDesktopDaemonApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*Des
 	if err != nil {
 		return nil, err
 	}
-	dataInitBootstrap := bootstrap.NewDataInitBootstrap(adapter, enforcer, gormDB)
+	dataInitBootstrap := bootstrap.NewDataInitBootstrap(exitChanStruct, adapter, enforcer, gormDB)
 	customCommandService := custom_command_service.NewCustomCommandService(_conf)
 	internalSlaveService := internal_service.NewInternalSlaveService(exitChanStruct, customCommandService, controlPCService, _conf)
 	desktopSlaveServiceBootstrap := bootstrap.NewDesktopSlaveServiceBootstrap(exitChanStruct, profilingBootstrap, controlPCService, dataInitBootstrap, _conf, loggerLogger, internalSlaveService)

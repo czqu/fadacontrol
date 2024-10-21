@@ -13,6 +13,7 @@ type SoftwareInfo struct {
 	AuthorEmail   string          `json:"author_email"`
 	Language      string          `json:"language"`
 	Region        string          `json:"region"`
+	Path          string          `json:"path"`
 }
 type ServiceInfo struct {
 	ServiceName string `json:"service_name"`

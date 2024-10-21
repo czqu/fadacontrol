@@ -2,8 +2,6 @@ package sys
 
 import (
 	"fadacontrol/internal/schema/remote_schema"
-	"os"
-	"time"
 )
 
 type ShutdownType int
@@ -67,9 +65,4 @@ func ProtoTypeToShutdownType(protoType remote_schema.ShutdownType) ShutdownType 
 	default:
 		return Unknown
 	}
-}
-func ShutDownMe(code int) {
-	time.Sleep(time.Second * 5)
-	os.Exit(code)
-
 }

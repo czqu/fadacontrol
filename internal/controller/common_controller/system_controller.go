@@ -14,6 +14,7 @@ import (
 	"fadacontrol/pkg/sys"
 	"github.com/gin-gonic/gin"
 	"net/http"
+	"os"
 )
 
 type SystemController struct {
@@ -38,6 +39,12 @@ func NewSystemController(_co *control_pc.ControlPCService, _conf *conf.Conf, _up
 func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
 	ver := version.GetVersion()
 
+	path, err := os.Executable()
+	if err != nil {
+		c.Error(err)
+		return
+	}
+
 	supportAlgo := make([]schema.AlgorithmInfo, 0)
 	for algo, _ := range secure.AlgorithmNames {
 		supportAlgo = append(supportAlgo, schema.AlgorithmInfo{AlgorithmName: secure.AlgorithmNames[algo]})
@@ -46,6 +53,7 @@ func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
 	i18nInfo := s._up.GetI18nInfo()
 	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c,
 		schema.SoftwareInfo{
+			Path:       path,
 			Version:    ver,
 			BuildInfo:  version.GetBuildInfo(),
 			Edition:    string(version.GetEdition()),

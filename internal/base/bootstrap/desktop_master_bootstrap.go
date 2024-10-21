@@ -41,25 +41,28 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 	goroutine.RecoverGO(func() {
 		r.pf.Start()
 	})
-	r.di.Start()
 
-	r._co.RunPowerSavingMode()
-	r._http.Start()
-	if r._conf.StartMode == conf.ServiceMode {
-		logger.Info("service mode")
-		r.master.Start()
+	r.di.Start()
+	if !conf.ResetPassword {
+		r._co.RunPowerSavingMode()
+		r._http.Start()
+		if r._conf.StartMode == conf.ServiceMode {
+			logger.Info("service mode")
+			r.master.Start()
+		}
+
+		r.legacy_.Start()
+		r.ble.Start()
+		r.rcb.Start()
+		goroutine.RecoverGO(func() {
+			r.discover.Start()
+		})
+		goroutine.RecoverGO(func() {
+			r.cp.Connect()
+
+		})
 	}
 
-	r.legacy_.Start()
-	r.ble.Start()
-	r.rcb.Start()
-	goroutine.RecoverGO(func() {
-		r.discover.Start()
-	})
-	goroutine.RecoverGO(func() {
-		r.cp.Connect()
-
-	})
 	goroutine.RecoverGO(
 		func() {
 			sChan := make(chan os.Signal, 1)
@@ -89,12 +92,15 @@ func (r *DesktopMasterServiceBootstrap) Stop() {
 	goroutine.RecoverGO(
 		func() {
 			r.pf.Stop()
-			r.ble.Stop()
-			r.discover.Stop()
-			r._http.Stop()
-			r.legacy_.Stop()
-			r.rcb.Stop()
-			r.master.Stop()
+			if !conf.ResetPassword {
+				r.ble.Stop()
+				r.discover.Stop()
+				r._http.Stop()
+				r.legacy_.Stop()
+				r.rcb.Stop()
+				r.master.Stop()
+			}
+
 		})
 	select {
 	case <-stopCh:
