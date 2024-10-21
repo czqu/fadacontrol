@@ -151,7 +151,7 @@ func (h *HttpController) PatchHttpConfig(c *gin.Context) {
 // @Failure 500 {object} schema.ResponseData "Internal Server Error"
 // @Router /http/restart [post]
 func (h *HttpController) RestartHttpService(c *gin.Context) {
-	query := c.Query("type")
+	query := c.DefaultQuery("type", "")
 	err := h.hs.RestartServer(query)
 	if err != nil {
 		c.Error(err)

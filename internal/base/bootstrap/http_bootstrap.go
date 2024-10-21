@@ -24,6 +24,7 @@ func NewHttpBootstrap(_jwt *jwt_service.JwtService, _conf *conf.Conf, _http *htt
 }
 
 func (s *HttpBootstrap) Start() error {
+	s._http.SetRestartFunc(s.Restart)
 	err := s.killOther()
 	if err == nil {
 		time.Sleep(5 * time.Second)
@@ -60,4 +61,11 @@ func (s *HttpBootstrap) killOther() error {
 	}
 	_, err = client.Post("http://localhost:2093/admin/api/v1/sys/stop", "accept: application/json", nil, headers)
 	return err
+}
+func (s *HttpBootstrap) Restart() error {
+	err := s.Stop()
+	if err != nil {
+		return err
+	}
+	return s.Start()
 }

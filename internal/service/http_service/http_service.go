@@ -7,6 +7,8 @@ import (
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/pkg/goroutine"
+	"golang.org/x/net/context"
+	"time"
 
 	"fadacontrol/internal/entity"
 	"fadacontrol/internal/router"
@@ -21,11 +23,12 @@ import (
 )
 
 type HttpService struct {
-	signalChanMap map[string]chan interface{}
-	_db           *gorm.DB
-	_conf         *conf.Conf
-	adminRouter   router.FadaControlRouter
-	commonRouter  router.FadaControlRouter
+	signalChanMap        map[string]chan interface{}
+	_db                  *gorm.DB
+	_conf                *conf.Conf
+	adminRouter          router.FadaControlRouter
+	commonRouter         router.FadaControlRouter
+	restartAllServerFunc func() error
 }
 
 func NewHttpService(_db *gorm.DB, _conf *conf.Conf) *HttpService {
@@ -206,6 +209,7 @@ func startHttpServer(host string, port int, cert tls.Certificate, router *gin.En
 	var srv *http.Server
 	var http3Server *http3.Server
 	tlsFlag := false
+
 	if cert.Certificate == nil || len(cert.Certificate) == 0 || cert.PrivateKey == nil {
 		tlsFlag = false
 		logger.Info("start no secure http at ", port)
@@ -252,9 +256,14 @@ func startHttpServer(host string, port int, cert tls.Certificate, router *gin.En
 	}
 	goroutine.RecoverGO(func() {
 		<-sign
-		if err := srv.Shutdown(nil); err != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		defer cancel()
+		if err := srv.Shutdown(ctx); err != nil {
 			logger.Errorf("server Shutdown: %s", err)
 			close(sign)
+		}
+		if http3Server == nil {
+			return
 		}
 		err := http3Server.Close()
 		if err != nil {
@@ -271,7 +280,7 @@ func startHttpServer(host string, port int, cert tls.Certificate, router *gin.En
 	}
 
 	if err != nil {
-		logger.Warn("server errors: %s", err)
+		logger.Warnf("server errors: %s", err)
 	}
 
 }
@@ -284,6 +293,7 @@ func (s *HttpService) StopServer(serviceName string) error {
 
 	return errors.New("not found http service,name: " + serviceName)
 }
+
 func (s *HttpService) StopAllServer() error {
 
 	for name, sign := range s.signalChanMap {
@@ -293,8 +303,16 @@ func (s *HttpService) StopAllServer() error {
 	return nil
 }
 func (s *HttpService) RestartServer(serviceName string) error {
-	if serviceName == HttpServiceAdmin {
-		return errors.New("not support http service,name: " + serviceName)
+	if serviceName == "" {
+
+		goroutine.RecoverGO(func() {
+			time.Sleep(1 * time.Second)
+			if s.restartAllServerFunc != nil {
+				s.restartAllServerFunc()
+			}
+		})
+		return nil
+
 	}
 	stopErr := s.StopServer(serviceName)
 	if stopErr != nil {
@@ -306,5 +324,9 @@ func (s *HttpService) RestartServer(serviceName string) error {
 		return startErr
 	}
 	return nil
+
+}
+func (s *HttpService) SetRestartFunc(f func() error) {
+	s.restartAllServerFunc = f
 
 }
