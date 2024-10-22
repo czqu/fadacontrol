@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/service/unlock"
+	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/sys/bluetooth"
 
 	"net"
@@ -19,12 +20,8 @@ func NewBleUnlockBootstrap(u *unlock.UnLockService) *BleUnlockBootstrap {
 	return &BleUnlockBootstrap{u: u}
 }
 
-//func init() {
-//	RegisterService(&BleUnlockBootstrap{})
-//}
-
 func (d *BleUnlockBootstrap) Start() error {
-	go d.StartServer()
+	//	go d.StartServer()
 	return nil
 }
 func (d *BleUnlockBootstrap) StartServer() error {
@@ -51,7 +48,10 @@ func (d *BleUnlockBootstrap) StartServer() error {
 			return err
 		}
 
-		go d.handleConnection(conn)
+		goroutine.RecoverGO(
+			func() {
+				d.handleConnection(conn)
+			})
 	}
 }
 func (d *BleUnlockBootstrap) handleConnection(conn net.Conn) {
@@ -85,6 +85,6 @@ func (d *BleUnlockBootstrap) handleConnection(conn net.Conn) {
 	d.u.UnlockPc(username, password)
 }
 func (d *BleUnlockBootstrap) Stop() error {
-	return d.listener.Close()
-
+	//return d.listener.Close()
+	return nil
 }

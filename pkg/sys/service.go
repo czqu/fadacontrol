@@ -1,7 +1,9 @@
 package sys
 
+import "fadacontrol/internal/base/constants"
+
 const (
-	ServiceName = "FadaControl Service"
+	ServiceName = constants.ServiceName
 	Description = "FadaControl Service"
 )
 
@@ -9,7 +11,7 @@ type Svc interface {
 	Start() error
 	Run() error
 	Stop() error
-	Install(args ...string) error
+	Install(path string, args ...string) error
 	Uninstall() error
 }
 type SvcHandler interface {

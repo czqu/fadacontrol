@@ -5,4 +5,5 @@ type DatabaseConf struct {
 	Connection        string `json:"connection" mapstructure:"connection" yaml:"connection"`
 	MaxIdleConnection int    `json:"max_idle" mapstructure:"max_idle" yaml:"max_idle"`
 	MaxOpenConnection int    `json:"max_open" mapstructure:"max_open" yaml:"max_open"`
+	Debug             bool   `json:"debug" mapstructure:"debug" yaml:"debug"`
 }

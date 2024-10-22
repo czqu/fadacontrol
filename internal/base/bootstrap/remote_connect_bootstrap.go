@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/service/remote_service"
+	"fadacontrol/pkg/goroutine"
 	"golang.org/x/sys/windows"
 	"gorm.io/gorm"
 	"strconv"
@@ -35,7 +36,10 @@ func (r *RemoteConnectBootstrap) Start() error {
 		})
 	}
 
-	go r.re.StartService()
+	goroutine.RecoverGO(func() {
+		r.re.StartService()
+	})
+
 	return nil
 }
 func (r *RemoteConnectBootstrap) Stop() error {
@@ -52,12 +56,12 @@ var (
 	onNetworkChangeCallback     func()
 )
 
-type context struct{}
+type networkContext struct{}
 
 func SetNetworkChangeCallback(callback func()) error {
 	onNetworkChangeCallback = callback
 
-	context := &context{}
+	context := &networkContext{}
 	interfaceChange := windows.Handle(0)
 	lastCalled = time.Now().Add(-time.Minute)
 	ret, _, err := procNotifyIpInterfaceChange.Call(syscall.AF_UNSPEC,

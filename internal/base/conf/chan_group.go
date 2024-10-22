@@ -1,11 +1,9 @@
 package conf
 
-type ChanGroup struct {
-	InternalCommandSend chan []byte
+type ExitChanStruct struct {
+	ExitChan chan int
 }
 
-func NewChanGroup() *ChanGroup {
-	return &ChanGroup{
-		InternalCommandSend: make(chan []byte),
-	}
+func NewExitChanStruct() *ExitChanStruct {
+	return &ExitChanStruct{ExitChan: make(chan int)}
 }

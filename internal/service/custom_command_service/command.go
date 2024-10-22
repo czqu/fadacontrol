@@ -4,6 +4,7 @@ import (
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/schema/custom_command_schema"
+	"fadacontrol/pkg/goroutine"
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -40,7 +41,7 @@ func (u *CustomCommandService) ReadConfig(filePath string) (map[string]custom_co
 	return ret, nil
 }
 func (u *CustomCommandService) ExecuteCommand(cmd custom_command_schema.Command, stdout, stderr *custom_command_schema.CustomWriter) error {
-	if u._conf.StartMode == conf.CommonMode || u._conf.StartMode == conf.DaemonMode {
+	if u._conf.StartMode == conf.CommonMode || u._conf.StartMode == conf.SlaveMode {
 		return u.executeCommand(cmd, stdout, stderr)
 	}
 
@@ -64,7 +65,7 @@ func (u *CustomCommandService) executeCommand(cmd custom_command_schema.Command,
 	} else {
 		logger.Warnf("Command %s executed successfully.", cmd.Name)
 	}
-	go func() {
+	goroutine.RecoverGO(func() {
 		if err := command.Wait(); err != nil {
 
 			logger.Warnf("Command %s failed with error: %v", cmd.Name, err)
@@ -72,7 +73,8 @@ func (u *CustomCommandService) executeCommand(cmd custom_command_schema.Command,
 		}
 		stdout.Close()
 		logger.Debugf("Command %s executed successfully.", cmd.Name)
-	}()
+	})
+
 	return nil
 
 }

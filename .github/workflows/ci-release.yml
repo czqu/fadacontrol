@@ -1,0 +1,57 @@
+name: release build
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: get version
+        id: get-version
+        run: |
+          ref="${{ github.ref }}"
+          version=$(echo $ref | sed 's|refs/tags/v||')
+          echo "CURRENT_VER=v$version" >> $GITHUB_ENV
+          echo "CURRENT_VER_NUM=$version" >>  $GITHUB_ENV
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name:  Download llvm-mingw
+        uses: dsaltares/fetch-gh-release-asset@master
+        with:
+          repo: 'mstorsjo/llvm-mingw'
+          version: 'tags/20240917'
+          file: 'llvm-mingw-20240917-ucrt-ubuntu-20.04-x86_64.tar.xz'
+          token: ${{ secrets.GH_TOKEN }}
+      - name: Set up  tools
+        run: |
+          tar -xf llvm-mingw-20240917-ucrt-ubuntu-20.04-x86_64.tar.xz
+      - name: Setup go
+        uses: actions/setup-go@v5
+        with:
+          go-version:  "1.23.1"
+      - name: Build EXE
+        run: |
+          export LLVM_PATH=$GITHUB_WORKSPACE/llvm-mingw-20240917-ucrt-ubuntu-20.04-x86_64/bin
+          export PATH=$LLVM_PATH:$PATH
+          cd cmd/install-service
+          bash build-windows.sh
+          cd ../core-service
+          bash  build-windows.sh ${{ env.CURRENT_VER_NUM }} ${{secrets.ME_MAIL}}  windows
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "cmd/core-service/out/*.exe"
+          make_latest: true
+          body_path: release_note.md
+          token: ${{ secrets.GH_TOKEN }}
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+         files: "cmd/install-service/out/*.exe"
+         make_latest: true
+         body_path: release_note.md
+         token: ${{ secrets.GH_TOKEN }}

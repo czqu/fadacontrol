@@ -3,6 +3,7 @@ package secure
 import (
 	"crypto/rand"
 	"crypto/sha256"
+	"encoding/base64"
 	"golang.org/x/crypto/argon2"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/hkdf"
@@ -64,4 +65,25 @@ func GenerateSalt(length int) ([]byte, error) {
 		return nil, err
 	}
 	return salt, nil
+}
+func GenerateSaltBase64(length int) (string, error) {
+	salt, err := GenerateSalt(length)
+	if err != nil {
+		return "", err
+	}
+	return base64.RawStdEncoding.EncodeToString(salt), nil
+}
+func HashPasswordByKDF(password string, salt []byte) string {
+	hash := pbkdf2.Key([]byte(password), salt, 4096, 32, sha256.New)
+	return base64.RawStdEncoding.EncodeToString(hash)
+}
+func HashPasswordByKDFBase64(password string, salt string) string {
+	saltBytes, _ := base64.RawStdEncoding.DecodeString(salt)
+	hash := pbkdf2.Key([]byte(password), saltBytes, 4096, 32, sha256.New)
+	return base64.RawStdEncoding.EncodeToString(hash)
+}
+func VerifyPassword(password, salt, hashedPassword string) bool {
+	saltBytes, _ := base64.RawStdEncoding.DecodeString(salt)
+	hash := pbkdf2.Key([]byte(password), saltBytes, 4096, 32, sha256.New)
+	return base64.RawStdEncoding.EncodeToString(hash) == hashedPassword
 }

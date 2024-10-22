@@ -1,0 +1,324 @@
+basePath: /api/v1
+definitions:
+  schema.LoginRequest:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    required:
+    - password
+    - username
+    type: object
+  schema.PcUserInfo:
+    properties:
+      password:
+        type: string
+      username:
+        type: string
+    type: object
+  schema.ResponseData:
+    properties:
+      code:
+        type: integer
+      data: {}
+      msg:
+        type: string
+      request_id:
+        type: string
+    type: object
+externalDocs:
+  description: OpenAPI
+  url: https://swagger.io/resources/open-api/
+host: localhost:2091
+info:
+  contact:
+    email: me@czqu.net
+    name: API Support
+    url: https://rfu.czqu.net
+  description: Remote unlock module API documentation
+  termsOfService: https://rfu.czqu.net
+  title: Remote Unlock Module API documentation
+  version: "1.0"
+paths:
+  /control-pc/{action}/:
+    post:
+      consumes:
+      - application/json
+      description: Control the operation of the computer according to the transmitted
+        parameters
+      parameters:
+      - description: The type of operation（shutdown、standby、lock）
+        enum:
+        - shutdown
+        - standby
+        - lock
+        in: path
+        name: action
+        required: true
+        type: string
+      - description: Delay time in seconds,only valid when the action is shutdown、standby
+        in: query
+        name: delay
+        type: string
+      - description: The type of shutdown
+        in: query
+        name: shutdown_type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "400":
+          description: Invalid action type
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: The operation failed
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Control  computer
+  /info:
+    get:
+      consumes:
+      - application/json
+      description: Get the software version information
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Server internal error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Get Software Info
+      tags:
+      - System
+  /interface:
+    get:
+      consumes:
+      - application/json
+      description: Based on the specified IP version type, a list of valid network
+        interfaces is returned
+      parameters:
+      - default: "4"
+        description: IP Version Type (4 or 6)
+        enum:
+        - "4"
+        - "6"
+        in: query
+        name: type
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: A list of valid network interfaces is successfully returned
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "400":
+          description: The request parameter is incorrect
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Server internal error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Returns a valid network interface
+      tags:
+      - Network interfaces
+  /interface/{ip}:
+    get:
+      parameters:
+      - description: IP address
+        in: path
+        name: ip
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "400":
+          description: The request is incorrect
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal errors
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Obtain the MAC address based on the IP address
+  /interface/{ip}/all:
+    get:
+      parameters:
+      - description: IP address
+        in: path
+        name: ip
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+        "400":
+          description: The request is incorrect
+        "500":
+          description: Internal errors
+      security:
+      - ApiKeyAuth: []
+      summary: Obtain the interface information based on the IP address
+  /login:
+    post:
+      consumes:
+      - application/json
+      description: Authenticate user with username and password to obtain a JWT token.
+      parameters:
+      - description: User login credentials
+        in: body
+        name: loginData
+        required: true
+        schema:
+          $ref: '#/definitions/schema.LoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully authenticated.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "400":
+          description: Invalid request parameters.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: User Login
+      tags:
+      - User
+  /logs/{module}:
+    get:
+      description: Stream the system logs in real-time. This endpoint opens a connection
+        to the log buffer and sends log entries as they are generated. The connection
+        remains open until explicitly closed or an error occurs. If the buffer is
+        not available, it returns an error response.
+      parameters:
+      - description: Specify the module to retrieve logs from (must be 'service')
+        in: path
+        name: module
+        required: true
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: Stream of system logs.
+          schema:
+            type: string
+        "400":
+          description: Invalid module specified.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Get System Logs
+      tags:
+      - System
+  /ping:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+      summary: Ping
+  /power-saving:
+    post:
+      consumes:
+      - application/json
+      description: Enable or disable power saving mode. This function first records
+        the setting in the database. If the database write fails, it returns immediately.
+        If the database write succeeds, it sets the power saving mode. A failure in
+        setting the mode does not affect the database value.
+      parameters:
+      - default: auto
+        description: Enable power saving mode (enable or disable or auto)
+        in: query
+        name: mode
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Power saving mode set successfully.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "400":
+          description: Invalid request parameters.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Set Power Saving Mode
+      tags:
+      - System
+  /unlock:
+    post:
+      parameters:
+      - description: User Information
+        in: body
+        name: UserInfo
+        required: true
+        schema:
+          $ref: '#/definitions/schema.PcUserInfo'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: success
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "400":
+          description: The request is incorrect
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal errors
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      summary: Unlock your computer
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

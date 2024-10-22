@@ -1,12 +1,16 @@
 package main
 
-import "fadacontrol/internal/base/cmd"
+import (
+	"fadacontrol/internal/base/application"
+	"fadacontrol/internal/base/logger"
+)
 
 func main() {
-
-	//go conf.Start()
-
-	//conf.Stop()
-	//cmd.Main()
-	cmd.Execute()
+	defer func() {
+		if err := recover(); err != nil {
+			logger.Error(err)
+			logger.Sync()
+		}
+	}()
+	application.Execute()
 }

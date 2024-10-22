@@ -2,42 +2,53 @@ package middleware
 
 import (
 	"fadacontrol/internal/base/exception"
-	"fadacontrol/internal/schema"
+	"fadacontrol/internal/controller"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
 
 func ErrorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		c.Next()
+		c.Next() //must be called first
+		if c.Writer.Status() == http.StatusMethodNotAllowed {
 
+			c.JSON(http.StatusMethodNotAllowed, controller.GetGinError(c, exception.ErrUserMethodNotAllowed))
+			return
+		}
+		if len(c.Errors) == 0 {
+
+			return
+		}
+		code := exception.ErrUnknownException.Code
+		msg := exception.ErrUnknownException.Msg
 		for _, e := range c.Errors {
 			err := e.Err
-			if e, ok := err.(*exception.Exception); ok {
-				status := http.StatusInternalServerError //The default is 500
-
-				if e.Code == exception.ErrResourceNotFound.Code {
-					status = http.StatusNotFound
-				} else if (e.Code >= exception.UserErrorStart) && (e.Code <= exception.UserErrorEnd) {
-
-					status = http.StatusBadRequest
-				} else if e.Code == exception.ErrSuccess.Code {
-					status = http.StatusOK
-				} else {
-
-				}
-
-				c.JSON(status, schema.ResponseData{
-					Code: e.Code,
-					Msg:  e.Msg,
-				})
-
-			} else {
-				c.JSON(http.StatusInternalServerError, schema.ResponseData{
-					Code: exception.ErrSystemUnknownException.Code,
-					Msg:  exception.ErrSystemUnknownException.Msg,
-				})
+			switch ex := err.(type) {
+			case *exception.Exception:
+				code = ex.Code
+				msg = ex.Msg
+			case error:
+				msg = ex.Error()
+			default:
+				msg = ex.Error()
 			}
+
+			status := http.StatusInternalServerError //The default is 500
+			if code == exception.ErrUserResourceNotFound.Code {
+				status = http.StatusNotFound
+			} else if (code >= exception.UserErrorStart) && (code <= exception.UserErrorEnd) {
+
+				status = http.StatusBadRequest
+			} else if code == exception.ErrSuccess.Code {
+				status = http.StatusOK
+			} else if code == exception.ErrUserTooManyRequests.Code {
+				status = http.StatusTooManyRequests
+			} else {
+
+			}
+
+			c.JSON(status, controller.GetGinError(c, &exception.Exception{Code: code, Msg: msg}))
+
 			return
 		}
 	}

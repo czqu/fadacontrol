@@ -36,18 +36,13 @@ func init() {
 func (windowsSystem) New(h SvcHandler) (Svc, error) {
 	w := &windowsSvc{
 		handler: h,
-		Name:    "FadaControlService",
+		Name:    ServiceName,
 	}
 
 	return w, nil
 }
 
-func (w *windowsSvc) Install(args ...string) error {
-
-	execPath, err := os.Executable()
-	if err != nil {
-		return err
-	}
+func (w *windowsSvc) Install(execPath string, args ...string) error {
 	m, err := mgr.Connect()
 	if err != nil {
 		return err

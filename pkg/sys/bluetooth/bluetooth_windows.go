@@ -1,7 +1,7 @@
 package bluetooth
 
 /*
-#cgo LDFLAGS: -lWs2_32
+#cgo LDFLAGS: -lws2_32
 #include "bluetooth_windwos.h"
 */
 import "C"

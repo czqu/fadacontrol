@@ -6,6 +6,7 @@ import (
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/service/unlock"
+	"fadacontrol/pkg/sys"
 	"net"
 )
 
@@ -90,7 +91,7 @@ func (l *LegacyControlService) HandleControlConnection(conn net.Conn) {
 		break
 	case "shutdown":
 
-		err := l.o.Shutdown()
+		err := l.o.Shutdown(sys.S_E_FORCE_SHUTDOWN)
 		if err != nil {
 			logger.Error(err)
 			data = buildErr()

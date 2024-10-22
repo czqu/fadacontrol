@@ -26,6 +26,7 @@ int PreCheckShutdownWindows(){
     if (GetLastError() != ERROR_SUCCESS) {
         return GetLastError(); // AdjustTokenPrivileges failed
     }
+    return 0;
 }
 int ShutdownWindows( UINT  uFlags) {
 	int ret=PreCheckShutdownWindows();
@@ -127,6 +128,12 @@ int IsSessionLocked()
 return GetSystemMetrics(SM_REMOTESESSION) ;
 }
 
+#if defined(__MINGW32__)
+    bool SetProcessPowerSavingMode(bool enable) {
+        return true;
+    }
+#else
+
 
 
 bool SetProcessPowerSavingMode(bool enable) {
@@ -155,6 +162,7 @@ bool SetProcessPowerSavingMode(bool enable) {
         return false;
     }
 }
+#endif
 void set_process_priority(bool enable)
 {
     if (enable) {
@@ -164,4 +172,45 @@ void set_process_priority(bool enable)
     }
 
 
+}
+
+int TryLogin(wchar_t *username, wchar_t *pwd, wchar_t *domain) {
+    HANDLE token;
+    BOOL result = LogonUserW(username, domain, pwd, LOGON32_LOGON_INTERACTIVE, LOGON32_PROVIDER_DEFAULT, &token);
+
+    int ret = 0;
+
+    if (result) {
+
+        CloseHandle(token);
+    } else {
+        DWORD errorCode = GetLastError();
+
+        ret = ConvertErrCode(errorCode);
+
+    }
+    return ret;
+}
+int ConvertErrCode(DWORD r) {
+
+    switch (r) {
+        case ERROR_LOGON_FAILURE:
+        case ERROR_USER_EXISTS:
+        case ERROR_INVALID_ACCOUNT_NAME:
+        case ERROR_PASSWORD_EXPIRED:
+            return ERROR_USER_LOGIN_FAILURE;
+            break;
+        case ERROR_ACCOUNT_RESTRICTION:
+            return ERROR_USER_ACCOUNT_RESTRICTION;
+            break;
+        case ERROR_WRONG_PASSWORD:
+            return ERROR_USER_WRONG_PASSWORD;
+            break;
+        case ERROR_ACCOUNT_DISABLED:
+            return ERROR_USER_ACCOUNT_DISABLED;
+            break;
+        default:
+            return ERROR_UNKNOWN_LOGIN_FAILURE;
+            break;
+    }
 }

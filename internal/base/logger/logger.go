@@ -3,11 +3,16 @@ package logger
 import (
 	"errors"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/pkg/syncer"
+	"fadacontrol/pkg/sys/log"
 	"fmt"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+	"io"
 	"os"
 	"path/filepath"
+	"sync"
+	"time"
 )
 import "gopkg.in/natefinch/lumberjack.v2"
 
@@ -47,26 +52,66 @@ func (l Loglevel) zapLevel() zapcore.Level {
 }
 
 type Logger struct {
-	logger  *zap.Logger
-	sugar   *zap.SugaredLogger
-	level   Loglevel
-	workdir string
-	r       *conf.Conf
+	logger          *zap.Logger
+	sugar           *zap.SugaredLogger
+	level           Loglevel
+	r               *conf.Conf
+	logPath         string
+	logLevel        string
+	logOutputSyncer *syncer.MultiBufferSyncWriteSyncer
 }
+
+var once sync.Once
 
 func NewLogger(r *conf.Conf) *Logger {
 	return &Logger{r: r}
 }
-func (l *Logger) InitLog() {
-	logger = l
 
-	err := l.Init(l.r.GetWorkdir()+"/log/"+l.r.LogName, str2Loglevel(l.r.LogLevel))
-	if err != nil {
-		logger = nil
+func (l *Logger) AddReader(reader io.Writer) int {
+
+	return l.logOutputSyncer.AddSyncerAndFlushBuf(syncer.AddSync(reader))
+
+}
+func (l *Logger) RemoveWriter(id int) {
+
+	l.logOutputSyncer.Remove(id)
+}
+func InitLog(c *conf.Conf) {
+	once.Do(func() {
+		if logger != nil {
+			return
+		}
+		l := new(Logger)
+		logger = l
+		l.r = c
+		l.logOutputSyncer = syncer.NewMultiBufferSyncWriteSyncer(100)
+		var err error
+		logger.logLevel = l.r.LogLevel
+		logger.logPath, err = filepath.Abs(l.r.GetWorkdir() + "/log/" + l.r.LogName)
+		if err != nil {
+			logger = nil
+			return
+		}
+		err = l.Init(l.logPath, str2Loglevel(l.logLevel))
+		if err != nil {
+			logger = nil
+			return
+		}
 		return
-	}
-	return
+	})
 
+}
+func GetLogPath() string {
+	if logger == nil {
+		return ""
+	}
+	return logger.logPath
+}
+func GetLogLevel() string {
+	if logger == nil {
+		return ""
+	}
+	return logger.logLevel
 }
 
 func (l *Logger) Init(logPath string, loglevel Loglevel) error {
@@ -104,13 +149,19 @@ func (l *Logger) Init(logPath string, loglevel Loglevel) error {
 		MaxAge:     30,
 		Compress:   false,
 	}
+	flushInterval := 1 * time.Second
+	bufferedWriteSyncer := zapcore.AddSync(&zapcore.BufferedWriteSyncer{
+		WS:            zapcore.AddSync(&logHook),
+		Size:          256 * 1024, // 256 KB buffer size
+		FlushInterval: flushInterval,
+	})
 	encoderConfig := zap.NewProductionEncoderConfig()
 	encoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	encoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 
 	core := zapcore.NewCore(
 		zapcore.NewConsoleEncoder(encoderConfig),
-		zapcore.NewMultiWriteSyncer(zapcore.AddSync(&logHook), zapcore.AddSync(os.Stdout)),
+		zapcore.NewMultiWriteSyncer(bufferedWriteSyncer, zapcore.AddSync(os.Stdout), zapcore.AddSync(l.logOutputSyncer)),
 		atomicLevel,
 	)
 
@@ -146,6 +197,7 @@ func (l *Logger) Info(args ...interface{}) {
 func (l *Logger) Error(args ...interface{}) {
 
 	l.sugar.Error(args)
+	l.logger.Sync()
 }
 
 var loglevel Loglevel = InfoLevel
@@ -184,6 +236,7 @@ func (l *Logger) Infof(format string, v ...interface{}) {
 func (l *Logger) Errorf(format string, v ...interface{}) {
 
 	l.sugar.Errorf(format, v...)
+	l.logger.Sync()
 }
 
 func (l *Logger) Warnf(format string, v ...interface{}) {
@@ -199,6 +252,7 @@ func Sync() {
 func Warn(args ...interface{}) {
 	if logger == nil {
 		fmt.Println(args...)
+		log.Warnf(nil, fmt.Sprintf("%v", args...))
 		return
 	}
 	logger.Warn(args...)
@@ -207,6 +261,7 @@ func Warn(args ...interface{}) {
 func Debug(args ...interface{}) {
 	if logger == nil {
 		fmt.Println(args...)
+		log.Debugf(nil, fmt.Sprintf("%v", args...))
 		return
 	}
 	logger.Debug(args...)
@@ -215,6 +270,7 @@ func Debug(args ...interface{}) {
 func Info(args ...interface{}) {
 	if logger == nil {
 		fmt.Println(args...)
+		log.Infof(nil, fmt.Sprintf("%v", args...))
 		return
 	}
 	logger.Info(args...)
@@ -222,14 +278,18 @@ func Info(args ...interface{}) {
 func Error(args ...interface{}) {
 	if logger == nil {
 		fmt.Println(args...)
+		log.Errorf(nil, fmt.Sprintf("%v", args...))
 		return
 	}
 	logger.Error(args...)
+	logger.Sync()
+	log.Errorf(nil, fmt.Sprintf("%v", args...))
 }
 
 func Infof(format string, v ...interface{}) {
 	if logger == nil {
 		fmt.Printf(format, v...)
+		log.Infof(nil, format, v...)
 		return
 	}
 	logger.Infof(format, v...)
@@ -237,6 +297,7 @@ func Infof(format string, v ...interface{}) {
 func Warnf(format string, v ...interface{}) {
 	if logger == nil {
 		fmt.Printf(format, v...)
+		log.Warnf(nil, format, v...)
 		return
 	}
 	logger.Warnf(format, v...)
@@ -244,6 +305,7 @@ func Warnf(format string, v ...interface{}) {
 func Debugf(format string, v ...interface{}) {
 	if logger == nil {
 		fmt.Printf(format, v...)
+		log.Debugf(nil, format, v...)
 		return
 	}
 	logger.Debugf(format, v...)
@@ -251,9 +313,12 @@ func Debugf(format string, v ...interface{}) {
 func Errorf(format string, v ...interface{}) {
 	if logger == nil {
 		fmt.Printf(format, v...)
+		log.Errorf(nil, format, v...)
 		return
 	}
 	logger.Errorf(format, v...)
+	logger.Sync()
+	log.Errorf(nil, format, v...)
 
 }
 

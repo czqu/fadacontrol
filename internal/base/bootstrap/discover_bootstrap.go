@@ -1,52 +1,25 @@
 package bootstrap
 
 import (
-	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/entity"
-	"fadacontrol/internal/service/discovery"
-	"gorm.io/gorm"
+	"fadacontrol/internal/service/discovery_service"
 )
 
 type DiscoverBootstrap struct {
-	db     *gorm.DB
 	config entity.DiscoverConfig
+	_dis   *discovery_service.DiscoverService
 }
 
-func NewDiscoverBootstrap(db *gorm.DB) *DiscoverBootstrap {
-	return &DiscoverBootstrap{db: db}
+func NewDiscoverBootstrap(_dis *discovery_service.DiscoverService) *DiscoverBootstrap {
+	return &DiscoverBootstrap{_dis: _dis}
 }
 func (d *DiscoverBootstrap) Start() error {
-	d.initConfig()
-	if d.config.Enabled == true {
-		logger.Info("starting discovery service")
-		discovery.StartBroadcast()
-	}
+	d._dis.StartBroadcast()
 
 	return nil
 }
 func (d *DiscoverBootstrap) Stop() error {
-	d.initConfig()
-	return discovery.StopBroadcast()
 
-}
+	return d._dis.StopBroadcast()
 
-func (d *DiscoverBootstrap) initConfig() {
-	err := d.db.AutoMigrate(&entity.DiscoverConfig{})
-	if err != nil {
-		logger.Errorf("failed to migrate database")
-		return
-	}
-	var count int64
-	d.db.Model(&entity.DiscoverConfig{}).Count(&count)
-	if count == 0 {
-
-		d.config = entity.DiscoverConfig{
-			Enabled: true,
-		}
-		d.db.Create(&d.config)
-
-	}
-	if err := d.db.First(&d.config).Error; err != nil {
-		logger.Errorf("failed to find database: %v", err)
-	}
 }
