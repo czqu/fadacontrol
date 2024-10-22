@@ -35,7 +35,7 @@ func (u *UpdateService) GetRegion() string {
 	if err := u._db.First(&config).Error; err != nil {
 		return version.RegionGlobal.String()
 	}
-	return version.ProductRegion(config.Region).String()
+	return version.GetRegionFromCode(config.Region).String()
 }
 
 const updateUrl = "https://update.czqu.net/"

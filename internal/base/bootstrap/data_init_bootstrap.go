@@ -61,6 +61,7 @@ func (d *DataInitBootstrap) initSysConfig() {
 		sysConfig := entity.SysConfig{
 			PowerSavingMode: true,
 			Language:        "en",
+			Region:          int(version.RegionGlobal),
 		}
 		d._db.Create(&sysConfig)
 		goroutine.RecoverGO(func() {
