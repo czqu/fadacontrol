@@ -9,6 +9,7 @@ type UpdateInfoResponse struct {
 type UpdateInfo struct {
 	Version     string   `json:"version"`
 	VersionCode int      `json:"version_code"`
+	Rev         string   `json:"rev"`
 	UpdateURL   string   `json:"update_url"`
 	Mandatory   bool     `json:"mandatory"`
 	ReleaseNote []string `json:"release_note"`
