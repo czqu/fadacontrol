@@ -63,14 +63,11 @@ func (o *ControlPCController) ControlPC(c *gin.Context) {
 			ret = o.p.Shutdown(sys.ShutdownType(shutdownType))
 		})
 
-		c.JSON(http.StatusOK, controller.GetGinSuccess(c))
-
 	case "standby":
 		goroutine.RecoverGO(func() {
 			time.Sleep(time.Duration(delaySec) * time.Second)
 			ret = o.p.Standby()
 		})
-		c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 
 	case "lock":
 		if o._conf.StartMode == conf.ServiceMode {
