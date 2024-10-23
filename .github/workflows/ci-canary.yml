@@ -1,4 +1,4 @@
-name: nightly build
+name: canary build
 
 on:
   push:
@@ -32,7 +32,7 @@ jobs:
           cd cmd/install-service
           bash build-windows.sh
           cd ../core-service
-          bash  build-windows.sh 4.0.1.7 ${{secrets.ME_MAIL}}  windows
+          bash  build-windows.sh 4.0.2.7 ${{secrets.ME_MAIL}}  windows
          
 
       - name: Upload release
@@ -40,7 +40,7 @@ jobs:
         with:
           files: "cmd/core-service/out/*.exe"
           prerelease: true
-          tag_name: nightly
+          tag_name: canary
           token: ${{ secrets.GH_TOKEN }}
           body_path: release_note.md
       - name: Upload release
@@ -48,6 +48,6 @@ jobs:
         with:
           files: "cmd/install-service/out/*.exe"
           prerelease: true
-          tag_name: nightly
+          tag_name: canary
           token: ${{ secrets.GH_TOKEN }}
           body_path: release_note.md
