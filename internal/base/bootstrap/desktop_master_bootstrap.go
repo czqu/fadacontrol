@@ -17,10 +17,8 @@ import (
 
 type DesktopMasterServiceBootstrap struct {
 	_db      *data.Data
-	ble      *BleUnlockBootstrap
 	discover *DiscoverBootstrap
 	_http    *HttpBootstrap
-	legacy_  *LegacyBootstrap
 	lo       *logger.Logger
 	_conf    *conf.Conf
 	master   *internal_service.InternalMasterService
@@ -34,8 +32,8 @@ type DesktopMasterServiceBootstrap struct {
 	_exitSignal *conf.ExitChanStruct
 }
 
-func NewDesktopMasterServiceBootstrap(_exitSignal *conf.ExitChanStruct, pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, master *internal_service.InternalMasterService, _conf *conf.Conf, _db *data.Data, lo *logger.Logger, ble *BleUnlockBootstrap, d *DiscoverBootstrap, http_ *HttpBootstrap, legacy *LegacyBootstrap) *DesktopMasterServiceBootstrap {
-	return &DesktopMasterServiceBootstrap{_exitSignal: _exitSignal, pf: pf, _co: _co, di: di, cp: cp, rcb: rcb, done: make(chan interface{}), master: master, _conf: _conf, _db: _db, lo: lo, ble: ble, discover: d, _http: http_, legacy_: legacy}
+func NewDesktopMasterServiceBootstrap(_exitSignal *conf.ExitChanStruct, pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, master *internal_service.InternalMasterService, _conf *conf.Conf, _db *data.Data, lo *logger.Logger, d *DiscoverBootstrap, http_ *HttpBootstrap) *DesktopMasterServiceBootstrap {
+	return &DesktopMasterServiceBootstrap{_exitSignal: _exitSignal, pf: pf, _co: _co, di: di, cp: cp, rcb: rcb, done: make(chan interface{}), master: master, _conf: _conf, _db: _db, lo: lo, discover: d, _http: http_}
 }
 func (r *DesktopMasterServiceBootstrap) Start() {
 	goroutine.RecoverGO(func() {
@@ -51,8 +49,6 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 			r.master.Start()
 		}
 
-		r.legacy_.Start()
-		r.ble.Start()
 		r.rcb.Start()
 		goroutine.RecoverGO(func() {
 			r.discover.Start()
@@ -93,10 +89,8 @@ func (r *DesktopMasterServiceBootstrap) Stop() {
 		func() {
 			r.pf.Stop()
 			if !conf.ResetPassword {
-				r.ble.Stop()
 				r.discover.Stop()
 				r._http.Stop()
-				r.legacy_.Stop()
 				r.rcb.Stop()
 				r.master.Stop()
 			}
