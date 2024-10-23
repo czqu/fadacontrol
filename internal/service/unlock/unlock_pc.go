@@ -63,12 +63,11 @@ func (u *UnLockService) UnlockPc(username string, password string) *exception.Ex
 
 	//todo
 	ret := u.cp.SendData(&packet)
-	if ret == nil || !ret.Equal(exception.ErrSuccess) {
+	if exception.ErrSuccess.NotEqual(ret) {
 
 		logger.Debugf("try login")
 		err := sys.TryLogin(username, password, "")
-		if ret == nil || !err.Equal(exception.ErrSuccess) {
-
+		if exception.ErrSuccess.NotEqual(err) {
 			logger.Debugf("err: %v", err)
 			return err
 		}

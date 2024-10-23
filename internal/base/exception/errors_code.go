@@ -117,7 +117,7 @@ var (
 	}
 	ErrUserUnlockNotInLockScreenState = &Exception{
 		Code: 10020,
-		Msg:  "Unlock not in lock screen state",
+		Msg:  "Cannot unlock in a non-lock screen state",
 	}
 
 	ErrUserTooManyRequests = &Exception{
