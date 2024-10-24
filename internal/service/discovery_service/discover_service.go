@@ -64,7 +64,8 @@ func (d *DiscoverService) listenAndSend(port int) {
 	}
 	conn, err := net.ListenUDP("udp", &addr)
 	if err != nil {
-		logger.Error("Error listening:", err.Error())
+		//todo when restart will error
+		logger.Warn("Error listening:", err.Error())
 		return
 	}
 	defer conn.Close()
@@ -207,6 +208,7 @@ func (d *DiscoverService) readConfig() {
 }
 func (d *DiscoverService) StartService() {
 	d.readConfig()
+	udpStopFlag = !d.config.Enabled
 	if d.config.Enabled == true {
 		logger.Info("starting discovery service")
 		d.StartBroadcast()
