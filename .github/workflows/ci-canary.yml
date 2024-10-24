@@ -1,4 +1,4 @@
-name: canary build
+name: build for canary
 
 on:
   push:
