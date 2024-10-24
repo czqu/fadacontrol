@@ -14,6 +14,7 @@ type SoftwareInfo struct {
 	Language      string          `json:"language"`
 	Region        string          `json:"region"`
 	Path          string          `json:"path"`
+	Rev           string          `json:"rev"`
 }
 type ServiceInfo struct {
 	ServiceName string `json:"service_name"`

@@ -27,4 +27,5 @@ type UpdateInfoClientResp struct {
 	UpdateURL   string   `json:"update_url"`
 	Mandatory   bool     `json:"mandatory"`
 	ReleaseNote []string `json:"release_note"`
+	Rev         string   `json:"rev"`
 }

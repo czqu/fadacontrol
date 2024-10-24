@@ -100,20 +100,18 @@ func (u *UpdateService) CheckUpdate(lang string) (*schema.UpdateInfoClientResp, 
 	}
 	versionCode := version.GetVersion()
 	ret := &schema.UpdateInfoClientResp{
-		CanUpdate:   u.CanUpdate(versionCode, strconv.Itoa(info.VersionCode)),
+		CanUpdate:   u.CanUpdate(versionCode, strconv.Itoa(info.VersionCode), info.Rev, version.GetRev()),
 		Channel:     string(edition),
 		Version:     info.Version,
 		VersionCode: info.VersionCode,
 		UpdateURL:   info.UpdateURL,
 		Mandatory:   info.Mandatory,
 		ReleaseNote: info.ReleaseNote,
+		Rev:         info.Rev,
 	}
 	return ret, nil
 }
-func (u *UpdateService) CanUpdate(oldVersion, newVersion string) bool {
-	if oldVersion == newVersion {
-		return false
-	}
+func (u *UpdateService) CanUpdate(oldVersion, newVersion, newRev, oldRev string) bool {
 	if oldVersion == "" {
 		return true
 	}
@@ -123,7 +121,10 @@ func (u *UpdateService) CanUpdate(oldVersion, newVersion string) bool {
 	}
 	newVersionCode, err := strconv.Atoi(newVersion)
 	if err != nil {
-		return false
+		return true
+	}
+	if newVersionCode == oldVersionCode && newRev != oldRev {
+		return true
 	}
 	return newVersionCode > oldVersionCode
 
@@ -131,12 +132,13 @@ func (u *UpdateService) CanUpdate(oldVersion, newVersion string) bool {
 func (u *UpdateService) ShouldUpdateEdition(info *schema.UpdateInfoResponse) version.ProductEdition {
 	nowVersionCode := version.GetVersion()
 	nowEdition := version.GetEdition()
+	nowRev := version.GetRev()
 	switch nowEdition {
 
 	case version.EditionRelease:
 		return version.EditionRelease
 	default:
-		if u.CanUpdate(nowVersionCode, strconv.Itoa(info.Release.VersionCode)) {
+		if u.CanUpdate(nowVersionCode, strconv.Itoa(info.Release.VersionCode), info.Release.Rev, nowRev) {
 			return version.EditionRelease
 		} else {
 			return nowEdition

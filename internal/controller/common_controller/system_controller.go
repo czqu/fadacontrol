@@ -70,6 +70,7 @@ func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
 			LogPath:       logger.GetLogPath(),
 			AlgorithmInfo: supportAlgo,
 			AuthorEmail:   version.AuthorEmail,
+			Rev:           version.GetRev(),
 		}))
 }
 

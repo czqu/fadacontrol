@@ -50,8 +50,11 @@ var version string
 var GitCommit string
 var AuthorEmail string
 
+func GetRev() string {
+	return GitCommit
+}
 func GetBuildInfo() string {
-	return GetVersionName() + " " + Edition + " " + "build-" + GetVersion() + "-" + GitCommit
+	return GetVersionName() + " " + Edition + " " + "build-" + GetVersion() + "-" + GetRev()
 
 }
 func GetVersionName() string {

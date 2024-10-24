@@ -25,6 +25,12 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version:  "1.23.1"
+      - name: Write date and git commit to file
+        run: |
+            {
+              date -u +%Y%m%d
+              git log --pretty=format:'%h' -1
+            } > canary.txt
       - name: Build EXE
         run: |
           export LLVM_PATH=$GITHUB_WORKSPACE/llvm-mingw-20240917-ucrt-ubuntu-20.04-x86_64/bin
@@ -34,6 +40,13 @@ jobs:
           cd ../core-service
           bash  build-windows.sh 4.0.2.7 ${{secrets.ME_MAIL}}  windows
          
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+           files: "canary.txt"
+           prerelease: true
+           tag_name: canary
+           token: ${{ secrets.GH_TOKEN }}
 
       - name: Upload release
         uses: softprops/action-gh-release@v2
