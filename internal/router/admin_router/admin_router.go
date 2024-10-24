@@ -22,10 +22,11 @@ type AdminRouter struct {
 	jwt         *middleware.JwtMiddleware
 	_sys        *common_controller.SystemController
 	_http       *admin_controller.HttpController
+	_de         *common_controller.DebugController
 }
 
-func NewAdminRouter(_http *admin_controller.HttpController, sys *common_controller.SystemController, jwt *middleware.JwtMiddleware, rc *admin_controller.RemoteController, u *common_controller.UnlockController, o *common_controller.ControlPCController, di *admin_controller.DiscoverController, auth *common_controller.AuthController) *AdminRouter {
-	return &AdminRouter{router: gin.Default(), u: u, o: o, rc: rc, di: di, auth: auth, jwt: jwt, _sys: sys, _http: _http}
+func NewAdminRouter(_de *common_controller.DebugController, _http *admin_controller.HttpController, sys *common_controller.SystemController, jwt *middleware.JwtMiddleware, rc *admin_controller.RemoteController, u *common_controller.UnlockController, o *common_controller.ControlPCController, di *admin_controller.DiscoverController, auth *common_controller.AuthController) *AdminRouter {
+	return &AdminRouter{router: gin.Default(), u: u, o: o, rc: rc, di: di, auth: auth, jwt: jwt, _sys: sys, _http: _http, _de: _de}
 }
 
 var swagHandler gin.HandlerFunc
@@ -45,7 +46,7 @@ func (d *AdminRouter) Register() {
 	}
 	apiv1 := r.Group("/admin/api/v1")
 	{
-		apiv1.GET("/ping", common_controller.Ping)
+		apiv1.GET("/ping", d._de.Ping)
 		apiv1.POST("/control-pc/:action", d.o.ControlPC)
 		apiv1.POST("/unlock", d.u.Unlock)
 		apiv1.GET("/interface/:ip", d.o.GetInterfaceByIP)

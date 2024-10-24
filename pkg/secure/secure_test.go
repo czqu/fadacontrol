@@ -60,13 +60,13 @@ func TestInvalidKeyLength(t *testing.T) {
 
 	for _, tt := range tests {
 		_, err := EncryptData(tt.algo, data, tt.key)
-		if err != exception.ErrUserInvalidAlgoKeyLen {
-			t.Errorf("Expected ErrUserInvalidAlgoKeyLen for algorithm %v with short key, got %v", tt.algo, err)
+		if err != exception.ErrSystemInvalidAlgoKeyLen {
+			t.Errorf("Expected ErrSystemInvalidAlgoKeyLen for algorithm %v with short key, got %v", tt.algo, err)
 		}
 
 		_, err = DecryptData(tt.algo, data, tt.key)
-		if err != exception.ErrUserInvalidAlgoKeyLen {
-			t.Errorf("Expected ErrUserInvalidAlgoKeyLen for algorithm %v with short key, got %v", tt.algo, err)
+		if err != exception.ErrSystemInvalidAlgoKeyLen {
+			t.Errorf("Expected ErrSystemInvalidAlgoKeyLen for algorithm %v with short key, got %v", tt.algo, err)
 		}
 	}
 }

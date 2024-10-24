@@ -37,7 +37,7 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 		admin_controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, admin_controller.NewDiscoverController, credential_provider_service.NewCredentialProviderService,
 		bootstrap.NewDataInitBootstrap, data.NewAdapterByDB, data.NewEnforcer, common_controller.NewAuthController,
 		middleware.NewJwtMiddleware, jwt_service.NewJwtService, auth_service.NewAuthService, user_service.NewUserService, discovery_service.NewDiscoverService,
-		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap, update_service.NewUpdateService, conf.NewExitChanStruct,
+		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap, update_service.NewUpdateService, conf.NewExitChanStruct, common_controller.NewDebugController,
 	)
 	return &DesktopServiceApp{_conf: _conf, db: db}, nil
 }

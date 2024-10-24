@@ -71,7 +71,7 @@ func EncryptData(algo EncryptionAlgorithmEnum, data []byte, key []byte) ([]byte,
 }
 func checkAlgoKeyLen(algo EncryptionAlgorithmEnum, key []byte) error {
 	if len(key) < AlgorithmKeyLengths[algo] {
-		return exception.ErrUserInvalidAlgoKeyLen
+		return exception.ErrSystemInvalidAlgoKeyLen
 	}
 	return nil
 }

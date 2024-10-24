@@ -20,10 +20,11 @@ type CommonRouter struct {
 	auth *common_controller.AuthController
 	jwt  *middleware.JwtMiddleware
 	sys  *common_controller.SystemController
+	_de  *common_controller.DebugController
 }
 
-func NewCommonRouter(sys *common_controller.SystemController, jwt *middleware.JwtMiddleware, auth *common_controller.AuthController, cu *common_controller.CustomCommandController, u *common_controller.UnlockController, o *common_controller.ControlPCController) *CommonRouter {
-	return &CommonRouter{router: gin.Default(), u: u, o: o, cu: cu, auth: auth, jwt: jwt, sys: sys}
+func NewCommonRouter(_de *common_controller.DebugController, sys *common_controller.SystemController, jwt *middleware.JwtMiddleware, auth *common_controller.AuthController, cu *common_controller.CustomCommandController, u *common_controller.UnlockController, o *common_controller.ControlPCController) *CommonRouter {
+	return &CommonRouter{router: gin.Default(), u: u, o: o, cu: cu, auth: auth, jwt: jwt, sys: sys, _de: _de}
 }
 
 var swagHandler gin.HandlerFunc
@@ -46,7 +47,7 @@ func (d *CommonRouter) Register() {
 
 	{
 
-		apiv1.GET("/ping", common_controller.Ping)
+		apiv1.GET("/ping", d._de.Ping)
 		apiv1.POST("/control-pc/:action", d.o.ControlPC)
 		apiv1.POST("/unlock", d.u.Unlock)
 		apiv1.GET("/interface/:ip", d.o.GetInterfaceByIP)
