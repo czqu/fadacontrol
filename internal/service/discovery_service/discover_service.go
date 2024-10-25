@@ -23,6 +23,7 @@ type DiscoverService struct {
 	ipFailRetry  time.Duration
 	udpStopFlag  bool
 	hostname     string
+	ListenConn   *net.UDPConn
 }
 
 const udpMaxTryTime = 10
@@ -63,54 +64,61 @@ func (d *DiscoverService) PatchDiscoverServiceConfig(content map[string]interfac
 
 }
 
-//type NetInterface struct {
-//	MACAddr       string
-//	InterfaceName string
-//	IPAddresses   []string
-//}
-
 func (d *DiscoverService) listenAndSend(port int) {
+	defer func() {
+		logger.Info("The UDP listen service is stopped")
+	}()
 	addr := net.UDPAddr{
 		Port: port,
 		IP:   net.IPv4zero,
 	}
-	conn, err := net.ListenUDP("udp", &addr)
-	if err != nil {
-		//todo when restart will error
-		logger.Warn("Error listening:", err.Error())
-		return
-	}
-	defer conn.Close()
-
-	logger.Info("Listening on port", port)
-	buffer := make([]byte, 1024)
 	for {
-
-		n, remoteAddr, err := conn.ReadFromUDP(buffer)
+		conn, err := net.ListenUDP("udp", &addr)
 		if err != nil {
-			logger.Warn("Error reading from UDP:", err)
-			continue
-		}
-		logger.Debugf("Received message from %s: %s", remoteAddr, string(buffer[:n]))
-
-		err = conn.SetWriteDeadline(time.Now().Add(connTimeout))
-		if err != nil {
-			fmt.Println("SetWriteDeadline failed:", err)
+			logger.Warn("Error listening:", err.Error())
 			return
 		}
-		_, err = conn.WriteToUDP([]byte(d.hostname), remoteAddr)
+		d.ListenConn = conn
+		defer conn.Close()
 
-		if err != nil {
-			logger.Warn("Error sending response:", err)
-		} else {
-			logger.Warnf("Sent 'hello' to %s", remoteAddr)
+		logger.Info("Listening on port", port)
+		buffer := make([]byte, 1024)
+		for {
+			n, remoteAddr, err := conn.ReadFromUDP(buffer)
+			if err != nil {
+				if isClosedConnError(err) {
+					logger.Warn("Udp Connection closed:")
+					return
+				}
+				logger.Warn("Error reading from UDP:", err)
+				continue
+			}
+
+			logger.Debugf("Received message from %s: %s", remoteAddr, string(buffer[:n]))
+
+			err = conn.SetWriteDeadline(time.Now().Add(connTimeout))
+			if err != nil {
+				fmt.Println("SetWriteDeadline failed:", err)
+				break
+			}
+			_, err = conn.WriteToUDP([]byte(d.hostname), remoteAddr)
+
+			if err != nil {
+				logger.Warn("Error sending response:", err)
+			} else {
+				logger.Warnf("Sent 'hello' to %s", remoteAddr)
+			}
 		}
 	}
 
 }
-func (d *DiscoverService) StopBroadcast() error {
-	logger.Info("The UDP broadcast service is stopped")
+func (d *DiscoverService) StopService() error {
+
+	if d.ListenConn != nil {
+		d.ListenConn.Close()
+	}
 	d.udpStopFlag = true
+	logger.Info("The UDP broadcast service is stopped")
 	return nil
 }
 func (d *DiscoverService) StartBroadcast() {
@@ -122,12 +130,10 @@ func (d *DiscoverService) StartBroadcast() {
 	d.hostname, err = os.Hostname()
 	if err != nil {
 		logger.Warn("Error getting hostname:", err)
-		d.StopBroadcast()
+		d.StopService()
 		return
 	}
-	goroutine.RecoverGO(func() {
-		d.listenAndSend(4085)
-	})
+
 	goroutine.RecoverGO(func() {
 		logger.Debug("Sending UDP Broadcast ")
 		for {
@@ -142,18 +148,13 @@ func (d *DiscoverService) StartBroadcast() {
 
 }
 
-var test []utils.Interface
-
 func (d *DiscoverService) GetValidInterface(t utils.AddressType) []utils.Interface {
-	if test != nil || len(test) != 0 {
-		return test
-	}
+
 	interfaces, err := utils.GetValidInterface(utils.UNSET)
 	if err != nil {
 		logger.Error("Error getting interface list:", err)
 		return []utils.Interface{}
 	}
-	test = interfaces
 	return interfaces
 }
 func (d *DiscoverService) udpBroadcast() {
@@ -217,9 +218,9 @@ func (d *DiscoverService) sendUdp(ip net.IP) {
 			d.ipFail.SetWithTTL(ip.String(), udpMaxTryTime, d.ipFailRetry)
 		} else {
 			d.ipFail.SetWithTTL(ip.String(), t, d.ipFailRetry)
-		}
+			logger.Warn(err, "Will retry", 10-t, "more times")
 
-		logger.Warn(err, "Will retry", 10-t, "more times")
+		}
 		logger.Debug(err)
 		if lddr != nil {
 			logger.Debugf(lddr.String())
@@ -251,8 +252,9 @@ func (d *DiscoverService) sendUdp(ip net.IP) {
 			d.ipFail.SetWithTTL(ip.String(), udpMaxTryTime, d.ipFailRetry)
 		} else {
 			d.ipFail.SetWithTTL(ip.String(), t, d.ipFailRetry)
+			logger.Warn(err, "Will retry", 10-tryTimes, "more times")
 		}
-		logger.Warn(err, "Will retry", 10-tryTimes, "more times")
+
 		logger.Debug(err)
 		return
 	}
@@ -267,14 +269,23 @@ func (d *DiscoverService) readConfig() {
 func (d *DiscoverService) StartService() {
 	d.readConfig()
 	d.udpStopFlag = !d.config.Enabled
-	if d.config.Enabled == true {
-		logger.Info("starting discovery service")
-		d.StartBroadcast()
+	if d.config.Enabled == false {
+		return
 	}
+
+	logger.Info("starting discovery service")
+	d.StartBroadcast()
+	goroutine.RecoverGO(func() {
+		d.listenAndSend(4085)
+	})
 }
 func (d *DiscoverService) RestartService() error {
-	d.StopBroadcast()
+	d.StopService()
 	d.StartService()
 	return nil
 
+}
+func isClosedConnError(err error) bool {
+	netErr, ok := err.(*net.OpError)
+	return ok && netErr.Err.Error() == "use of closed network connection"
 }

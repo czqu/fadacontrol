@@ -9,6 +9,7 @@ import (
 	"fadacontrol/internal/service/credential_provider_service"
 	"fadacontrol/internal/service/internal_service"
 	"fadacontrol/pkg/goroutine"
+	"fadacontrol/pkg/utils"
 	"os"
 	"os/signal"
 	"syscall"
@@ -56,6 +57,12 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 		goroutine.RecoverGO(func() {
 			r.cp.Connect()
 
+		})
+		utils.AddNetworkChangeCallback(func() {
+			r.rcb.Stop()
+			r.rcb.Start()
+			r.discover.Stop()
+			r.discover.Start()
 		})
 	}
 

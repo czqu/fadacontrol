@@ -53,16 +53,18 @@ func (s *InternalMasterService) StartServer() error {
 	done := make(chan struct{})
 	goroutine.RecoverGO(func() {
 		<-s._done
-		listener.Close()
 		done <- struct{}{}
 		close(done)
+		listener.Close()
+
 		logger.Info("socket close at", port)
 	})
 	for {
 
 		conn, err := listener.Accept()
-
-		logger.Debug("recv a connection from", conn.RemoteAddr())
+		if err != nil && conn != nil {
+			logger.Debug("recv a connection from", conn.RemoteAddr())
+		}
 
 		select {
 		case <-done:
