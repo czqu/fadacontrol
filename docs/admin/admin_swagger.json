@@ -472,6 +472,65 @@
                 }
             }
         },
+        "/info/language": {
+            "get": {
+                "description": "Get the system language.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Get System Language",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved system language.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Set the system language.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Set System Language",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "en",
+                        "description": "Language for the update information (default: en)",
+                        "name": "lang",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved system language.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
         "/interface": {
             "get": {
                 "security": [

@@ -16,6 +16,7 @@ var IgnoredPaths = []string{
 	"/admin/api/v1/unlock",
 	"/admin/api/v1/login",
 	"/swagger/*",
+	"/info/language",
 }
 
 type ProductLanguage string
@@ -32,6 +33,12 @@ const (
 	LanguageKorean             ProductLanguage = "ko"    // Korean
 	LanguagePortuguese         ProductLanguage = "pt"    // Portuguese
 	LanguageChineseTraditional ProductLanguage = "zh-tw" // Traditional Chinese
+	LanguageArabic             ProductLanguage = "ar"    // Arabic
+	LanguageHindi              ProductLanguage = "hi"    // Hindi
+	LanguageTurkish            ProductLanguage = "tr"    // Turkish
+	LanguageVietnamese         ProductLanguage = "vi"    // Vietnamese
+	LanguagePersian            ProductLanguage = "fa"    // Persian
+	LanguageSwahili            ProductLanguage = "sw"    // Swahili
 )
 
 func (l ProductLanguage) String() string {
@@ -61,6 +68,18 @@ func ProductLanguageFromString(s string) ProductLanguage {
 		return LanguagePortuguese
 	case "zh-tw":
 		return LanguageChineseTraditional
+	case "ar":
+		return LanguageArabic
+	case "hi":
+		return LanguageHindi
+	case "tr":
+		return LanguageTurkish
+	case "vi":
+		return LanguageVietnamese
+	case "fa":
+		return LanguagePersian
+	case "sw":
+		return LanguageSwahili
 	default:
 		return LanguageEnglish
 

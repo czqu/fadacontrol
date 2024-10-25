@@ -46,7 +46,7 @@ func (u *UpdateService) GetI18nInfo() *schema.I18nInfo {
 	if err := u._db.First(&config).Error; err != nil {
 		logger.Errorf("failed to get config %v", err)
 	} else {
-		//todo
+		lang = string(conf.ProductLanguageFromString(config.Language))
 	}
 	region := u.GetRegion()
 
@@ -56,7 +56,14 @@ func (u *UpdateService) GetI18nInfo() *schema.I18nInfo {
 	}
 
 }
-
+func (u *UpdateService) SetLanguage(language string) error {
+	var config entity.SysConfig
+	if err := u._db.First(&config).Error; err != nil {
+		return err
+	}
+	config.Language = string(conf.ProductLanguageFromString(language))
+	return u._db.Save(&config).Error
+}
 func (u *UpdateService) CheckUpdate(lang string) (*schema.UpdateInfoClientResp, error) {
 
 	client, err := utils.NewClientBuilder().SetTimeout(5 * time.Second).Build()
