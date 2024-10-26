@@ -18,6 +18,8 @@ type InternalMasterService struct {
 	cp          *control_pc.ControlPCService
 	_lock       sync.Mutex
 	hasClient   bool
+	startOnce   sync.Once
+	stopOnce    sync.Once
 }
 
 func NewInternalMasterService(cp *control_pc.ControlPCService) *InternalMasterService {
@@ -25,16 +27,21 @@ func NewInternalMasterService(cp *control_pc.ControlPCService) *InternalMasterSe
 
 }
 func (s *InternalMasterService) Start() error {
-	s.cp.SetCommandSender(s.SendCommand)
-	goroutine.RecoverGO(func() {
-		s.StartServer()
+	s.startOnce.Do(func() {
+		s.cp.SetCommandSender(s.SendCommand)
+		goroutine.RecoverGO(func() {
+			s.StartServer()
+		})
 	})
 
 	return nil
 
 }
 func (s *InternalMasterService) Stop() error {
-	return s.StopServer()
+	s.stopOnce.Do(func() {
+		s.StopServer()
+	})
+	return nil
 }
 
 func (s *InternalMasterService) StartServer() error {

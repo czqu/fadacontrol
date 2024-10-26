@@ -11,6 +11,7 @@ import (
 	"gorm.io/gorm"
 	"net"
 	"os"
+	"sync"
 	"time"
 )
 
@@ -21,11 +22,15 @@ type DiscoverService struct {
 	ipAlwaysFail cache.Cache[string, int]
 	port         int
 	ipFailRetry  time.Duration
-	udpStopFlag  bool
+	udpDone      chan int
 	hostname     string
 	ListenConn   *net.UDPConn
+	StartLock    sync.Mutex
+	StopLock     sync.Mutex
+	RestartLock  sync.Mutex
 }
 
+const udpSendInterval = 2 * time.Second
 const udpMaxTryTime = 10
 const connTimeout = 5 * time.Second
 
@@ -113,18 +118,20 @@ func (d *DiscoverService) listenAndSend(port int) {
 
 }
 func (d *DiscoverService) StopService() error {
+	if !d.StopLock.TryLock() {
+		return nil
+	}
+	defer d.StopLock.Unlock()
 
 	if d.ListenConn != nil {
 		d.ListenConn.Close()
 	}
-	d.udpStopFlag = true
-	logger.Info("The UDP broadcast service is stopped")
+	d.udpDone <- 1
+	close(d.udpDone)
+	logger.Info("The UDP service service is stopped")
 	return nil
 }
 func (d *DiscoverService) StartBroadcast() {
-	if d.udpStopFlag {
-		return
-	}
 	logger.Info("The UDP broadcast service is launched")
 	var err error
 	d.hostname, err = os.Hostname()
@@ -135,14 +142,17 @@ func (d *DiscoverService) StartBroadcast() {
 	}
 
 	goroutine.RecoverGO(func() {
+		defer func() {
+			logger.Info("The UDP broadcast service is stopped")
+		}()
 		logger.Debug("Sending UDP Broadcast ")
 		for {
-
-			if d.udpStopFlag {
+			select {
+			case <-d.udpDone:
 				return
+			case <-time.After(udpSendInterval):
+				d.udpBroadcast()
 			}
-			d.udpBroadcast()
-			time.Sleep(2 * time.Second)
 		}
 	})
 
@@ -267,8 +277,12 @@ func (d *DiscoverService) readConfig() {
 	}
 }
 func (d *DiscoverService) StartService() {
+	if !d.StartLock.TryLock() {
+		return
+	}
+	defer d.StartLock.Unlock()
+	d.udpDone = make(chan int)
 	d.readConfig()
-	d.udpStopFlag = !d.config.Enabled
 	if d.config.Enabled == false {
 		return
 	}
@@ -280,6 +294,10 @@ func (d *DiscoverService) StartService() {
 	})
 }
 func (d *DiscoverService) RestartService() error {
+	if !d.RestartLock.TryLock() {
+		return nil
+	}
+	defer d.RestartLock.Unlock()
 	d.StopService()
 	d.StartService()
 	return nil

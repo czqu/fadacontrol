@@ -74,7 +74,6 @@ func (d *AdminRouter) Register() {
 		apiv1.GET("/http/config", d._http.GetHttpConfig)
 		apiv1.PATCH("/http/config", d._http.PatchHttpConfig)
 		apiv1.PUT("/http/config", d._http.UpdateHttpConfig)
-		apiv1.POST("/http/restart", d._http.RestartHttpService)
 
 		apiv1.POST("/sys/stop", d._http.StopService)
 

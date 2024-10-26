@@ -97,15 +97,12 @@ func init() {
 	context := &networkContext{}
 	interfaceChange := windows.Handle(0)
 	lastCalled = time.Now().Add(-time.Minute)
-	ret, _, err := procNotifyIpInterfaceChange.Call(syscall.AF_UNSPEC,
+	ret, _, _ := procNotifyIpInterfaceChange.Call(syscall.AF_UNSPEC,
 		syscall.NewCallback(networkMonitorCallback),
 		uintptr(unsafe.Pointer(context)),
 		0,
 		uintptr(unsafe.Pointer(&interfaceChange))) //this must be pointer
-	if err != nil {
-		logger.Error("network change callback failed " + err.Error())
-		return
-	}
+
 	if ret != 0 {
 		logger.Error("network change callback failed " + strconv.Itoa(int(ret)))
 		return

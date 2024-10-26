@@ -27,21 +27,22 @@ import (
 )
 
 type RemoteService struct {
-	co         *control_pc.ControlPCService
-	un         *unlock.UnLockService
-	_conf      *conf.Conf
-	db         *gorm.DB
-	config     entity.RemoteConnectConfig
-	Client     RMTT.Client
-	done       chan struct{}
-	runStatus  bool
-	statusLock sync.Mutex
+	co          *control_pc.ControlPCService
+	un          *unlock.UnLockService
+	_conf       *conf.Conf
+	db          *gorm.DB
+	config      entity.RemoteConnectConfig
+	Client      RMTT.Client
+	done        chan struct{}
+	StartLock   sync.Mutex
+	StopLock    sync.Mutex
+	RestartLock sync.Mutex
 }
 
 const DefaultGenKeyLength = 48
 
 func NewRemoteService(co *control_pc.ControlPCService, un *unlock.UnLockService, _conf *conf.Conf, db *gorm.DB) *RemoteService {
-	return &RemoteService{co: co, un: un, _conf: _conf, db: db, done: make(chan struct{}), config: entity.RemoteConnectConfig{}}
+	return &RemoteService{co: co, un: un, _conf: _conf, db: db, config: entity.RemoteConnectConfig{}}
 }
 
 const (
@@ -436,6 +437,11 @@ func (r *RemoteService) TestServerDelay() int64 {
 }
 
 func (r *RemoteService) StartService() error {
+	if !r.StartLock.TryLock() {
+		return fmt.Errorf("start remote service lock fail")
+	}
+	defer r.StartLock.Unlock()
+	r.done = make(chan struct{})
 	return nil
 	//logger.Debug("starting service")
 	//
@@ -498,14 +504,13 @@ func (r *RemoteService) StartService() error {
 
 }
 func (r *RemoteService) StopService() error {
-	if r.runStatus == false {
+
+	if !r.StopLock.TryLock() {
 		return nil
 	}
-	r.statusLock.Lock()
-	defer r.statusLock.Unlock()
+	defer r.StopLock.Unlock()
 
 	logger.Debug("stopping service")
 	r.done <- struct{}{}
-	r.runStatus = false
 	return nil
 }

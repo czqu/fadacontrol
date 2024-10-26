@@ -32,3 +32,6 @@ func (r *RemoteConnectBootstrap) Stop() error {
 	return r.re.StopService()
 
 }
+func (r *RemoteConnectBootstrap) Restart() error {
+	return r.re.RestartService()
+}
