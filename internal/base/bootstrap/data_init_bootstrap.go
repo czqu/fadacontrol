@@ -12,6 +12,7 @@ import (
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"gorm.io/gorm"
+	"sync"
 	"time"
 )
 
@@ -20,6 +21,7 @@ type DataInitBootstrap struct {
 	adapter     *gormadapter.Adapter
 	enforcer    *casbin.Enforcer
 	_exitSignal *conf.ExitChanStruct
+	startOnce   sync.Once
 }
 
 const HttpServiceApi = "HTTP_SERVICE_API"
@@ -46,40 +48,42 @@ func (d *DataInitBootstrap) Start() error {
 	return nil
 }
 func (d *DataInitBootstrap) initSysConfig() {
-	err := d._db.AutoMigrate(&entity.SysConfig{})
-	if err != nil {
-		logger.Errorf("failed to migrate database")
-		return
-	}
-	var cnt int64
-	err = d._db.Model(&entity.SysConfig{}).Count(&cnt).Error
-	if err != nil {
-		logger.Errorf("failed to count database")
-		return
-	}
-	if cnt == 0 {
-		sysConfig := entity.SysConfig{
-			PowerSavingMode: true,
-			Language:        "en",
-			Region:          int(version.RegionGlobal),
+	d.startOnce.Do(func() {
+		err := d._db.AutoMigrate(&entity.SysConfig{})
+		if err != nil {
+			logger.Errorf("failed to migrate database")
+			return
 		}
-		d._db.Create(&sysConfig)
-		goroutine.RecoverGO(func() {
-			client, err := utils.NewClientBuilder().SetTimeout(5 * time.Second).Build()
-			if err != nil {
-				logger.Errorf("failed to create client")
-				return
+		var cnt int64
+		err = d._db.Model(&entity.SysConfig{}).Count(&cnt).Error
+		if err != nil {
+			logger.Errorf("failed to count database")
+			return
+		}
+		if cnt == 0 {
+			sysConfig := entity.SysConfig{
+				PowerSavingMode: true,
+				Language:        "en",
+				Region:          int(version.RegionGlobal),
 			}
-			_, err = client.Get("https://www.google.com/")
-			if err != nil {
-				sysConfig.Region = int(version.RegionCN)
-			} else {
-				sysConfig.Region = int(version.RegionGlobal)
-			}
-			d._db.Save(&sysConfig)
-		})
+			d._db.Create(&sysConfig)
+			goroutine.RecoverGO(func() {
+				client, err := utils.NewClientBuilder().SetTimeout(5 * time.Second).Build()
+				if err != nil {
+					logger.Errorf("failed to create client")
+					return
+				}
+				_, err = client.Get("https://www.google.com/")
+				if err != nil {
+					sysConfig.Region = int(version.RegionCN)
+				} else {
+					sysConfig.Region = int(version.RegionGlobal)
+				}
+				d._db.Save(&sysConfig)
+			})
 
-	}
+		}
+	})
 
 }
 func (d *DataInitBootstrap) initHttpConfig() {

@@ -23,3 +23,8 @@ func (d *DiscoverBootstrap) Stop() error {
 	return d._dis.StopService()
 
 }
+func (d *DiscoverBootstrap) Restart() error {
+
+	return d._dis.RestartService()
+
+}

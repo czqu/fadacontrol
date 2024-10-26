@@ -361,49 +361,6 @@ const docTemplateadmin = `{
                 }
             }
         },
-        "/http/restart": {
-            "post": {
-                "security": [
-                    {
-                        "ApiKeyAuth": []
-                    }
-                ],
-                "description": "Restart the server based on the provided type.",
-                "consumes": [
-                    "application/json"
-                ],
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "HTTP"
-                ],
-                "summary": "Restart Service",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Service type (HTTP_SERVICE_API or HTTPS_SERVICE_API)",
-                        "name": "type",
-                        "in": "query",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Service restarted successfully.",
-                        "schema": {
-                            "$ref": "#/definitions/schema.ResponseData"
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "$ref": "#/definitions/schema.ResponseData"
-                        }
-                    }
-                }
-            }
-        },
         "/info": {
             "get": {
                 "security": [

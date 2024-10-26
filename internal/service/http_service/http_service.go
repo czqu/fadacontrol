@@ -302,31 +302,3 @@ func (s *HttpService) StopAllServer() error {
 	}
 	return nil
 }
-func (s *HttpService) RestartServer(serviceName string) error {
-	if serviceName == "" {
-
-		goroutine.RecoverGO(func() {
-			time.Sleep(1 * time.Second)
-			if s.restartAllServerFunc != nil {
-				s.restartAllServerFunc()
-			}
-		})
-		return nil
-
-	}
-	stopErr := s.StopServer(serviceName)
-	if stopErr != nil {
-		return stopErr
-	}
-
-	startErr := s.StartServer(s.commonRouter, serviceName)
-	if startErr != nil {
-		return startErr
-	}
-	return nil
-
-}
-func (s *HttpService) SetRestartFunc(f func() error) {
-	s.restartAllServerFunc = f
-
-}

@@ -8,15 +8,18 @@ import (
 	"fadacontrol/internal/service/jwt_service"
 	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/utils"
+	"sync"
 	"time"
 )
 
 type HttpBootstrap struct {
-	_common *common_router.CommonRouter
-	_adr    *admin_router.AdminRouter
-	_conf   *conf.Conf
-	_http   *http_service.HttpService
-	_jwt    *jwt_service.JwtService
+	_common   *common_router.CommonRouter
+	_adr      *admin_router.AdminRouter
+	_conf     *conf.Conf
+	_http     *http_service.HttpService
+	_jwt      *jwt_service.JwtService
+	startOnce sync.Once
+	stopOnce  sync.Once
 }
 
 func NewHttpBootstrap(_jwt *jwt_service.JwtService, _conf *conf.Conf, _http *http_service.HttpService, _common *common_router.CommonRouter, _adr *admin_router.AdminRouter) *HttpBootstrap {
@@ -24,27 +27,34 @@ func NewHttpBootstrap(_jwt *jwt_service.JwtService, _conf *conf.Conf, _http *htt
 }
 
 func (s *HttpBootstrap) Start() error {
-	s._http.SetRestartFunc(s.Restart)
-	err := s.killOther()
-	if err == nil {
-		time.Sleep(5 * time.Second)
-	}
 
-	goroutine.RecoverGO(func() {
-		s._http.StartServer(s._common, HttpServiceApi)
-	})
-	goroutine.RecoverGO(func() {
-		s._http.StartServer(s._common, HttpsServiceApi)
-	})
-	goroutine.RecoverGO(func() {
-		s._http.StartServer(s._adr, HttpServiceAdmin)
+	s.startOnce.Do(func() {
+
+		err := s.killOther()
+		if err == nil {
+			time.Sleep(5 * time.Second)
+		}
+
+		goroutine.RecoverGO(func() {
+			s._http.StartServer(s._common, HttpServiceApi)
+		})
+		goroutine.RecoverGO(func() {
+			s._http.StartServer(s._common, HttpsServiceApi)
+		})
+		goroutine.RecoverGO(func() {
+			s._http.StartServer(s._adr, HttpServiceAdmin)
+		})
+
 	})
 
 	return nil
 
 }
 func (s *HttpBootstrap) Stop() error {
-	return s._http.StopAllServer()
+	s.stopOnce.Do(func() {
+		s._http.StopAllServer()
+	})
+	return nil
 
 }
 func (s *HttpBootstrap) killOther() error {
@@ -61,11 +71,4 @@ func (s *HttpBootstrap) killOther() error {
 	}
 	_, err = client.Post("http://localhost:2093/admin/api/v1/sys/stop", "accept: application/json", nil, headers)
 	return err
-}
-func (s *HttpBootstrap) Restart() error {
-	err := s.Stop()
-	if err != nil {
-		return err
-	}
-	return s.Start()
 }
