@@ -16,13 +16,14 @@ type PipePacket struct {
 type PipePacketType uint8
 
 const (
-	Unknown PipePacketType = iota
+	Hello PipePacketType = iota
 	Resp
 	UnlockReq
 	SetFieldBitmap
 	CommandClicked
 	SetCommandClickText
 	SetLargeText
+	SystemLock
 	END = 0xff
 )
 

@@ -17,12 +17,13 @@ import (
 	"io"
 	"net"
 	"os"
+	"sync"
 	"time"
 )
 
 type CredentialProviderService struct {
-	pipe net.Conn
-	db   *gorm.DB
+	db       *gorm.DB
+	pipeLock sync.Mutex
 }
 
 func NewCredentialProviderService(db *gorm.DB) *CredentialProviderService {
@@ -33,7 +34,8 @@ const (
 	pipePrefix    = `\\.\pipe\fc.pipe.`
 	pipeCacheSize = 4 * 1024
 )
-const DataPipeName = pipePrefix + "v1.data.4k"
+const RPipeName = pipePrefix + "v1.data.4k.r"
+const FCPipeName = pipePrefix + "v1.data.4k.f"
 
 type pipeSendStatus struct {
 	err    *exception.Exception
@@ -70,10 +72,10 @@ func (p *CredentialProviderService) SetQrCode(contents string, size, borderSize 
 
 	return nil
 }
-func (p *CredentialProviderService) Connect() {
+func (p *CredentialProviderService) Start() {
 
 	goroutine.RecoverGO(func() {
-		err := sys.ListenNamedPipeWithHandler(DataPipeName, p.PipeHandler, pipeCacheSize, pipeCacheSize)
+		err := sys.ListenNamedPipeWithHandler(FCPipeName, p.PipeHandler, pipeCacheSize, pipeCacheSize)
 		if err != nil {
 			logger.Error(err.Error())
 		}
@@ -112,24 +114,34 @@ func (p *CredentialProviderService) SetText(tpe entity.PipePacketType, text stri
 
 }
 func (p *CredentialProviderService) SendData(packet *entity.PipePacket) *exception.Exception {
-	if p.pipe == nil {
-		logger.Debug("pipe is nil")
-		return exception.ErrSystemUnknownException
-	}
-	packetData, err := packet.Pack()
+	data, err := packet.Pack()
 	if err != nil {
-		logger.Debug("err")
-		return exception.ErrSystemUnknownException
+		logger.Error(err.Error())
+		return exception.ErrUnknownException
 	}
-
-	logger.Debugf("write data")
-
-	if _, err := p.pipe.Write(packetData); err != nil {
-		logger.Debugf("write data err")
-
-		return exception.ErrSystemUnknownException
+	err = sys.SendToNamedPipe(RPipeName, data)
+	if err != nil {
+		logger.Error(err.Error())
+		return exception.ErrUnknownException
 	}
-	logger.Debugf("write data %d ", len(packetData))
+	//if p.pipe == nil {
+	//	logger.Debug("pipe is nil")
+	//	return exception.ErrSystemUnknownException
+	//}
+	//packetData, err := packet.Pack()
+	//if err != nil {
+	//	logger.Debug("err")
+	//	return exception.ErrSystemUnknownException
+	//}
+	//
+	//logger.Debugf("write data")
+	//
+	//if _, err := p.pipe.Write(packetData); err != nil {
+	//	logger.Debugf("write data err")
+	//
+	//	return exception.ErrSystemUnknownException
+	//}
+	//logger.Debugf("write data %d ", len(packetData))
 	ret := p.getResp()
 	logger.Debug("get resp ok")
 	return ret
@@ -138,26 +150,16 @@ func (p *CredentialProviderService) getResp() *exception.Exception {
 	select {
 	case ret := <-resp:
 		return ret.err
-		//case <-time.After(time.Second * 2):
-		//	return exception.ErrSystemUnknownException
+	case <-time.After(time.Second * 5):
+		return exception.ErrSystemUnknownException
 	}
 }
 
 func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
 
 	defer conn.Close()
-	p.pipe = conn
-	logger.Debug("connect pipe")
-	goroutine.RecoverGO(func() {
-		time.Sleep(1 * time.Second)
-		goroutine.RecoverGO(func() {
-			p.SetText(entity.SetLargeText, "RemoteFingerUnlock")
-		})
 
-		goroutine.RecoverGO(func() {
-			p.SetText(entity.SetCommandClickText, "use your phone to unlock")
-		})
-	})
+	logger.Debug("connect pipe")
 
 	logger.Debug("connect pipe")
 	for {
@@ -174,6 +176,9 @@ func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
 			return
 		}
 		switch packet.Tpe {
+		case entity.Hello:
+			logger.Debug("recv hello")
+			return
 		case entity.Resp:
 			logger.Debugf("recv resp")
 			var code uint32
@@ -183,13 +188,13 @@ func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
 
 				resp <- pipeSendStatus{exception.ErrSystemUnknownException, nil}
 
-				break
+				return
 			}
 			code = binary.BigEndian.Uint32(packet.Data[0:codeSize])
 			logger.Debug("code is ", code)
 			resp <- pipeSendStatus{exception.GetErrorByCode(int(code)), &packet}
 			logger.Debug("over")
-			break
+			return
 		case entity.CommandClicked:
 			logger.Debugf("receive clicked command")
 			clientId := ""
@@ -213,11 +218,21 @@ func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
 
 			})
 
-			break
+			return
 			logger.Debug("over")
+
+		case entity.SystemLock:
+			logger.Debug("send command click text")
+			p.SetText(entity.SetCommandClickText, "use your phone to unlock")
+			logger.Debug("send command click text success")
+			logger.Debug("send large text")
+			p.SetText(entity.SetLargeText, "RemoteFingerUnlock")
+			logger.Debug("send large text success")
+			return
+
 		default:
 			logger.Debug("read err")
-			break
+			return
 		}
 	}
 

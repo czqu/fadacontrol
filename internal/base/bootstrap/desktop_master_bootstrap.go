@@ -60,7 +60,7 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 				r.discover.Start()
 			})
 			goroutine.RecoverGO(func() {
-				r.cp.Connect()
+				r.cp.Start()
 
 			})
 			utils.AddNetworkChangeCallback(func() {
