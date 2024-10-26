@@ -29,15 +29,15 @@ import (
 )
 
 func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopServiceApp, error) {
-	wire.Build(NewDesktopServiceApp, bootstrap.NewBleUnlockBootstrap, bootstrap.NewHttpBootstrap, bootstrap.NewDiscoverBootstrap,
-		bootstrap.NewLegacyBootstrap, logger.NewLogger, unlock.NewUnLockService, data.NewDB, common_router.NewCommonRouter, admin_router.NewAdminRouter, bootstrap.NewDesktopMasterServiceBootstrap,
-		control_pc.NewLegacyControlService, control_pc.NewControlPCService, data.NewData, common_controller.NewControlPCController, common_controller.NewUnlockController,
+	wire.Build(NewDesktopServiceApp, bootstrap.NewHttpBootstrap, bootstrap.NewDiscoverBootstrap,
+		logger.NewLogger, unlock.NewUnLockService, data.NewDB, common_router.NewCommonRouter, admin_router.NewAdminRouter, bootstrap.NewDesktopMasterServiceBootstrap,
+		control_pc.NewControlPCService, data.NewData, common_controller.NewControlPCController, common_controller.NewUnlockController,
 		common_controller.NewCustomCommandController, internal_service.NewInternalMasterService,
 		custom_command_service.NewCustomCommandService, remote_service.NewRemoteService,
 		admin_controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, admin_controller.NewDiscoverController, credential_provider_service.NewCredentialProviderService,
 		bootstrap.NewDataInitBootstrap, data.NewAdapterByDB, data.NewEnforcer, common_controller.NewAuthController,
 		middleware.NewJwtMiddleware, jwt_service.NewJwtService, auth_service.NewAuthService, user_service.NewUserService, discovery_service.NewDiscoverService,
-		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap, update_service.NewUpdateService, conf.NewExitChanStruct,
+		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap, update_service.NewUpdateService, conf.NewExitChanStruct, common_controller.NewDebugController,
 	)
 	return &DesktopServiceApp{_conf: _conf, db: db}, nil
 }

@@ -1,4 +1,4 @@
-name: nightly build
+name: build for canary
 
 on:
   push:
@@ -25,6 +25,12 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version:  "1.23.1"
+      - name: Write date and git commit to file
+        run: |
+            {
+              date -u +%Y%m%d
+              git log --pretty=format:'%h' -1
+            } > canary.txt
       - name: Build EXE
         run: |
           export LLVM_PATH=$GITHUB_WORKSPACE/llvm-mingw-20240917-ucrt-ubuntu-20.04-x86_64/bin
@@ -32,15 +38,22 @@ jobs:
           cd cmd/install-service
           bash build-windows.sh
           cd ../core-service
-          bash  build-windows.sh 4.0.1.7 ${{secrets.ME_MAIL}}  windows
+          bash  build-windows.sh 4.0.2.7 ${{secrets.ME_MAIL}}  windows
          
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+           files: "canary.txt"
+           prerelease: true
+           tag_name: canary
+           token: ${{ secrets.GH_TOKEN }}
 
       - name: Upload release
         uses: softprops/action-gh-release@v2
         with:
           files: "cmd/core-service/out/*.exe"
           prerelease: true
-          tag_name: nightly
+          tag_name: canary
           token: ${{ secrets.GH_TOKEN }}
           body_path: release_note.md
       - name: Upload release
@@ -48,6 +61,16 @@ jobs:
         with:
           files: "cmd/install-service/out/*.exe"
           prerelease: true
-          tag_name: nightly
+          tag_name: canary
           token: ${{ secrets.GH_TOKEN }}
           body_path: release_note.md
+      - name: Dispatch cf workflow
+        run: |
+          curl -X POST https://api.cloudflare.com/client/v4/pages/webhooks/deploy_hooks/${{ secrets.CF_HOOK }}
+      - name: Dispatch RFU workflow
+        run: |
+          curl -X POST \
+            -H "Authorization: token ${{ secrets.GH_TOKEN }}" \
+            -H "Accept: application/vnd.github.v3+json" \
+            https://api.github.com/repos/czqu/RemoteFingerUnlock/dispatches \
+            -d '{"event_type":"canary"}'

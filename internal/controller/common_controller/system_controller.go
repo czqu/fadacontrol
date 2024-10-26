@@ -70,6 +70,7 @@ func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
 			LogPath:       logger.GetLogPath(),
 			AlgorithmInfo: supportAlgo,
 			AuthorEmail:   version.AuthorEmail,
+			Rev:           version.GetRev(),
 		}))
 }
 
@@ -159,4 +160,45 @@ func (s *SystemController) CheckUpdate(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c, ret))
+}
+
+// @Summary Get System Language
+// @Description Get the system language.
+// @Tags System
+// @Produce  json
+// @Success 200 {object} schema.ResponseData "Successfully retrieved system language."
+// @Failure 500 {object} schema.ResponseData "Internal Server Error"
+// @Router /info/language [get]
+func (s *SystemController) GetLanguage(c *gin.Context) {
+	i18nInfo := s._up.GetI18nInfo()
+
+	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c, i18nInfo.Language))
+}
+
+// @Summary Set System Language
+// @Description Set the system language.
+// @Tags System
+// @Produce  json
+// @Param lang query string false "Language for the update information (default: en)" default(en)
+// @Success 200 {object} schema.ResponseData "Successfully retrieved system language."
+// @Failure 500 {object} schema.ResponseData "Internal Server Error"
+// @Router /info/language [Patch]
+func (s *SystemController) SetLanguage(c *gin.Context) {
+
+	var data map[string]interface{}
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.Error(err)
+		return
+	}
+	lang, ok := data["lang"].(string)
+	if !ok {
+		c.Error(exception.ErrUserParameterError)
+		return
+	}
+	err := s._up.SetLanguage(lang)
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 }

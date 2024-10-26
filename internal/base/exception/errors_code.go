@@ -175,11 +175,14 @@ var (
 		Code: 20016,
 		Msg:  "Severe error in current configuration, please reinitialize the configuration",
 	}
-	ErrUserInvalidAlgoKeyLen = &Exception{
+	ErrSystemInvalidAlgoKeyLen = &Exception{
 		Code: 20017,
-		Msg:  "Invalid algo key length",
+		Msg:  "Invalid algo key length,Please check System configuration",
 	}
-
+	ErrSystemServiceNotFullyStarted = &Exception{
+		Code: 20018,
+		Msg:  "Service not fully started",
+	}
 	//9xx
 	ErrUnknownLoginFailure = &Exception{
 		Code: 90001,
@@ -224,8 +227,8 @@ var errorMap = map[int]*Exception{
 	20010: ErrSystemGenTokenErr,
 	20015: ErrSystemMessageSerializationFailed,
 	20016: ErrSystemSevereConfigurationError,
-	20017: ErrUserInvalidAlgoKeyLen,
-
+	20017: ErrSystemInvalidAlgoKeyLen,
+	20018: ErrSystemServiceNotFullyStarted,
 	90001: ErrUnknownLoginFailure,
 }
 

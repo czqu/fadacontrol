@@ -46,7 +46,7 @@ func (u *UpdateService) GetI18nInfo() *schema.I18nInfo {
 	if err := u._db.First(&config).Error; err != nil {
 		logger.Errorf("failed to get config %v", err)
 	} else {
-		//todo
+		lang = string(conf.ProductLanguageFromString(config.Language))
 	}
 	region := u.GetRegion()
 
@@ -56,7 +56,14 @@ func (u *UpdateService) GetI18nInfo() *schema.I18nInfo {
 	}
 
 }
-
+func (u *UpdateService) SetLanguage(language string) error {
+	var config entity.SysConfig
+	if err := u._db.First(&config).Error; err != nil {
+		return err
+	}
+	config.Language = string(conf.ProductLanguageFromString(language))
+	return u._db.Save(&config).Error
+}
 func (u *UpdateService) CheckUpdate(lang string) (*schema.UpdateInfoClientResp, error) {
 
 	client, err := utils.NewClientBuilder().SetTimeout(5 * time.Second).Build()
@@ -100,20 +107,18 @@ func (u *UpdateService) CheckUpdate(lang string) (*schema.UpdateInfoClientResp, 
 	}
 	versionCode := version.GetVersion()
 	ret := &schema.UpdateInfoClientResp{
-		CanUpdate:   u.CanUpdate(versionCode, strconv.Itoa(info.VersionCode)),
+		CanUpdate:   u.CanUpdate(versionCode, strconv.Itoa(info.VersionCode), info.Rev, version.GetRev()),
 		Channel:     string(edition),
 		Version:     info.Version,
 		VersionCode: info.VersionCode,
 		UpdateURL:   info.UpdateURL,
 		Mandatory:   info.Mandatory,
 		ReleaseNote: info.ReleaseNote,
+		Rev:         info.Rev,
 	}
 	return ret, nil
 }
-func (u *UpdateService) CanUpdate(oldVersion, newVersion string) bool {
-	if oldVersion == newVersion {
-		return false
-	}
+func (u *UpdateService) CanUpdate(oldVersion, newVersion, newRev, oldRev string) bool {
 	if oldVersion == "" {
 		return true
 	}
@@ -123,7 +128,10 @@ func (u *UpdateService) CanUpdate(oldVersion, newVersion string) bool {
 	}
 	newVersionCode, err := strconv.Atoi(newVersion)
 	if err != nil {
-		return false
+		return true
+	}
+	if newVersionCode == oldVersionCode && newRev != oldRev {
+		return true
 	}
 	return newVersionCode > oldVersionCode
 
@@ -131,12 +139,13 @@ func (u *UpdateService) CanUpdate(oldVersion, newVersion string) bool {
 func (u *UpdateService) ShouldUpdateEdition(info *schema.UpdateInfoResponse) version.ProductEdition {
 	nowVersionCode := version.GetVersion()
 	nowEdition := version.GetEdition()
+	nowRev := version.GetRev()
 	switch nowEdition {
 
 	case version.EditionRelease:
 		return version.EditionRelease
 	default:
-		if u.CanUpdate(nowVersionCode, strconv.Itoa(info.Release.VersionCode)) {
+		if u.CanUpdate(nowVersionCode, strconv.Itoa(info.Release.VersionCode), info.Release.Rev, nowRev) {
 			return version.EditionRelease
 		} else {
 			return nowEdition

@@ -14,12 +14,12 @@ func NewDiscoverBootstrap(_dis *discovery_service.DiscoverService) *DiscoverBoot
 	return &DiscoverBootstrap{_dis: _dis}
 }
 func (d *DiscoverBootstrap) Start() error {
-	d._dis.StartBroadcast()
+	d._dis.StartService()
 
 	return nil
 }
 func (d *DiscoverBootstrap) Stop() error {
 
-	return d._dis.StopBroadcast()
+	return d._dis.StopService()
 
 }

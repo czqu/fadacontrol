@@ -1,13 +1,17 @@
 package conf
 
+import "time"
+
 const DefaultLogLevel = "info"
 const DefaultMasterLogName = "service.log"
 const DefaultSlaveLogName = "slave.log"
+const NetWorkChangeServiceRestartInterval = 10 * time.Second
 
 var RootPassword = "1234"
 var ResetPassword = false
 var Http3Enabled = false
 var Http3Port = 2091
+
 var IgnoredPaths = []string{
 	"/api/v1/ping",
 	"/api/v1/unlock",
@@ -16,6 +20,7 @@ var IgnoredPaths = []string{
 	"/admin/api/v1/unlock",
 	"/admin/api/v1/login",
 	"/swagger/*",
+	"/info/language",
 }
 
 type ProductLanguage string
@@ -32,6 +37,12 @@ const (
 	LanguageKorean             ProductLanguage = "ko"    // Korean
 	LanguagePortuguese         ProductLanguage = "pt"    // Portuguese
 	LanguageChineseTraditional ProductLanguage = "zh-tw" // Traditional Chinese
+	LanguageArabic             ProductLanguage = "ar"    // Arabic
+	LanguageHindi              ProductLanguage = "hi"    // Hindi
+	LanguageTurkish            ProductLanguage = "tr"    // Turkish
+	LanguageVietnamese         ProductLanguage = "vi"    // Vietnamese
+	LanguagePersian            ProductLanguage = "fa"    // Persian
+	LanguageSwahili            ProductLanguage = "sw"    // Swahili
 )
 
 func (l ProductLanguage) String() string {
@@ -61,6 +72,18 @@ func ProductLanguageFromString(s string) ProductLanguage {
 		return LanguagePortuguese
 	case "zh-tw":
 		return LanguageChineseTraditional
+	case "ar":
+		return LanguageArabic
+	case "hi":
+		return LanguageHindi
+	case "tr":
+		return LanguageTurkish
+	case "vi":
+		return LanguageVietnamese
+	case "fa":
+		return LanguagePersian
+	case "sw":
+		return LanguageSwahili
 	default:
 		return LanguageEnglish
 

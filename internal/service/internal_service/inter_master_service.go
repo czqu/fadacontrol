@@ -17,10 +17,11 @@ type InternalMasterService struct {
 	_activeConn map[string]net.Conn
 	cp          *control_pc.ControlPCService
 	_lock       sync.Mutex
+	hasClient   bool
 }
 
 func NewInternalMasterService(cp *control_pc.ControlPCService) *InternalMasterService {
-	return &InternalMasterService{_done: make(chan bool), cp: cp, _activeConn: make(map[string]net.Conn)}
+	return &InternalMasterService{_done: make(chan bool), cp: cp, _activeConn: make(map[string]net.Conn), hasClient: false}
 
 }
 func (s *InternalMasterService) Start() error {
@@ -52,16 +53,18 @@ func (s *InternalMasterService) StartServer() error {
 	done := make(chan struct{})
 	goroutine.RecoverGO(func() {
 		<-s._done
-		listener.Close()
 		done <- struct{}{}
 		close(done)
+		listener.Close()
+
 		logger.Info("socket close at", port)
 	})
 	for {
 
 		conn, err := listener.Accept()
-
-		logger.Debug("recv a connection from", conn.RemoteAddr())
+		if err != nil && conn != nil {
+			logger.Debug("recv a connection from", conn.RemoteAddr())
+		}
 
 		select {
 		case <-done:
@@ -88,10 +91,12 @@ func (s *InternalMasterService) StopServer() error {
 func (s *InternalMasterService) Handler(conn net.Conn) {
 	s._lock.Lock()
 	s._activeConn[conn.RemoteAddr().String()] = conn
+	s.hasClient = true
 	s._lock.Unlock()
 
 	defer func() {
 		s._lock.Lock()
+		s.hasClient = false
 		delete(s._activeConn, conn.RemoteAddr().String())
 		s._lock.Unlock()
 		conn.Close()
@@ -119,7 +124,7 @@ func (s *InternalMasterService) Handler(conn net.Conn) {
 	}
 	conn.Write(data)
 
-	keepAlive := 60 * time.Second
+	keepAlive := 5 * time.Second
 
 	for {
 		select {
@@ -128,7 +133,7 @@ func (s *InternalMasterService) Handler(conn net.Conn) {
 
 		case <-time.After(keepAlive):
 			cmd := schema.InternalCommand{CommandType: schema.KeepLive, Data: nil}
-			logger.Debug("send keep live to server")
+			logger.Debug("send keep live to client")
 			msg, err := json.Marshal(cmd)
 			packet := &schema.InternalDataPacket{DataLength: uint16(len(msg)), Data: msg, DataType: schema.JsonData}
 			data, err := packet.Pack()
@@ -171,4 +176,7 @@ func (s *InternalMasterService) SendCommand(cmd *schema.InternalCommand) error {
 	s._lock.Unlock()
 	logger.Debug("send command")
 	return nil
+}
+func (s *InternalMasterService) HasClient() bool {
+	return s.hasClient
 }
