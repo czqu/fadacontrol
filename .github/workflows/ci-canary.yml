@@ -2,7 +2,7 @@ name: build for canary
 
 on:
   push:
-    branches: develop
+    branches: release/canary
 
 jobs:
   build:
