@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
+	"os"
 	"sync"
 	"time"
 )
@@ -31,7 +32,9 @@ var (
 
 // @Summary	Ping
 // @Produce	json
+// @Param	type	query	string	false	"type" Enums(ws,pairing)
 // @Success	200		"success"
+// @Failure	500		"error"
 // @Router		/ping [get]
 func (d *DebugController) Ping(c *gin.Context) {
 	query := c.DefaultQuery("type", "")
@@ -89,7 +92,22 @@ func (d *DebugController) Ping(c *gin.Context) {
 		}
 
 	}
+	if query == "pairing" {
+
+		hostname, err := os.Hostname()
+		if err != nil {
+			c.Error(err)
+			return
+		}
+		c.JSON(http.StatusOK, controller.GetGinSuccessWithData(
+			c,
+			map[string]string{
+				"hostname": hostname,
+			}))
+		return
+	}
 	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
+	return
 }
 
 var upgrader = websocket.Upgrader{
