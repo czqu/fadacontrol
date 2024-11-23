@@ -8,9 +8,10 @@ import (
 )
 
 type PipePacket struct {
-	Tpe  PipePacketType
-	Size uint32
-	Data []byte
+	Tpe   PipePacketType
+	Size  uint32
+	ReqId uint32
+	Data  []byte
 }
 
 type PipePacketType uint8
@@ -40,6 +41,10 @@ func (p *PipePacket) Pack() ([]byte, error) {
 		return nil, fmt.Errorf("failed to write Size: %v", err)
 	}
 
+	err = binary.Write(buf, binary.BigEndian, p.ReqId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to write ReqId: %v", err)
+	}
 	// 写入Data
 	buf.Write(p.Data)
 
@@ -59,7 +64,10 @@ func (p *PipePacket) Unpack(buf io.Reader) error {
 	if err != nil {
 		return fmt.Errorf("failed to read Size: %v", err)
 	}
-
+	err = binary.Read(buf, binary.BigEndian, &p.ReqId)
+	if err != nil {
+		return fmt.Errorf("failed to read ReqId: %v", err)
+	}
 	// 读取Data，根据Size读取固定字节
 	p.Data = make([]byte, p.Size)
 	_, err = buf.Read(p.Data)

@@ -15,19 +15,26 @@ import (
 	"image"
 	"image/color"
 	"io"
+	"math/rand/v2"
 	"net"
 	"os"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 type CredentialProviderService struct {
 	db       *gorm.DB
 	pipeLock sync.Mutex
+	reqId    uint32
+	respMap  map[uint32]uint32
+
+	reqCond *sync.Cond
 }
 
 func NewCredentialProviderService(db *gorm.DB) *CredentialProviderService {
-	return &CredentialProviderService{db: db}
+	return &CredentialProviderService{db: db, reqId: rand.Uint32(), respMap: make(map[uint32]uint32), reqCond: sync.NewCond(&sync.Mutex{})}
+
 }
 
 const (
@@ -41,8 +48,6 @@ type pipeSendStatus struct {
 	err    *exception.Exception
 	packet *entity.PipePacket
 }
-
-var resp = make(chan pipeSendStatus)
 
 func (p *CredentialProviderService) SetQrCode(contents string, size, borderSize int) error {
 	qr, err := qrcode.New(contents, qrcode.Highest)
@@ -72,6 +77,39 @@ func (p *CredentialProviderService) SetQrCode(contents string, size, borderSize 
 
 	return nil
 }
+func (p *CredentialProviderService) setResp(reqId uint32, resp uint32) {
+
+	p.reqCond.L.Lock()
+	p.respMap[reqId] = resp
+	p.reqCond.L.Unlock()
+	p.reqCond.Broadcast()
+}
+func (p *CredentialProviderService) getResp(reqId uint32, timeout time.Duration) *exception.Exception {
+
+	logger.Debug("now:", time.Now())
+	_timeout := time.After(timeout)
+	goroutine.RecoverGO(func() {
+		select {
+		case <-_timeout:
+			logger.Debug("now: ", time.Now())
+			p.setResp(reqId, uint32(exception.ErrSystemRequestTimeout.Code))
+		}
+	})
+	p.reqCond.L.Lock()
+	defer p.reqCond.L.Unlock()
+	for {
+
+		logger.Debug("reqId:", reqId)
+		resp, ok := p.respMap[reqId]
+
+		if ok {
+			return exception.GetErrorByCode(int(resp))
+		}
+		p.reqCond.Wait()
+
+	}
+
+}
 func (p *CredentialProviderService) Start() {
 
 	goroutine.RecoverGO(func() {
@@ -80,6 +118,10 @@ func (p *CredentialProviderService) Start() {
 			logger.Error(err.Error())
 		}
 	})
+
+}
+func (p *CredentialProviderService) GenReqId() uint32 {
+	return atomic.AddUint32(&p.reqId, 1)
 
 }
 
@@ -92,6 +134,7 @@ func (p *CredentialProviderService) SetFieldBitmap(data []byte) *exception.Excep
 	packet.Tpe = entity.SetFieldBitmap
 	packet.Size = uint32(len(data))
 	packet.Data = data
+	packet.ReqId = p.GenReqId()
 	logger.Debug("set field bitmap")
 	ret := p.SendData(&packet)
 	logger.Debug("set field bitmap success")
@@ -107,12 +150,14 @@ func (p *CredentialProviderService) SetText(tpe entity.PipePacketType, text stri
 		packet.Tpe = tpe
 		packet.Size = uint32(len(text))
 		packet.Data = []byte(text)
+		packet.ReqId = p.GenReqId()
 		ret := p.SendData(&packet)
 		return ret
 	}
 	return exception.ErrUserParameterError
 
 }
+
 func (p *CredentialProviderService) SendData(packet *entity.PipePacket) *exception.Exception {
 	data, err := packet.Pack()
 	if err != nil {
@@ -122,37 +167,11 @@ func (p *CredentialProviderService) SendData(packet *entity.PipePacket) *excepti
 	err = sys.SendToNamedPipe(RPipeName, data)
 	if err != nil {
 		logger.Error(err.Error())
-		return exception.ErrUnknownException
+		return exception.ErrUserUnlockNotInLockScreenState
 	}
-	//if p.pipe == nil {
-	//	logger.Debug("pipe is nil")
-	//	return exception.ErrSystemUnknownException
-	//}
-	//packetData, err := packet.Pack()
-	//if err != nil {
-	//	logger.Debug("err")
-	//	return exception.ErrSystemUnknownException
-	//}
-	//
-	//logger.Debugf("write data")
-	//
-	//if _, err := p.pipe.Write(packetData); err != nil {
-	//	logger.Debugf("write data err")
-	//
-	//	return exception.ErrSystemUnknownException
-	//}
-	//logger.Debugf("write data %d ", len(packetData))
-	ret := p.getResp()
+	ret := p.getResp(packet.ReqId, 5*time.Second)
 	logger.Debug("get resp ok")
 	return ret
-}
-func (p *CredentialProviderService) getResp() *exception.Exception {
-	select {
-	case ret := <-resp:
-		return ret.err
-	case <-time.After(time.Second * 5):
-		return exception.ErrSystemUnknownException
-	}
 }
 
 func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
@@ -186,13 +205,12 @@ func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
 			if len(packet.Data) != codeSize {
 				logger.Debug("read err")
 
-				resp <- pipeSendStatus{exception.ErrSystemUnknownException, nil}
-
+				p.setResp(packet.ReqId, uint32(exception.ErrSystemUnknownException.Code))
 				return
 			}
 			code = binary.BigEndian.Uint32(packet.Data[0:codeSize])
 			logger.Debug("code is ", code)
-			resp <- pipeSendStatus{exception.GetErrorByCode(int(code)), &packet}
+			p.setResp(packet.ReqId, uint32(code))
 			logger.Debug("over")
 			return
 		case entity.CommandClicked:

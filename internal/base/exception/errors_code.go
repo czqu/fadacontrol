@@ -183,6 +183,10 @@ var (
 		Code: 20018,
 		Msg:  "Service not fully started",
 	}
+	ErrSystemRequestTimeout = &Exception{
+		Code: 20019,
+		Msg:  "Request timeout!",
+	}
 	//9xx
 	ErrUnknownLoginFailure = &Exception{
 		Code: 90001,
@@ -229,6 +233,8 @@ var errorMap = map[int]*Exception{
 	20016: ErrSystemSevereConfigurationError,
 	20017: ErrSystemInvalidAlgoKeyLen,
 	20018: ErrSystemServiceNotFullyStarted,
+	20019: ErrSystemRequestTimeout,
+	//9xx
 	90001: ErrUnknownLoginFailure,
 }
 

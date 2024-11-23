@@ -38,7 +38,7 @@ jobs:
           cd cmd/install-service
           bash build-windows.sh
           cd ../core-service
-          bash  build-windows.sh 4.0.2.7 ${{secrets.ME_MAIL}}  windows
+          bash  build-windows.sh 4.1.0.7 ${{secrets.ME_MAIL}}  windows
          
       - name: Upload release
         uses: softprops/action-gh-release@v2
