@@ -22,3 +22,6 @@ type ServiceInfo struct {
 type AlgorithmInfo struct {
 	AlgorithmName string `json:"algorithm_name"`
 }
+type PowerSavingModeInfo struct {
+	PowerSavingMode bool `json:"power_save_mode"`
+}

@@ -725,9 +725,24 @@ const docTemplateadmin = `{
                     "application/json"
                 ],
                 "summary": "Ping",
+                "parameters": [
+                    {
+                        "enum": [
+                            "ws",
+                            "pairing"
+                        ],
+                        "type": "string",
+                        "description": "type",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "success"
+                    },
+                    "500": {
+                        "description": "error"
                     }
                 }
             }
@@ -768,6 +783,37 @@ const docTemplateadmin = `{
                     },
                     "400": {
                         "description": "Invalid request parameters.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
+        "/power-saving/status": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get the current status of power saving mode.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Get Power Saving Mode Status",
+                "responses": {
+                    "200": {
+                        "description": "Power saving mode status retrieved successfully.",
                         "schema": {
                             "$ref": "#/definitions/schema.ResponseData"
                         }

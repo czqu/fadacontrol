@@ -524,11 +524,21 @@ paths:
       - System
   /ping:
     get:
+      parameters:
+      - description: type
+        enum:
+        - ws
+        - pairing
+        in: query
+        name: type
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: success
+        "500":
+          description: error
       summary: Ping
   /power-saving:
     post:
@@ -562,6 +572,25 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Set Power Saving Mode
+      tags:
+      - System
+  /power-saving/status:
+    get:
+      description: Get the current status of power saving mode.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Power saving mode status retrieved successfully.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Get Power Saving Mode Status
       tags:
       - System
   /remote/config:

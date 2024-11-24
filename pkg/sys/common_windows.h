@@ -39,10 +39,5 @@ int checkGrant();
 int IsSessionLocked();
 bool SetProcessPowerSavingMode(bool enable);
 void set_process_priority(bool enable);
-BOOL SetProcessInformation(
-    HANDLE hProcess,
-    PROCESS_INFORMATION_CLASS ProcessInformationClass,
-    LPVOID ProcessInformation,
-    DWORD ProcessInformationSize
-);
+
 #endif // COMMON_WINDOWS_H
