@@ -73,10 +73,22 @@ func (control *ControlPCService) SetPowerSavingMode(enable bool) error {
 		ret = sys.SetPowerSavingMode(false)
 	}
 	if ret == false {
+		config.PowerSavingMode = false
+		control._db.Save(&config)
 		return exception.ErrSystemSetPowerSaveModeError
 	}
-
 	return nil
+}
+func (control *ControlPCService) GetPowerSavingModeStatus() (*schema.PowerSavingModeInfo, error) {
+	var config entity.SysConfig
+	if err := control._db.First(&config).Error; err != nil {
+		return nil, err
+	}
+	ret := &schema.PowerSavingModeInfo{
+		PowerSavingMode: config.PowerSavingMode,
+	}
+	return ret, nil
+
 }
 func (control *ControlPCService) RunPowerSavingMode() *exception.Exception {
 
@@ -93,6 +105,8 @@ func (control *ControlPCService) RunPowerSavingMode() *exception.Exception {
 	ret := sys.SetPowerSavingMode(true)
 
 	if ret == false {
+		config.PowerSavingMode = false
+		control._db.Save(&config)
 		return exception.ErrSystemUnknownException
 	}
 

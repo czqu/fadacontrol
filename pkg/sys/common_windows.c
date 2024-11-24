@@ -128,13 +128,6 @@ int IsSessionLocked()
 return GetSystemMetrics(SM_REMOTESESSION) ;
 }
 
-#if defined(__MINGW32__)
-    bool SetProcessPowerSavingMode(bool enable) {
-        return true;
-    }
-#else
-
-
 
 bool SetProcessPowerSavingMode(bool enable) {
     //
@@ -162,7 +155,7 @@ bool SetProcessPowerSavingMode(bool enable) {
         return false;
     }
 }
-#endif
+
 void set_process_priority(bool enable)
 {
     if (enable) {

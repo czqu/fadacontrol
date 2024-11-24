@@ -11,6 +11,7 @@ import (
 	"fadacontrol/pkg/goroutine"
 	"fmt"
 	"github.com/Microsoft/go-winio"
+	"golang.org/x/sys/windows"
 	"net"
 	"os/user"
 	"strconv"
@@ -238,4 +239,127 @@ func TryLogin(username, password, domain string) *exception.Exception {
 
 	logger.Debug("login code :" + strconv.Itoa(ret))
 	return err
+}
+
+type USER_INFO_2 struct {
+	Name         *uint16
+	Password     *uint16
+	PasswordAge  uint32
+	Priv         uint32
+	HomeDir      *uint16
+	Comment      *uint16
+	Flags        uint32
+	ScriptPath   *uint16
+	AuthFlags    uint32
+	FullName     *uint16
+	UsrComment   *uint16
+	Params       *uint16
+	Workstations *uint16
+	LastLogon    uint32
+	LastLogoff   uint32
+	AcctExpires  uint32
+	MaxStorage   uint32
+	UnitsPerWeek uint32
+	LogonHours   *byte
+	BadPwCount   uint32
+	NumLogons    uint32
+	LogonServer  *uint16
+	CountryCode  uint32
+	CodePage     uint32
+}
+
+type UserInfo struct {
+	Username  string
+	FullName  string
+	Comment   string
+	UserType  uint32
+	LastLogon uint32
+	Flags     uint32
+}
+
+const (
+	FILTER_NORMAL_ACCOUNT uint32 = 0x0002
+	MAX_PREFERRED_LENGTH  uint32 = 0xFFFFFFFF
+)
+
+func UTF16PtrToString(p *uint16) string {
+	if p == nil {
+		return ""
+	}
+	return syscall.UTF16ToString((*[4096]uint16)(unsafe.Pointer(p))[:])
+}
+
+func EnumerateUsers() ([]UserInfo, error) {
+	var (
+		level        uint32 = 2
+		entriesRead  uint32
+		totalEntries uint32
+		resumeHandle uint32
+	)
+
+	users := make([]UserInfo, 0)
+
+	for {
+		var bufptr *byte
+
+		// Try to enumerate users
+		err := windows.NetUserEnum(
+			nil,
+			level,
+			FILTER_NORMAL_ACCOUNT,
+			&bufptr,
+			MAX_PREFERRED_LENGTH,
+			&entriesRead,
+			&totalEntries,
+			&resumeHandle,
+		)
+
+		if err != nil && err != syscall.ERROR_MORE_DATA {
+			return nil, err
+		}
+
+		// Exit if no entries were read
+		if entriesRead == 0 {
+			break
+		}
+
+		// Calculate the size of USER_INFO_2 structure
+		//	size := unsafe.Sizeof(USER_INFO_2{})
+
+		// Convert buffer to slice of USER_INFO_2
+		userInfos := (*[1024]USER_INFO_2)(unsafe.Pointer(bufptr))[:entriesRead:entriesRead]
+
+		// Process each user entry
+		for i := uint32(0); i < entriesRead; i++ {
+			if userInfos[i].Name == nil {
+				continue
+			}
+
+			username := UTF16PtrToString(userInfos[i].Name)
+			if username == "" {
+				continue
+			}
+
+			user := UserInfo{
+				Username:  username,
+				FullName:  UTF16PtrToString(userInfos[i].FullName),
+				Comment:   UTF16PtrToString(userInfos[i].Comment),
+				UserType:  userInfos[i].Priv,
+				LastLogon: userInfos[i].LastLogon,
+				Flags:     userInfos[i].Flags,
+			}
+
+			users = append(users, user)
+		}
+
+		// Free the buffer allocated by the system
+		windows.NetApiBufferFree(bufptr)
+
+		//// Break if we've got all entries
+		if err != syscall.ERROR_MORE_DATA {
+			break
+		}
+	}
+
+	return users, nil
 }

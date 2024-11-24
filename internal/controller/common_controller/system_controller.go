@@ -109,6 +109,23 @@ func (s *SystemController) SetPowerSavingMode(c *gin.Context) {
 
 }
 
+// @Summary Get Power Saving Mode Status
+// @Description Get the current status of power saving mode.
+// @Tags System
+// @Produce json
+// @Security ApiKeyAuth
+// @Success 200 {object} schema.ResponseData "Power saving mode status retrieved successfully."
+// @Failure 500 {object} schema.ResponseData "Internal Server Error"
+// @Router /power-saving/status [get]
+func (s *SystemController) GetPowerSavingModeStatus(c *gin.Context) {
+	ret, err := s._co.GetPowerSavingModeStatus()
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c, ret))
+}
+
 // @Summary Get System Logs
 // @Description Stream the system logs in real-time. This endpoint opens a connection to the log buffer and sends log entries as they are generated. The connection remains open until explicitly closed or an error occurs. If the buffer is not available, it returns an error response.
 // @Tags System

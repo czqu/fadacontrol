@@ -14,7 +14,7 @@ build_exe() {
   echo "go_args: $build_go_args"
   echo "build_data: $(date -u +%Y-%m-%dT%H:%M:%SZ)"
 
-  CGO_ENABLED=1 CC=$build_exe_cc CXX=$build_exe_cxx GOOS=$build_exe_os GOARCH=$build_exe_arch go build $build_go_args -buildmode=pie -trimpath -ldflags "-H=windowsgui -X 'fadacontrol/internal/base/version.AuthorEmail=$build_authors' -X 'fadacontrol/internal/base/version._VersionName=$build_version' -X 'fadacontrol/internal/base/version.GitCommit=$(git log --pretty=format:'%h' -1)' -X 'fadacontrol/internal/base/version.Edition=$build_edition' -X 'fadacontrol/internal/base/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)' -s -w -linkmode=external -extldflags '-static -flto -O2 -Wl,--gc-sections'" -o $build_exe_output
+  CGO_CFLAGS="-O2" CGO_ENABLED=1 CC=$build_exe_cc CXX=$build_exe_cxx GOOS=$build_exe_os GOARCH=$build_exe_arch go build $build_go_args -buildmode=pie -trimpath -ldflags "-H=windowsgui -X 'fadacontrol/internal/base/version.AuthorEmail=$build_authors' -X 'fadacontrol/internal/base/version._VersionName=$build_version' -X 'fadacontrol/internal/base/version.GitCommit=$(git log --pretty=format:'%h' -1)' -X 'fadacontrol/internal/base/version.Edition=$build_edition' -X 'fadacontrol/internal/base/version.BuildDate=$(date -u +%Y-%m-%dT%H:%M:%SZ)' -s -w -linkmode=external -extldflags '-static -flto -O2 -Wl,--gc-sections'" -o $build_exe_output
 }
 if [ "$#" -ne 3 ]; then
   echo "Usage: $0 <build_version> <author_email>  <build_os>"
@@ -50,10 +50,10 @@ case $last_digit in
 esac
 
 # x64
-build_exe $build_version $author_email $build_edition $build_os  amd64 x86_64-w64-mingw32-gcc x86_64-w64-mingw32-g++ ./out/core-service-x64.exe $go_args
-
+build_exe $build_version $author_email $build_edition $build_os   amd64 x86_64-w64-mingw32-gcc  x86_64-w64-mingw32-g++ ./out/core-service-x64.exe $go_args
+cp ./out/core-service-x64.exe ./out/core-service-arm64.exe #arm64 is not ready yet, so copy x64 for now
 # arm64
-build_exe $build_version $author_email  $build_edition $build_os  arm64 aarch64-w64-mingw32-gcc aarch64-w64-mingw32-g++ ./out/core-service-arm64.exe $go_args
+#build_exe $build_version $author_email  $build_edition $build_os  arm64 aarch64-w64-mingw32-gcc-15.0.0 aarch64-w64-mingw32-g++ ./out/core-service-arm64.exe $go_args
 
 # x86
 build_exe $build_version $author_email  $build_edition $build_os  386 i686-w64-mingw32-gcc i686-w64-mingw32-g++ ./out/core-service-x86.exe $go_args
