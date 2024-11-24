@@ -23,12 +23,12 @@ func (u *UnLockService) UnlockPc(username string, password string) *exception.Ex
 	packet.Tpe = entity.UnlockReq
 	packet.Size = uint32(len(data))
 	packet.Data = data
+	packet.ReqId = u.cp.GenReqId()
 
-	//todo
 	logger.Debugf("send packet")
 	ret := u.cp.SendData(&packet)
-	logger.Debugf("ret: %v", ret)
-	if exception.ErrSuccess.NotEqual(ret) {
+	logger.Debugf("ret: %v", ret.Msg)
+	if exception.ErrUserUnlockNotInLockScreenState.Equal(ret) {
 
 		logger.Debugf("try login")
 		err := sys.TryLogin(username, password, "")
