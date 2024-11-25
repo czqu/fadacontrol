@@ -6,6 +6,8 @@ import (
 	"fadacontrol/internal/schema"
 	"fadacontrol/internal/service/internal_master_service"
 	"fadacontrol/pkg/sys"
+	"fmt"
+	"net"
 )
 
 type ControlPCService struct {
@@ -64,6 +66,40 @@ func (control *ControlPCService) SetPowerSavingMode(enable bool) error {
 func (control *ControlPCService) RunPowerSavingMode() *exception.Exception {
 
 	sys.SetPowerSavingMode(true)
+
+	return nil
+}
+func (control *ControlPCService) PowerOnOtherDevices(macAddr []byte) error {
+
+	if len(macAddr) != 6 {
+		return fmt.Errorf("invalid MAC address length: %d", len(macAddr))
+	}
+
+	magicPacket := make([]byte, 6+16*len(macAddr))
+
+	for i := 0; i < 6; i++ {
+		magicPacket[i] = 0xFF
+	}
+
+	for i := 6; i < len(magicPacket); i += len(macAddr) {
+		copy(magicPacket[i:], macAddr)
+	}
+
+	conn, err := net.Dial("udp", "255.255.255.255:9")
+	if err != nil {
+		return fmt.Errorf("failed to create UDP connection: %v", err)
+	}
+	defer conn.Close()
+
+	err = conn.(*net.UDPConn).SetWriteBuffer(len(magicPacket))
+	if err != nil {
+		return fmt.Errorf("failed to set write buffer: %v", err)
+	}
+
+	_, err = conn.Write(magicPacket)
+	if err != nil {
+		return fmt.Errorf("failed to send magic packet: %v", err)
+	}
 
 	return nil
 }

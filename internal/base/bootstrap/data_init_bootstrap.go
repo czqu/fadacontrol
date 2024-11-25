@@ -7,6 +7,7 @@ import (
 	"fadacontrol/internal/base/constants"
 	_log "fadacontrol/internal/base/log"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/internal/base/util"
 	"fadacontrol/internal/base/version"
 	"fadacontrol/internal/entity"
 	"fadacontrol/pkg/goroutine"
@@ -23,10 +24,9 @@ import (
 )
 
 type DataInitBootstrap struct {
-	_db      *gorm.DB
-	adapter  *gormadapter.Adapter
-	enforcer *casbin.Enforcer
-
+	_db       *gorm.DB
+	adapter   *gormadapter.Adapter
+	enforcer  *casbin.Enforcer
 	startOnce sync.Once
 	ctx       context.Context
 }
@@ -45,12 +45,50 @@ func (d *DataInitBootstrap) Start() error {
 	d.initSysConfig()
 	d.initLogReport()
 	d.initUser()
+	d.initSupportModules()
 	d.initHttpConfig()
 	d.initRemoteConfig()
 	d.initUdpConfig()
 	d.initCasbinConfig()
 	d.initBluetoothConfig()
+	d.initCredentialTable()
 	return nil
+}
+func (d *DataInitBootstrap) initSupportModules() {
+	var modules []entity.SupportModule
+	err := d._db.AutoMigrate(&modules)
+	if err != nil {
+		logger.Errorf("failed to migrate database")
+		return
+	}
+	err = d._db.Find(&modules).Error
+	if err != nil {
+		logger.Errorf("failed to get modules %v", err)
+	}
+	if len(modules) == 0 {
+		d._db.Create(&entity.SupportModule{
+			ModuleName: util.BluetoothUnlockModule.String(),
+		})
+		util.GetSupportModules(d._db)
+	} else {
+		goroutine.RecoverGO(
+			func() {
+				util.GetSupportModules(d._db)
+			},
+		)
+	}
+
+}
+func (d *DataInitBootstrap) initCredentialTable() {
+	if util.RemoteUnlockModule.NotSupport() {
+		return
+	}
+	credential := entity.Credential{}
+	err := d._db.AutoMigrate(&credential)
+	if err != nil {
+		logger.Errorf("failed to migrate database")
+		return
+	}
 }
 func (d *DataInitBootstrap) initLogReport() {
 
@@ -210,30 +248,24 @@ func (d *DataInitBootstrap) initHttpConfig() {
 	}
 }
 func (d *DataInitBootstrap) initRemoteConfig() {
-	err := d._db.AutoMigrate(&entity.RemoteConnectConfig{})
+	err := d._db.AutoMigrate(&entity.RemoteConfig{})
 	if err != nil {
 		logger.Errorf("failed to migrate database")
 
 	}
-	err = d._db.AutoMigrate(&entity.RemoteMsgServer{})
+	err = d._db.AutoMigrate(&entity.RemoteServer{})
 	if err != nil {
 		logger.Errorf("failed to migrate database")
 	}
-	var count int64
-	d._db.Model(&entity.RemoteConnectConfig{}).Count(&count)
-	if count == 0 {
-		key, err := secure.GenerateRandomBase58Key(35)
-		if err != nil {
-			logger.Errorf("failed to generate random base58 key")
-		}
-
-		remoteConfig := entity.RemoteConnectConfig{
-			Enable:      false,
-			SecurityKey: key,
-		}
-		d._db.Create(&remoteConfig)
+	err = d._db.AutoMigrate(&entity.RemoteRmttServers{})
+	if err != nil {
+		logger.Errorf("failed to migrate database")
 	}
 
+	err = d._db.AutoMigrate(&entity.Credential{})
+	if err != nil {
+		logger.Errorf("failed to migrate database")
+	}
 }
 func (d *DataInitBootstrap) initUdpConfig() {
 	err := d._db.AutoMigrate(&entity.DiscoverConfig{})
@@ -296,7 +328,11 @@ func (d *DataInitBootstrap) initUser() {
 
 	d._db.Model(&entity.User{}).Count(&count)
 	if count == 0 {
-		salt, _ := secure.GenerateSaltBase64(10)
+		salt, err := secure.GenerateSaltBase64(10)
+		if err != nil {
+			logger.Errorf("failed to generate salt: %v", err)
+			return
+		}
 		user := entity.User{
 			Username: "root",
 			Password: secure.HashPasswordByKDFBase64(conf.RootPassword, salt),

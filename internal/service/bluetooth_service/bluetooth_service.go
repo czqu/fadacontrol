@@ -7,6 +7,7 @@ import (
 	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/internal/base/util"
 	"fadacontrol/internal/entity"
 	"fadacontrol/internal/schema/bluetooth_schema"
 	"fadacontrol/internal/service/control_pc"
@@ -46,12 +47,15 @@ func NewBluetoothService(ctx context.Context, db *gorm.DB, co *control_pc.Contro
 }
 
 func (r *BluetoothService) StartService() error {
+	if util.BluetoothUnlockModule.NotSupport() {
+		return nil
+	}
 	r.bluetoothCtx, r.bluetoothCtxCancel = context.WithCancel(r.ctx)
 
 	config := &bluetooth.Config{ServiceInstanceName: "RemoteFingerprint Service ", Comment: "RemoteFingerprint Service "}
 
 	serviceClassId := bluetooth.GUID{
-		Data1: 0x4E5877C0,
+		Data1: 0x5E5877C0,
 		Data2: 0x8297,
 		Data3: 0x4AAE,
 		Data4: [8]byte{0xB7, 0xBD, 0x73, 0xA8, 0xCB, 0xC1, 0xED, 0xAF},
@@ -206,6 +210,9 @@ func (r *BluetoothService) handleConnection(conn net.Conn) {
 }
 
 func (r *BluetoothService) StopService() error {
+	if util.BluetoothUnlockModule.NotSupport() {
+		return nil
+	}
 	if r.bluetoothCtx != nil {
 		r.bluetoothCtxLock.Lock()
 		r.bluetoothCtxCancel()
@@ -239,6 +246,9 @@ func (r *BluetoothService) PatchBluetoothConfig(m *map[string]interface{}) error
 }
 
 func (r *BluetoothService) RestartBoothService() error {
+	if util.BluetoothUnlockModule.NotSupport() {
+		return nil
+	}
 	r.StopService()
 	return r.StartService()
 }

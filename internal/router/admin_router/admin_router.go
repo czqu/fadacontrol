@@ -3,6 +3,7 @@ package admin_router
 import (
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/middleware"
+	"fadacontrol/internal/base/util"
 	"fadacontrol/internal/base/version"
 	"fadacontrol/internal/controller/admin_controller"
 	"fadacontrol/internal/controller/common_controller"
@@ -70,15 +71,26 @@ func (d *AdminRouter) Register() {
 		apiv1.PATCH("/discovery/config", d.di.PatchDiscoverServiceConfig)
 		apiv1.POST("/discovery/restart", d.di.RestartDiscoverService)
 
-		apiv1.GET("/bluetooth/config", d._bc.GetBluetoothConfig)
-		apiv1.PATCH("/bluetooth/config", d._bc.PatchBluetoothConfig)
-		apiv1.POST("/bluetooth/restart", d._bc.RestartBluetoothService)
+		if util.BluetoothUnlockModule.IsSupport() {
+			apiv1.GET("/bluetooth/config", d._bc.GetBluetoothConfig)
+			apiv1.PATCH("/bluetooth/config", d._bc.PatchBluetoothConfig)
+			apiv1.POST("/bluetooth/restart", d._bc.RestartBluetoothService)
+		}
 
-		apiv1.GET("/remote/config", d.rc.GetRemoteConnectConfig)
-		apiv1.PATCH("/remote/config", d.rc.PatchRemoteConnectConfig)
-		apiv1.PUT("/remote/config", d.rc.UpdateRemoteConnectConfig)
-		apiv1.POST("/remote/restart", d.rc.RestartRemoteService)
-
+		if util.RemoteUnlockModule.IsSupport() {
+			apiv1.GET("/remote/config", d.rc.GetRemoteConfig)
+			apiv1.PATCH("/remote/config", d.rc.PatchRemoteConfig)
+			apiv1.PUT("/remote/config", d.rc.UpdateRemoteConfig)
+			apiv1.GET("/remote/config", d.rc.GetRemoteConfig)
+			apiv1.PATCH("/remote/config", d.rc.PatchRemoteConfig)
+			apiv1.PUT("/remote/config", d.rc.UpdateRemoteConfig)
+			apiv1.GET("/remote/apiserver/config/:id", d.rc.GetRemoteApiServerConfig)
+			apiv1.POST("/remote/apiserver/config/:id", d.rc.UpdateRemoteApiServerConfig)
+			apiv1.GET("/remote/delay", d.rc.GetNowServerDelay)
+			apiv1.GET("/remote/credential", d.rc.GetCredential)
+			apiv1.PUT("/remote/credential", d.rc.RefreshCredential)
+			apiv1.POST("/remote/restart", d.rc.RestartRemoteService)
+		}
 		apiv1.GET("/http/config", d._http.GetHttpConfig)
 		apiv1.PATCH("/http/config", d._http.PatchHttpConfig)
 		apiv1.PUT("/http/config", d._http.UpdateHttpConfig)

@@ -85,6 +85,9 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 				r.rcb.Restart()
 				r.discover.Restart()
 			})
+			goroutine.RecoverGO(func() {
+				r.ble.StartService()
+			})
 
 		}
 
@@ -128,6 +131,7 @@ func (r *DesktopMasterServiceBootstrap) Stop() {
 						r.discover.Stop()
 						r._http.Stop()
 						r.rcb.Stop()
+						r.ble.StopService()
 
 					}
 

@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fadacontrol/internal/base/version"
 	"golang.org/x/net/context"
+	"google.golang.org/protobuf/reflect/protoreflect"
 	"reflect"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -93,4 +95,10 @@ func GetValueFromContext[T any](ctx context.Context, key string, defaultValue T)
 	}
 
 	return castedValue
+}
+func ProtoNumberToString(num protoreflect.EnumNumber) string {
+	return strconv.FormatInt(int64(num), 10)
+}
+func Int64ToString(num int64) string {
+	return strconv.FormatInt(num, 10)
 }

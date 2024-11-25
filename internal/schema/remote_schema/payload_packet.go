@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/binary"
-	"fadacontrol/pkg/secure"
 )
 
 type PacketType uint8
@@ -16,39 +15,26 @@ const (
 	Text
 )
 
-type KeyGenAlgorithm uint8
-
-const (
-	NoSalt KeyGenAlgorithm = iota
-	Arg2iD
-)
-
 type PayloadPacket struct {
-	Reserve             uint8
-	RequestIdLen        uint8
-	RequestId           []byte
-	EncryptionAlgorithm secure.EncryptionAlgorithmEnum // 1 byte encryption algorithm length combination 0x00 reserved for unencrypted 0xff
-	DataType            PacketType                     // packet Type
-	Data                []byte                         // data section
+	SessionIdLen uint8
+	SessionId    []byte
+	DataType     PacketType // packet Type
+	Data         []byte     // data section
 }
 
 // Pack converts a PayloadPacket struct into a byte slice.
 func (p *PayloadPacket) Pack() ([]byte, error) {
 	var buf bytes.Buffer
-	buf.WriteByte(p.Reserve)
-	// Write RequestIdLen
-	if err := binary.Write(&buf, binary.BigEndian, p.RequestIdLen); err != nil {
+
+	// Write SessionIdLen
+	if err := binary.Write(&buf, binary.BigEndian, p.SessionIdLen); err != nil {
 		return nil, err
 	}
-	if p.RequestIdLen > 0 {
-		// Write RequestId
-		if _, err := buf.Write(p.RequestId); err != nil {
+	if p.SessionIdLen > 0 {
+		// Write SessionId
+		if _, err := buf.Write(p.SessionId); err != nil {
 			return nil, err
 		}
-	}
-	// Write EncryptionAlgorithm
-	if err := binary.Write(&buf, binary.BigEndian, p.EncryptionAlgorithm); err != nil {
-		return nil, err
 	}
 
 	// Write DataType
@@ -68,28 +54,18 @@ func (p *PayloadPacket) Pack() ([]byte, error) {
 func (p *PayloadPacket) Unpack(data []byte) error {
 	buf := bytes.NewReader(data)
 
-	b, err := buf.ReadByte()
-	if err != nil {
+	// Read SessionIdLen
+	if err := binary.Read(buf, binary.BigEndian, &p.SessionIdLen); err != nil {
 		return err
 	}
-	p.Reserve = b
-	// Read RequestIdLen
-	if err := binary.Read(buf, binary.BigEndian, &p.RequestIdLen); err != nil {
-		return err
-	}
-	p.RequestId = nil
-	if p.RequestIdLen > 0 {
-		// Read RequestId
-		requestId := make([]byte, p.RequestIdLen)
-		if _, err := buf.Read(requestId); err != nil {
+	p.SessionId = nil
+	if p.SessionIdLen > 0 {
+		// Read SessionId
+		topic := make([]byte, p.SessionIdLen)
+		if _, err := buf.Read(topic); err != nil {
 			return err
 		}
-		p.RequestId = requestId
-	}
-
-	// Read EncryptionAlgorithm
-	if err := binary.Read(buf, binary.BigEndian, &p.EncryptionAlgorithm); err != nil {
-		return err
+		p.SessionId = topic
 	}
 
 	// Read DataType

@@ -236,13 +236,6 @@ func (p *CredentialProviderService) PipeHandler(conn net.Conn) {
 				logger.Error("get hostname err")
 				hostname = ""
 			}
-			rc := entity.RemoteConnectConfig{}
-
-			if err := p.db.First(&rc).Error; err != nil {
-				logger.Errorf("failed to find database: %v", err)
-			} else {
-				clientId = rc.ClientId
-			}
 			text := hostname + ";" + clientId + ";"
 			goroutine.RecoverGO(func() {
 				logger.Debug("set text", text)

@@ -1,0 +1,109 @@
+syntax = "proto3";
+package net.czqu.rmtt_msg;
+import "google/protobuf/any.proto";
+
+option go_package = ".;rmtt_msg";
+
+enum RmttMsgType{
+  UnknownRmttMsgType = 0;
+  RfuResponseMsgType = 1;
+  UnlockPcMsgType = 2;
+  LockScreenMsgType = 3;
+  ShutdownMsgType = 4;
+  StandbyMsgType = 5;
+  PowerOnMsgType = 6;
+  CustomCommandMsgType = 7;
+  PingMsgType = 8;
+  PongMsgType = 9;
+}
+enum EncryptionAlgorithmEnum{
+  NoEncryption = 0;
+  AESGCM128Algorithm = 1;                              // The AES-128GCM key is 16 bytes long
+  AESGCM192Algorithm = 2;                           // The AES-192GCM key is 24 bytes long
+  AESGCM256Algorithm = 3;                        // The AES-256GCM key is 32 bytes long
+  ChaCha20Poly1305Algorithm = 4;
+}
+enum ShutdownType {
+  E_UNKNOWN = 0;
+  // E=>通用
+  E_LOGOFF = 1;  // 注销当前用户
+  E_FORCE_SHUTDOWN = 2;  // 强制关闭所有应用程序并关机 在Windows上即 (EWX_SHUTDOWN | EWX_FORCE)
+  E_FORCE_REBOOT = 3;  // 强制关闭所有应用程序并重启 在Windows上即(EWX_REBOOT | EWX_FORCE)
+
+  //EWX => Windows 专有
+  EWX_SHUTDOWN = 4;  // 关机但不关闭电源
+  EWX_REBOOT = 5;  // 重启计算机
+  EWX_POWEROFF = 6;  // 关机并关闭电源
+  EWX_HYBRID_SHUTDOWN = 7;  // 混合关机
+
+  EWX_FORCE_POWEROFF = 8;  // 强制关闭所有应用程序并关机同时关闭电源 (EWX_POWEROFF | EWX_FORCE)
+  EWX_REBOOT_RESTARTAPPS = 9;  // 重启计算机并重启应用程序 (EWX_REBOOT | EWX_RESTARTAPPS)
+  EWX_FORCE_REBOOT_RESTARTAPPS = 10;  // 强制关闭应用程序后重启并重启应用程序 (EWX_REBOOT | EWX_FORCE | EWX_RESTARTAPPS)
+  EWX_SHUTDOWN_RESTARTAPPS = 11;  // 关机但不关闭电源，关机后重启应用程序 (EWX_SHUTDOWN | EWX_RESTARTAPPS)
+  EWX_HYBRID_SHUTDOWN_FORCE = 12;  // 混合关机并强制关闭应用程序 (EWX_HYBRID_SHUTDOWN | EWX_FORCE)
+  EWX_HYBRID_SHUTDOWN_RESTARTAPPS = 13;  // 混合关机并重启应用程序 (EWX_HYBRID_SHUTDOWN | EWX_RESTARTAPPS)
+  EWX_HYBRID_SHUTDOWN_FORCE_RESTARTAPPS = 14;  // 混合关机、强制关闭应用程序并重启应用程序 (EWX_HYBRID_SHUTDOWN | EWX_FORCE | EWX_RESTARTAPPS
+}
+enum SignatureMethod{
+  NoSignature = 0;
+  HmacSHA256 = 1;
+  HmacSHA1 = 2;
+  HmacMD5 = 3;
+  HmacSHA512= 4;
+}
+
+message RmttMsg{
+  MetaData metaData = 1;
+  google.protobuf.Any Data = 2;
+}
+
+
+//用于给电脑端和电脑端响应的签名 仅电脑端验证和生成 服务端不验证
+message MetaData{
+  RmttMsgType msgType = 1; //主要目的为了参与签名
+  string Nonce = 2; //随机数
+  int64 timestamp = 3; //毫秒
+  string key=4 ;//签名key  作为返回结果的时候为空 则电脑端在签名的时候会忽略此字段
+  SignatureMethod signatureMethod = 5;
+  string bigDataMd5 = 6; // bigData 部分的字节数组的MD5 ， 只有bigData的字段有数据才有此签名
+  string signature = 7;  // 签名，用于请求电脑端或者响应电脑端， 签名字段按顺序，  字段之间使用\n间隔 最后一段不加\n 空的内容不加，最后一部分是
+}
+//例如 LoginToPCMsg 部分签名为 Nonce\nString(timestamp)\nString(int(signatureMethod))\nString(msgType)\nBase64(username)\nBase64(password)\nString(int(encryptionSignatureMethod))
+message LoginToPCRequestMsg{
+
+  bytes username = 1; // 源字符串使用utf-8转为字节数组后加密形成的最终数组  为了兼容json形式的数据 因此此处签名用的是base64后的字符串参与签名，  即转换成base64后换行放在bigDataMd5后
+  bytes password = 2; // 源字符串使用utf-8转为字节数组后加密形成的最终数组  为了兼容json形式的数据 因此此处签名用的是base64后的字符串参与签名，
+  EncryptionAlgorithmEnum  encryptionMethod = 3;
+}
+message PowerOnRequestMsg{
+
+
+  bytes macAddress = 1;  // 源字符串使用utf-8转为字节数组后加密形成的最终数组  为了兼容json形式的数据 因此此处签名用的是base64后的字符串参与签名，  即转换成base64后换行放在bigDataMd5后
+  EncryptionAlgorithmEnum  encryptionMethod = 2;
+}
+message ShutdownRequestMsg {
+    ShutdownType shutdownType = 1;
+
+}
+message LockScreenRequestMsg {
+
+
+}
+message StandbyRequestMsg {
+
+}
+message PingMsg {
+
+}
+message PongMsg {
+
+}
+message RmttResponseMsg{
+  MetaData metaData = 1;
+  string requestId = 2;
+  int32 code = 3;
+  string msg = 4;
+  bytes  bigData = 5;//一般为返回的文件数据,日志数据之类的二进制数据
+  EncryptionAlgorithmEnum  dataEncryptionMethod = 6; //转成数字后再转成字符串签名
+  //签名顺序 metaData的1-4 + 此处的2、3、4、6
+}
