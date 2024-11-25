@@ -31,6 +31,8 @@ jobs:
           bash build-windows.sh
           cd ../core-service
           bash  build-windows.sh ${{ env.CURRENT_VER_NUM }} ${{secrets.ME_MAIL}}  windows
+          cd ../rfuct
+          bash  build-windows.sh
       - name: Upload release
         uses: softprops/action-gh-release@v2
         with:
@@ -45,3 +47,10 @@ jobs:
          make_latest: true
          body_path: release_note.md
          token: ${{ secrets.GH_TOKEN }}
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: "cmd/rfuct/out/*.exe"
+          make_latest: true
+          body_path: release_note.md
+          token: ${{ secrets.GH_TOKEN }}

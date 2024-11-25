@@ -25,7 +25,6 @@ var rootCmd = &cobra.Command{
 			conf.RootPassword = rootPassword
 			conf.ResetPassword = true
 			logger.Info("root password will set")
-
 		}
 
 		if serviceMode {

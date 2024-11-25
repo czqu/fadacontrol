@@ -2,10 +2,10 @@ package common_controller
 
 import (
 	"context"
+	"fadacontrol/internal/controller"
 
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
-	"fadacontrol/internal/controller"
 	"fadacontrol/internal/service/internal_master_service"
 	"fadacontrol/pkg/goroutine"
 

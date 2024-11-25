@@ -19,12 +19,12 @@ func TestEncryptDecrypt(t *testing.T) {
 		{AESGCM192Algorithm, generateRandomKey(AlgorithmKeyLengths[AESGCM192Algorithm])},
 		{AESGCM256Algorithm, generateRandomKey(AlgorithmKeyLengths[AESGCM256Algorithm])},
 		{ChaCha20Poly1305Algorithm, generateRandomKey(AlgorithmKeyLengths[ChaCha20Poly1305Algorithm])},
-		{None, generateRandomKey(AlgorithmKeyLengths[None])},
+		{NoEncryption, generateRandomKey(AlgorithmKeyLengths[NoEncryption])},
 		{AESGCM128Algorithm, generateRandomKey(35)},
 		{AESGCM192Algorithm, generateRandomKey(35)},
 		{AESGCM256Algorithm, generateRandomKey(35)},
 		{ChaCha20Poly1305Algorithm, generateRandomKey(35)},
-		{None, generateRandomKey(35)},
+		{NoEncryption, generateRandomKey(35)},
 	}
 
 	for _, tt := range tests {

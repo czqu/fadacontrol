@@ -67,9 +67,14 @@ func (d *AdminRouter) Register() {
 		apiv1.PATCH("/discovery/config", d.di.PatchDiscoverServiceConfig)
 		apiv1.POST("/discovery/restart", d.di.RestartDiscoverService)
 
-		apiv1.GET("/remote/config", d.rc.GetRemoteConnectConfig)
-		apiv1.PATCH("/remote/config", d.rc.PatchRemoteConnectConfig)
-		apiv1.PUT("/remote/config", d.rc.UpdateRemoteConnectConfig)
+		apiv1.GET("/remote/config", d.rc.GetRemoteConfig)
+		apiv1.PATCH("/remote/config", d.rc.PatchRemoteConfig)
+		apiv1.PUT("/remote/config", d.rc.UpdateRemoteConfig)
+		apiv1.GET("/remote/apiserver/config/:id", d.rc.GetRemoteApiServerConfig)
+		apiv1.POST("/remote/apiserver/config/:id", d.rc.UpdateRemoteApiServerConfig)
+		apiv1.GET("/remote/delay", d.rc.GetNowServerDelay)
+		apiv1.GET("/remote/credential", d.rc.GetCredential)
+		apiv1.PUT("/remote/credential", d.rc.RefreshCredential)
 		apiv1.POST("/remote/restart", d.rc.RestartRemoteService)
 
 		apiv1.GET("/http/config", d._http.GetHttpConfig)

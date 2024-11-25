@@ -48,7 +48,16 @@ func (d *DataInitBootstrap) Start() error {
 	d.initRemoteConfig()
 	d.initUdpConfig()
 	d.initCasbinConfig()
+	d.initCredentialTable()
 	return nil
+}
+func (d *DataInitBootstrap) initCredentialTable() {
+	credential := entity.Credential{}
+	err := d._db.AutoMigrate(&credential)
+	if err != nil {
+		logger.Errorf("failed to migrate database")
+		return
+	}
 }
 func (d *DataInitBootstrap) initLogReport() {
 
@@ -208,30 +217,24 @@ func (d *DataInitBootstrap) initHttpConfig() {
 	}
 }
 func (d *DataInitBootstrap) initRemoteConfig() {
-	err := d._db.AutoMigrate(&entity.RemoteConnectConfig{})
+	err := d._db.AutoMigrate(&entity.RemoteConfig{})
 	if err != nil {
 		logger.Errorf("failed to migrate database")
 
 	}
-	err = d._db.AutoMigrate(&entity.RemoteMsgServer{})
+	err = d._db.AutoMigrate(&entity.RemoteServer{})
 	if err != nil {
 		logger.Errorf("failed to migrate database")
 	}
-	var count int64
-	d._db.Model(&entity.RemoteConnectConfig{}).Count(&count)
-	if count == 0 {
-		key, err := secure.GenerateRandomBase58Key(35)
-		if err != nil {
-			logger.Errorf("failed to generate random base58 key")
-		}
-
-		remoteConfig := entity.RemoteConnectConfig{
-			Enable:      false,
-			SecurityKey: key,
-		}
-		d._db.Create(&remoteConfig)
+	err = d._db.AutoMigrate(&entity.RemoteRmttServers{})
+	if err != nil {
+		logger.Errorf("failed to migrate database")
 	}
 
+	err = d._db.AutoMigrate(&entity.Credential{})
+	if err != nil {
+		logger.Errorf("failed to migrate database")
+	}
 }
 func (d *DataInitBootstrap) initUdpConfig() {
 	err := d._db.AutoMigrate(&entity.DiscoverConfig{})
@@ -279,7 +282,11 @@ func (d *DataInitBootstrap) initUser() {
 
 	d._db.Model(&entity.User{}).Count(&count)
 	if count == 0 {
-		salt, _ := secure.GenerateSaltBase64(10)
+		salt, err := secure.GenerateSaltBase64(10)
+		if err != nil {
+			logger.Errorf("failed to generate salt: %v", err)
+			return
+		}
 		user := entity.User{
 			Username: "root",
 			Password: secure.HashPasswordByKDFBase64(conf.RootPassword, salt),

@@ -52,8 +52,9 @@ func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (
 	}
 	dataInitBootstrap := bootstrap.NewDataInitBootstrap(ctx, adapter, enforcer, gormDB)
 	credentialProviderService := credential_provider_service.NewCredentialProviderService(gormDB)
+	userService := user_service.NewUserService(gormDB)
 	unLockService := unlock.NewUnLockService(credentialProviderService)
-	remoteService := remote_service.NewRemoteService(controlPCService, unLockService, ctx, gormDB)
+	remoteService := remote_service.NewRemoteService(userService, controlPCService, unLockService, ctx, gormDB)
 	remoteConnectBootstrap := bootstrap.NewRemoteConnectBootstrap(ctx, gormDB, remoteService)
 	dataData := data.NewData(gormDB)
 	loggerLogger := logger.NewLogger(ctx)
@@ -66,7 +67,6 @@ func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (
 	systemController := common_controller.NewSystemController(controlPCService, ctx, updateService)
 	authService := auth_service.NewAuthService(enforcer)
 	jwtMiddleware := middleware.NewJwtMiddleware(jwtService, authService)
-	userService := user_service.NewUserService(gormDB)
 	authController := common_controller.NewAuthController(userService, jwtService)
 	customCommandService := custom_command_service.NewCustomCommandService(ctx)
 	customCommandController := common_controller.NewCustomCommandController(ctx, customCommandService)
