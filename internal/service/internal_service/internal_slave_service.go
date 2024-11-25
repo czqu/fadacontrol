@@ -49,11 +49,10 @@ const (
 func (s *InternalSlaveService) connectToServer(addr string) {
 	logger.Info("connect to server")
 	backoff := initialBackoff
-	cnt := 0
 	for {
 
 		conn, err := net.Dial("tcp", addr)
-
+		logger.Debug("connecting")
 		select {
 		case <-s._done:
 			return
@@ -76,7 +75,6 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 				logger.Debug("maxBackoff")
 				s._exitSignal.ExitChan <- 0
 				<-s._done
-				logger.Debug(cnt)
 				return
 
 			}
@@ -88,8 +86,8 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 		if err != nil {
 			logger.Warn("Error setting keep-alive:", err)
 		}
-		// Reset the backoff time after a successful connection
-		backoff = initialBackoff
+		// Reset the backoff time after a successful connection ,if we have a successful connection,only retry once
+		backoff = maxBackoff / 2
 		for {
 			packet := &schema.InternalDataPacket{}
 			err := packet.Unpack(conn)
@@ -163,6 +161,12 @@ func (s *InternalSlaveService) JsonDataHandler(conn net.Conn, packet *schema.Int
 			return err
 		}
 
+	}
+	if cmd.CommandType == schema.Exit {
+		logger.Debug("Exit")
+		s._exitSignal.ExitChan <- 0
+		<-s._done
+		return nil
 	}
 	return nil
 }

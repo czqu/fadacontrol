@@ -28,7 +28,7 @@ func NewInternalMasterService(cp *control_pc.ControlPCService) *InternalMasterSe
 }
 func (s *InternalMasterService) Start() error {
 	s.startOnce.Do(func() {
-		s.cp.SetCommandSender(s.SendCommand)
+		s.cp.SetCommandSender(s.SendCommandAll)
 		goroutine.RecoverGO(func() {
 			s.StartServer()
 		})
@@ -92,6 +92,10 @@ func (s *InternalMasterService) StartServer() error {
 }
 
 func (s *InternalMasterService) StopServer() error {
+	err := s.StopAllSlave()
+	if err != nil {
+		logger.Error(err)
+	}
 	s._done <- true
 	return nil
 }
@@ -156,7 +160,17 @@ func (s *InternalMasterService) Handler(conn net.Conn) {
 		}
 	}
 }
-func (s *InternalMasterService) SendCommand(cmd *schema.InternalCommand) error {
+func (s *InternalMasterService) StopAllSlave() error {
+	logger.Debug("send exit command to all client")
+	cmd := schema.InternalCommand{CommandType: schema.Exit, Data: nil}
+	err := s.SendCommandAll(&cmd)
+	if err != nil {
+		logger.Error(err)
+		return err
+	}
+	return nil
+}
+func (s *InternalMasterService) SendCommandAll(cmd *schema.InternalCommand) error {
 	logger.Debug("receive command    ")
 	msg, err := json.Marshal(cmd)
 	if err != nil {

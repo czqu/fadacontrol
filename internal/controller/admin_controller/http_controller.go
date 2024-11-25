@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"net/http"
+	"time"
 )
 
 type HttpController struct {
@@ -151,6 +152,7 @@ func (h *HttpController) PatchHttpConfig(c *gin.Context) {
 // @Router /sys/stop [post]
 func (h *HttpController) StopService(c *gin.Context) {
 	goroutine.RecoverGO(func() {
+		time.Sleep(1 * time.Second)
 		h._exitSignal.ExitChan <- 0
 	})
 
