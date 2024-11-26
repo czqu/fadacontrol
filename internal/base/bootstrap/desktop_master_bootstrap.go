@@ -107,10 +107,11 @@ func (r *DesktopMasterServiceBootstrap) Stop() {
 				func() {
 					r.pf.Stop()
 					if !conf.ResetPassword {
+						r.master.Stop()
 						r.discover.Stop()
 						r._http.Stop()
 						r.rcb.Stop()
-						r.master.Stop()
+
 					}
 
 				})

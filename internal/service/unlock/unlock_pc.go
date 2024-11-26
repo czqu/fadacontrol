@@ -33,10 +33,13 @@ func (u *UnLockService) UnlockPc(username string, password string) *exception.Ex
 		logger.Debugf("try login")
 		err := sys.TryLogin(username, password, "")
 		if exception.ErrSuccess.NotEqual(err) {
-			logger.Debugf("err: %v", err)
+			logger.Errorf("err: %v", err)
 			return err
 		}
 		return exception.ErrUserUnlockNotInLockScreenState
+	}
+	if exception.ErrSuccess.NotEqual(ret) {
+		logger.Errorf("err: %v", ret)
 	}
 	return ret
 

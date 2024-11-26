@@ -14,6 +14,7 @@ const (
 	Hello
 	LockPC
 	CustomCommand
+	Exit
 )
 
 type InternalCommand struct {
