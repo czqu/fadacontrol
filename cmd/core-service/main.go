@@ -31,7 +31,9 @@ func main() {
 		scope.SetTag("app_info", version.GetBuildInfo())
 
 	})
-	logger.Error(err)
+	if err != nil {
+		logger.Error(err)
+	}
 	defer sentry.Flush(5 * time.Second)
 	application.Execute()
 }
