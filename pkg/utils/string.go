@@ -11,3 +11,13 @@ func GenRandString(n int) string {
 	}
 	return string(b)
 }
+func ConvertToString(r interface{}) string {
+	switch v := r.(type) {
+	case string:
+		return v
+	case error:
+		return v.Error()
+	default:
+		return "unknown panic"
+	}
+}
