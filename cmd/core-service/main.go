@@ -24,7 +24,7 @@ func main() {
 	}()
 	err := sentry.Init(sentry.ClientOptions{
 		Dsn:   "https://82431285059e21675920c08d0e172643@o4508488989605888.ingest.us.sentry.io/4508489034825728",
-		Debug: true,
+		Debug: false,
 	})
 	sentry.ConfigureScope(func(scope *sentry.Scope) {
 
