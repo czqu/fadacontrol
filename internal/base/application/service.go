@@ -31,23 +31,3 @@ func StartService() {
 		logger.Error(err.Error())
 	}
 }
-
-func InstallService(path string, args ...string) {
-
-	var p program
-	s, _ := sys.New(&p)
-
-	err := s.Install(path, args...)
-	if err != nil {
-		logger.Error(err.Error())
-	}
-}
-func UninstallService() {
-	var p program
-	s, _ := sys.New(&p)
-	err := s.Uninstall()
-	if err != nil {
-		logger.Error(err.Error())
-	}
-
-}
