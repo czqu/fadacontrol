@@ -5,6 +5,7 @@ import (
 	"fadacontrol/pkg/sys"
 )
 
+// for install service,do not implement Start,Stop
 type program struct {
 }
 
@@ -18,14 +19,6 @@ func (p *program) run() {
 func (p *program) Stop(s sys.Svc) error {
 
 	return nil
-}
-func StartService() {
-	var p program
-	s, _ := sys.New(&p)
-	err := s.Run()
-	if err != nil {
-		logger.Error(err.Error())
-	}
 }
 
 func InstallService(path string, args ...string) {

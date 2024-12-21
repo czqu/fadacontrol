@@ -88,7 +88,11 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 
 	connection := "file:" + dbFile + "?cache=shared&mode=rwc&_journal_mode=WAL"
 
-	app, _ := initDesktopServiceApplication(c, &conf.DatabaseConf{Driver: "sqlite", Connection: connection, MaxIdleConnection: 10, MaxOpenConnection: 100, Debug: c.Debug})
+	app, err := initDesktopServiceApplication(c, &conf.DatabaseConf{Driver: "sqlite", Connection: connection, MaxIdleConnection: 10, MaxOpenConnection: 100, Debug: c.Debug})
+	if err != nil {
+		logger.Fatal("init desktop service err %v", err)
+		return
+	}
 	appDesktopService = app
 	app.Start()
 }
