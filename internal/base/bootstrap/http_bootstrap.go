@@ -36,9 +36,6 @@ func (s *HttpBootstrap) Start() error {
 		}
 
 		goroutine.RecoverGO(func() {
-			s._http.StartServer(s._common, HttpServiceApi)
-		})
-		goroutine.RecoverGO(func() {
 			s._http.StartServer(s._common, HttpsServiceApi)
 		})
 		goroutine.RecoverGO(func() {

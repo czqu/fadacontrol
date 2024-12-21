@@ -188,6 +188,16 @@ func (s *HttpService) StartServer(r router.FadaControlRouter, serviceName string
 			cert, err = secure.LoadBaseX509KeyPair(config.Cer, config.Key)
 			if err != nil {
 				logger.Error(err)
+				_cert, _key, err := secure.GenerateX509Cert()
+				if err != nil {
+					logger.Error("gen key err", err)
+					return err
+				}
+				cert, err = secure.LoadX509KeyPairFromMemory(_cert, _key)
+				if err != nil {
+					logger.Error(err)
+					return err
+				}
 				return err
 			}
 			enableQuic = config.EnableHttp3

@@ -25,7 +25,6 @@ type DataInitBootstrap struct {
 	startOnce   sync.Once
 }
 
-const HttpServiceApi = "HTTP_SERVICE_API"
 const HttpsServiceApi = "HTTPS_SERVICE_API"
 const HttpServiceAdmin = "HTTP_SERVICE_ADMIN"
 
@@ -134,12 +133,38 @@ func (d *DataInitBootstrap) initHttpConfig() {
 
 	err := d._db.AutoMigrate(&entity.HttpConfig{})
 	if err != nil {
-		logger.Errorf("failed to migrate database")
-		return
+		logger.Warnf("Failed to migrate database: %v. Attempting to drop and recreate the table.", err)
+		if dropErr := d._db.Migrator().DropTable(&entity.HttpConfig{}); dropErr != nil {
+			logger.Errorf("Failed to drop table: %v", dropErr)
+			return
+		}
+		if recreateErr := d._db.AutoMigrate(&entity.HttpConfig{}); recreateErr != nil {
+			logger.Errorf("Failed to recreate table: %v", recreateErr)
+			return
+		}
+
+		logger.Infof("Table recreated successfully.")
 	}
+	var config1 entity.HttpConfig
+	adminServiceErr := d._db.Where(&entity.HttpConfig{ServiceName: HttpServiceAdmin}).First(&config1).Error
+	var config2 entity.HttpConfig
+	commonServiceErr := d._db.Where(&entity.HttpConfig{ServiceName: HttpsServiceApi}).First(&config2).Error
+
 	var httpCount int64
 	d._db.Model(&entity.HttpConfig{}).Count(&httpCount)
-	if httpCount == 0 {
+	if httpCount != 2 || adminServiceErr != nil || commonServiceErr != nil {
+
+		if dropErr := d._db.Migrator().DropTable(&entity.HttpConfig{}); dropErr != nil {
+			logger.Errorf("Failed to drop table: %v", dropErr)
+			return
+		}
+		if recreateErr := d._db.AutoMigrate(&entity.HttpConfig{}); recreateErr != nil {
+			logger.Errorf("Failed to recreate table: %v", recreateErr)
+			return
+		}
+
+		logger.Infof("Table recreated successfully.")
+
 		cert, key, err := secure.GenerateX509Cert()
 		if err != nil {
 			logger.Errorf("failed to generate x509 cert: %v", err)
@@ -147,15 +172,6 @@ func (d *DataInitBootstrap) initHttpConfig() {
 		}
 		strCert := base64.StdEncoding.EncodeToString(cert)
 		strKey := base64.StdEncoding.EncodeToString(key)
-		httpConfig := entity.HttpConfig{
-			ServiceName: HttpServiceApi, //http service api
-			Enable:      false,
-			Host:        "0.0.0.0",
-			Port:        2092,
-			Cer:         "",
-			Key:         "",
-		}
-		d._db.Create(&httpConfig)
 
 		httpsConfig := entity.HttpConfig{
 			ServiceName: HttpsServiceApi, //https service api
@@ -166,7 +182,8 @@ func (d *DataInitBootstrap) initHttpConfig() {
 			Key:         strKey,
 			EnableHttp3: false,
 		}
-		d._db.Create(&httpsConfig)
+
+		d._db.Save(&httpsConfig)
 
 		httpAdminConfig := entity.HttpConfig{
 			ServiceName: HttpServiceAdmin,
@@ -176,7 +193,8 @@ func (d *DataInitBootstrap) initHttpConfig() {
 			Cer:         "",
 			Key:         "",
 		}
-		d._db.Create(&httpAdminConfig)
+
+		d._db.Save(&httpAdminConfig)
 	}
 }
 func (d *DataInitBootstrap) initRemoteConfig() {
