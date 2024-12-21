@@ -1,6 +1,9 @@
 package utils
 
-import "math/rand"
+import (
+	"errors"
+	"math/rand"
+)
 
 const letterBytes = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
 
@@ -20,4 +23,11 @@ func ConvertToString(r interface{}) string {
 	default:
 		return "unknown panic"
 	}
+}
+func ConvertToError(r interface{}) error {
+	e, ok := r.(error)
+	if !ok {
+		e = errors.New(ConvertToString(r))
+	}
+	return e
 }
