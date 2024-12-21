@@ -11,6 +11,7 @@ import (
 	"fadacontrol/pkg/utils"
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
+	"github.com/google/uuid"
 	"gorm.io/gorm"
 	"sync"
 	"time"
@@ -36,16 +37,60 @@ func (d *DataInitBootstrap) Stop() error {
 	return nil
 }
 func (d *DataInitBootstrap) Start() error {
+	d.initLogReport()
 	d.initUser()
 	d.initHttpConfig()
-
 	d.initRemoteConfig()
 	d.initUdpConfig()
 	d.initCasbinConfig()
-
 	d.initSysConfig()
 
 	return nil
+}
+func (d *DataInitBootstrap) initLogReport() {
+
+	sysconfig := entity.SysConfig{}
+	region := version.RegionGlobal
+	if err := d._db.First(&sysconfig).Error; err != nil {
+		logger.Errorf("failed to get config %v", err)
+	} else {
+		region = version.GetRegionFromCode(sysconfig.Region)
+	}
+	err := d._db.AutoMigrate(&entity.LogReportSentry{})
+	if err != nil {
+		logger.InitLogReporter("unknown", "fatal")
+		logger.Fatal("failed to migrate database")
+		return
+	}
+	enableReport, _ := utils.GetRemoteConfig("log_report_enable", region, true)
+	reportLevel, _ := utils.GetRemoteConfig("log_report_min_level", region, "info")
+	var cnt int64
+	err = d._db.Model(&entity.LogReportSentry{}).Count(&cnt).Error
+	if err != nil {
+		logger.Errorf("failed to count database")
+		return
+	}
+	if cnt == 0 {
+		sentryConfig := entity.LogReportSentry{
+			Enable:      enableReport.(bool),
+			UserId:      uuid.New().String(),
+			ReportLevel: reportLevel.(string),
+		}
+		d._db.Create(&sentryConfig)
+	}
+	sentryConfig := entity.LogReportSentry{}
+	err = d._db.First(&sentryConfig).Error
+	if err != nil {
+		logger.Errorf("failed to get config %v", err)
+		logger.InitLogReporter("unknown", reportLevel.(string))
+		return
+	}
+	if !enableReport.(bool) {
+		logger.InitLogReporter(sentryConfig.UserId, reportLevel.(string))
+	} else {
+		logger.InitLogReporter(sentryConfig.UserId, reportLevel.(string))
+	}
+
 }
 func (d *DataInitBootstrap) initSysConfig() {
 	d.startOnce.Do(func() {

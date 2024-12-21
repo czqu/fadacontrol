@@ -1,8 +1,8 @@
 package utils
 
 import (
+	"errors"
 	"fadacontrol/internal/base/conf"
-	"fadacontrol/internal/base/logger"
 	"fmt"
 	"golang.org/x/sys/windows"
 	"net"
@@ -93,7 +93,7 @@ var (
 
 type networkContext struct{}
 
-func init() {
+func NetworkChangeCallbackInit() {
 	context := &networkContext{}
 	interfaceChange := windows.Handle(0)
 	lastCalled = time.Now().Add(-time.Minute)
@@ -104,8 +104,7 @@ func init() {
 		uintptr(unsafe.Pointer(&interfaceChange))) //this must be pointer
 
 	if ret != 0 {
-		logger.Error("network change callback failed " + strconv.Itoa(int(ret)))
-		return
+		panic(errors.New("network change callback failed " + strconv.Itoa(int(ret))))
 	}
 
 }

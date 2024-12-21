@@ -3,14 +3,18 @@ package logger
 import (
 	"errors"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/version"
 	"fadacontrol/pkg/syncer"
 	"fadacontrol/pkg/sys/log"
+	"fadacontrol/pkg/utils"
 	"fmt"
+	"github.com/getsentry/sentry-go"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"io"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 )
@@ -51,14 +55,68 @@ func (l Loglevel) zapLevel() zapcore.Level {
 	}
 }
 
+type LogReporter interface {
+	ReportMsg(msg string)
+	ReportException(err error)
+	Flush()
+}
+type SentryReporter struct {
+	userId string
+}
+
+var sentryInitLock sync.Mutex
+
+func NewSentryReporter(userId string) *SentryReporter {
+	sentryInitLock.Lock()
+	defer sentryInitLock.Unlock()
+	ss := &SentryReporter{userId: userId}
+	err := sentry.Init(sentry.ClientOptions{
+		Dsn:   "https://82431285059e21675920c08d0e172643@o4508488989605888.ingest.us.sentry.io/4508489034825728",
+		Debug: false,
+	})
+	defer sentry.Flush(2 * time.Second)
+	if err != nil {
+		Error(err)
+	}
+	hostname, err := os.Hostname()
+	if err != nil {
+		hostname = "unknown"
+	}
+	if userId == "" {
+		sentry.ConfigureScope(func(scope *sentry.Scope) {
+			scope.SetTag("app_info", version.GetBuildInfo())
+			scope.SetTag("hostname", hostname)
+		})
+	} else {
+		sentry.ConfigureScope(func(scope *sentry.Scope) {
+			scope.SetUser(sentry.User{ID: ss.userId})
+			scope.SetTag("app_info", version.GetBuildInfo())
+			scope.SetTag("hostname", hostname)
+		})
+	}
+	return ss
+}
+func (s *SentryReporter) ReportMsg(msg string) {
+	sentry.CaptureMessage(msg)
+}
+func (s *SentryReporter) ReportException(err error) {
+	sentry.CaptureException(err)
+}
+
+func (s *SentryReporter) Flush() {
+
+}
+
 type Logger struct {
 	logger          *zap.Logger
 	sugar           *zap.SugaredLogger
 	level           Loglevel
+	reportLevel     Loglevel
 	r               *conf.Conf
 	logPath         string
 	logLevel        string
 	logOutputSyncer *syncer.MultiBufferSyncWriteSyncer
+	LogReporter     LogReporter
 }
 
 var once sync.Once
@@ -99,6 +157,14 @@ func InitLog(c *conf.Conf) {
 		}
 		return
 	})
+
+}
+func InitLogReporter(userId string, reportLevel string) {
+	if logger == nil {
+		return
+	}
+	logger.LogReporter = NewSentryReporter(userId)
+	logger.reportLevel = str2Loglevel(strings.ToLower(reportLevel))
 
 }
 func GetLogPath() string {
@@ -171,21 +237,53 @@ func (l *Logger) Init(logPath string, loglevel Loglevel) error {
 	if loglevel == DebugLevel {
 		l.logger = zap.New(zapcore.NewTee(coreArr...), zap.AddCallerSkip(2), zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
 	} else {
-		l.logger = zap.New(zapcore.NewTee(coreArr...), zap.AddCallerSkip(2), zap.AddCaller())
+		l.logger = zap.New(zapcore.NewTee(coreArr...), zap.AddCallerSkip(2), zap.AddCaller(), zap.AddStacktrace(zapcore.FatalLevel))
 	}
 
 	l.sugar = l.logger.Sugar()
 	return nil
 }
+func (l *Logger) ReportInfoMsg(msg string) {
+	if l.reportLevel > InfoLevel {
+		return
+	}
+	if l.LogReporter != nil {
+		(l.LogReporter).ReportMsg(msg)
+	}
+}
+func (l *Logger) ReportWarnMsg(msg string) {
+	if l.reportLevel > WarnLevel {
+		return
+	}
+	if l.LogReporter != nil {
+		(l.LogReporter).ReportMsg(msg)
+	}
+}
+func (l *Logger) ReportErrorMsg(msg string) {
+	if l.reportLevel > ErrorLevel {
+		return
+	}
+	if l.LogReporter != nil {
+		(l.LogReporter).ReportException(utils.ConvertToError(msg))
+	}
+}
+func (l *Logger) ReportFatalMsg(msg string) {
+	if l.LogReporter == nil {
+		l.LogReporter = NewSentryReporter("unknown")
+	}
+	(l.LogReporter).ReportException(utils.ConvertToError(msg))
 
+}
+func (l *Logger) ReportException(err error) {
+	if l.LogReporter != nil {
+		(l.LogReporter).ReportException(err)
+	}
+}
 func (l *Logger) Sync() {
 
 	l.logger.Sync()
 }
-func (l *Logger) Warn(args ...interface{}) {
 
-	l.sugar.Warn(args)
-}
 func (l *Logger) Debug(args ...interface{}) {
 
 	l.sugar.Debug(args)
@@ -193,11 +291,50 @@ func (l *Logger) Debug(args ...interface{}) {
 func (l *Logger) Info(args ...interface{}) {
 
 	l.sugar.Info(args)
+	l.ReportInfoMsg(fmt.Sprint(args...))
+}
+func (l *Logger) Warn(args ...interface{}) {
+	l.sugar.Warn(args)
+	l.ReportWarnMsg(fmt.Sprint(args...))
 }
 func (l *Logger) Error(args ...interface{}) {
 
 	l.sugar.Error(args)
 	l.logger.Sync()
+	l.ReportErrorMsg(fmt.Sprint(args...))
+}
+func (l *Logger) Fatal(args ...interface{}) {
+
+	l.sugar.Error(args)
+	l.logger.Sync()
+	l.ReportFatalMsg(fmt.Sprint(args...))
+}
+func (l *Logger) Debugf(format string, v ...interface{}) {
+
+	l.sugar.Debugf(format, v...)
+}
+
+func (l *Logger) Infof(format string, v ...interface{}) {
+
+	l.sugar.Infof(format, v...)
+	l.ReportInfoMsg(fmt.Sprintf(format, v...))
+}
+func (l *Logger) Warnf(format string, v ...interface{}) {
+
+	l.sugar.Warnf(format, v...)
+	l.ReportWarnMsg(fmt.Sprintf(format, v...))
+}
+func (l *Logger) Errorf(format string, v ...interface{}) {
+
+	l.sugar.Errorf(format, v...)
+	l.logger.Sync()
+	l.ReportErrorMsg(fmt.Sprintf(format, v...))
+}
+
+func (l *Logger) Fatalf(format string, v ...interface{}) {
+	l.sugar.Fatalf(format, v...)
+	l.logger.Sync()
+	l.ReportFatalMsg(fmt.Sprintf(format, v...))
 }
 
 var loglevel Loglevel = InfoLevel
@@ -216,32 +353,13 @@ func str2Loglevel(level string) Loglevel {
 	case "error":
 		loglevel = ErrorLevel
 		break
+	case "fatal":
+		loglevel = FatalLevel
 	default:
 		loglevel = InfoLevel
 
 	}
 	return loglevel
-}
-
-func (l *Logger) Debugf(format string, v ...interface{}) {
-
-	l.sugar.Debugf(format, v...)
-}
-
-func (l *Logger) Infof(format string, v ...interface{}) {
-
-	l.sugar.Infof(format, v...)
-}
-
-func (l *Logger) Errorf(format string, v ...interface{}) {
-
-	l.sugar.Errorf(format, v...)
-	l.logger.Sync()
-}
-
-func (l *Logger) Warnf(format string, v ...interface{}) {
-
-	l.sugar.Warnf(format, v...)
 }
 
 func Sync() {
@@ -285,7 +403,18 @@ func Error(args ...interface{}) {
 	logger.Sync()
 	log.Errorf(nil, fmt.Sprintf("%v", args...))
 }
-
+func Fatal(args ...interface{}) {
+	if logger == nil {
+		r := NewSentryReporter("unknown")
+		fmt.Println(args...)
+		log.Fatalf(nil, fmt.Sprintf("%v", args...))
+		r.ReportException(utils.ConvertToError(fmt.Sprintf("%v", args...)))
+		return
+	}
+	logger.Fatal(args...)
+	logger.Sync()
+	log.Fatalf(nil, fmt.Sprintf("%v", args...))
+}
 func Infof(format string, v ...interface{}) {
 	if logger == nil {
 		fmt.Printf(format, v...)
@@ -339,6 +468,8 @@ func (l *Logger) Println(v ...interface{}) {
 	case ErrorLevel:
 		l.Error(v...)
 		break
+	case FatalLevel:
+		l.Fatal(v...)
 	default:
 		fmt.Println(v...)
 		break
@@ -359,6 +490,8 @@ func (l *Logger) Printf(format string, v ...interface{}) {
 	case ErrorLevel:
 		l.Errorf(format, v...)
 		break
+	case FatalLevel:
+		l.Fatalf(format, v...)
 	default:
 		fmt.Printf(format, v...)
 

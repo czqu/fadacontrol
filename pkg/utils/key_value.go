@@ -1,6 +1,12 @@
 package utils
 
-import "reflect"
+import (
+	"encoding/json"
+	"errors"
+	"fadacontrol/internal/base/version"
+	"reflect"
+	"time"
+)
 
 type KeyValue map[string]interface{}
 
@@ -42,4 +48,26 @@ func StructToMap(obj interface{}) (map[string]interface{}, error) {
 		data[field.Name] = val.Field(i).Interface()
 	}
 	return data, nil
+}
+func GetRemoteConfig(key string, region version.ProductRegion, defaultValue interface{}) (interface{}, error) {
+	client, err := NewClientBuilder().SetTimeout(5 * time.Second).Build()
+	if err != nil {
+		return defaultValue, err
+	}
+	url := "https://update.czqu.net/"
+	url = url + version.ProductName + "/" + region.String() + "/" + "config.json"
+	resp, err := client.Get(url)
+	if err != nil {
+		return defaultValue, err
+	}
+	config := map[string]interface{}{}
+	err = json.Unmarshal([]byte(resp), &config)
+	if err != nil {
+		return defaultValue, err
+	}
+	value, found := config[key]
+	if !found {
+		return defaultValue, errors.New("key not found")
+	}
+	return value, nil
 }
