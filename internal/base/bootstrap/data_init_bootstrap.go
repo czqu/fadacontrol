@@ -44,7 +44,6 @@ func (d *DataInitBootstrap) Start() error {
 	d.initUdpConfig()
 	d.initCasbinConfig()
 	d.initSysConfig()
-
 	return nil
 }
 func (d *DataInitBootstrap) initLogReport() {
