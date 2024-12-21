@@ -6,7 +6,6 @@ import (
 	"fadacontrol/internal/base/version"
 	"fadacontrol/pkg/syncer"
 	"fadacontrol/pkg/sys/log"
-	"fadacontrol/pkg/utils"
 	"fmt"
 	"github.com/getsentry/sentry-go"
 	"go.uber.org/zap"
@@ -57,6 +56,7 @@ func (l Loglevel) zapLevel() zapcore.Level {
 
 type LogReporter interface {
 	ReportMsg(msg string)
+	ReportEvent(msg string, level Loglevel)
 	ReportException(err error)
 	Flush()
 }
@@ -96,13 +96,44 @@ func NewSentryReporter(userId string) *SentryReporter {
 	}
 	return ss
 }
+func LoglevelToSentryLevel(level Loglevel) sentry.Level {
+	switch level {
+	case DebugLevel:
+		return sentry.LevelDebug
+	case InfoLevel:
+		return sentry.LevelInfo
+	case WarnLevel:
+		return sentry.LevelWarning
+	case ErrorLevel:
+		return sentry.LevelError
+	case FatalLevel:
+		return sentry.LevelFatal
+	default:
+		return sentry.LevelInfo
+	}
+}
 func (s *SentryReporter) ReportMsg(msg string) {
 	sentry.CaptureMessage(msg)
 }
 func (s *SentryReporter) ReportException(err error) {
 	sentry.CaptureException(err)
 }
-
+func (s *SentryReporter) ReportEvent(msg string, level Loglevel) {
+	event := sentry.NewEvent()
+	event.Level = LoglevelToSentryLevel(level)
+	event.Message = msg
+	if level == FatalLevel || level == ErrorLevel {
+		event.Exception = []sentry.Exception{{
+			Value: msg,
+			Type:  msg,
+		}}
+		event.Threads = []sentry.Thread{{
+			Stacktrace: sentry.NewStacktrace(),
+			Current:    true,
+		}}
+	}
+	sentry.CaptureEvent(event)
+}
 func (s *SentryReporter) Flush() {
 
 }
@@ -248,7 +279,7 @@ func (l *Logger) ReportInfoMsg(msg string) {
 		return
 	}
 	if l.LogReporter != nil {
-		(l.LogReporter).ReportMsg(msg)
+		(l.LogReporter).ReportEvent(msg, InfoLevel)
 	}
 }
 func (l *Logger) ReportWarnMsg(msg string) {
@@ -256,7 +287,7 @@ func (l *Logger) ReportWarnMsg(msg string) {
 		return
 	}
 	if l.LogReporter != nil {
-		(l.LogReporter).ReportMsg(msg)
+		(l.LogReporter).ReportEvent(msg, WarnLevel)
 	}
 }
 func (l *Logger) ReportErrorMsg(msg string) {
@@ -264,14 +295,14 @@ func (l *Logger) ReportErrorMsg(msg string) {
 		return
 	}
 	if l.LogReporter != nil {
-		(l.LogReporter).ReportException(utils.ConvertToError(msg))
+		(l.LogReporter).ReportEvent(msg, ErrorLevel)
 	}
 }
 func (l *Logger) ReportFatalMsg(msg string) {
 	if l.LogReporter == nil {
 		l.LogReporter = NewSentryReporter("unknown")
 	}
-	(l.LogReporter).ReportException(utils.ConvertToError(msg))
+	(l.LogReporter).ReportEvent(msg, FatalLevel)
 
 }
 func (l *Logger) ReportException(err error) {
@@ -408,7 +439,7 @@ func Fatal(args ...interface{}) {
 		r := NewSentryReporter("unknown")
 		fmt.Println(args...)
 		log.Fatalf(nil, fmt.Sprintf("%v", args...))
-		r.ReportException(utils.ConvertToError(fmt.Sprintf("%v", args...)))
+		r.ReportEvent(fmt.Sprintf("%v", args...), FatalLevel)
 		return
 	}
 	logger.Fatal(args...)
