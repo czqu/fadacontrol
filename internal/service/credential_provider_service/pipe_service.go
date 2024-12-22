@@ -8,6 +8,7 @@ import (
 	"fadacontrol/internal/entity"
 	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/sys"
+	"fmt"
 	"github.com/skip2/go-qrcode"
 	"golang.org/x/image/bmp"
 	"golang.org/x/image/draw"
@@ -164,11 +165,20 @@ func (p *CredentialProviderService) SendData(packet *entity.PipePacket) *excepti
 		logger.Error(err.Error())
 		return exception.ErrUnknownException
 	}
-	err = sys.SendToNamedPipe(RPipeName, data)
-	if err != nil {
-		logger.Error(err.Error())
-		return exception.ErrUserUnlockNotInLockScreenState
+
+	maxTryCount := 3
+	for tryCount := 0; tryCount < maxTryCount; tryCount++ {
+		err = sys.SendToNamedPipe(RPipeName, data)
+		if err == nil {
+			break
+		}
+		logger.Warn(fmt.Sprintf("send to named pipe failed, try count: %d", tryCount))
+		if tryCount == maxTryCount-1 {
+			return exception.ErrUserUnlockNotInLockScreenState
+		}
+		time.Sleep(time.Millisecond * 1000)
 	}
+
 	ret := p.getResp(packet.ReqId, 5*time.Second)
 	logger.Debug("get resp ok")
 	return ret

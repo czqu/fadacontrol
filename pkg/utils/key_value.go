@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fadacontrol/internal/base/version"
 	"reflect"
+	"strings"
 	"time"
 )
 
@@ -70,4 +71,11 @@ func GetRemoteConfig(key string, region version.ProductRegion, defaultValue inte
 		return defaultValue, errors.New("key not found")
 	}
 	return value, nil
+}
+func SplitWindowsAccount(account string) (domain, username string) {
+	parts := strings.SplitN(account, `\`, 2)
+	if len(parts) != 2 {
+		return "", account
+	}
+	return parts[0], parts[1]
 }

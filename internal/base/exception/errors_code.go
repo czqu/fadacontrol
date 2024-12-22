@@ -117,7 +117,7 @@ var (
 	}
 	ErrUserUnlockNotInLockScreenState = &Exception{
 		Code: 10020,
-		Msg:  "Cannot unlock in a non-lock screen state",
+		Msg:  "The username and password verification was successful, but there's no need to unlock it on the lock screen!",
 	}
 
 	ErrUserTooManyRequests = &Exception{

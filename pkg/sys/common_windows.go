@@ -224,7 +224,18 @@ func SetPowerSavingMode(enable bool) bool {
 	return bool(result)
 }
 func TryLogin(username, password, domain string) *exception.Exception {
-
+	users, _err := EnumerateUsers()
+	if _err == nil {
+		for _, user := range users {
+			if user.Username == username {
+				break
+			}
+			if user.FullName == username {
+				username = user.Username
+				break
+			}
+		}
+	}
 	usernamePtr, _ := syscall.UTF16PtrFromString(username)
 	passwordPtr, _ := syscall.UTF16PtrFromString(password)
 	domainPtr, _ := syscall.UTF16PtrFromString(domain)

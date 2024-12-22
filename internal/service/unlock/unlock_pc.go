@@ -1,12 +1,12 @@
 package unlock
 
 import (
-	"fadacontrol/pkg/sys"
-
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/entity"
 	"fadacontrol/internal/service/credential_provider_service"
+	"fadacontrol/pkg/sys"
+	"fadacontrol/pkg/utils"
 )
 
 type UnLockService struct {
@@ -31,7 +31,8 @@ func (u *UnLockService) UnlockPc(username string, password string) *exception.Ex
 	if exception.ErrUserUnlockNotInLockScreenState.Equal(ret) {
 
 		logger.Debugf("try login")
-		err := sys.TryLogin(username, password, "")
+		domain, account := utils.SplitWindowsAccount(username)
+		err := sys.TryLogin(account, password, domain)
 		if exception.ErrSuccess.NotEqual(err) {
 			logger.Errorf("err: %v", err)
 			return err
