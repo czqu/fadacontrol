@@ -253,10 +253,13 @@ func (d *DataInitBootstrap) initCasbinConfig() {
 		logger.Errorf("failed to add default policy")
 		return
 	}
-	d.enforcer.AddPolicy("*", "api:/api/v1//unlock", "*")
+	_, err = d.enforcer.AddPolicy("*", "api:/api/v1//unlock", "*")
+	if err != nil {
+		logger.Warn("failed to add default policy", err)
+	}
 	err = d.enforcer.SavePolicy()
 	if err != nil {
-		logger.Errorf("failed to save policy")
+		logger.Error("failed to save policy", err)
 		return
 	}
 
