@@ -6,6 +6,8 @@ import (
 	"fadacontrol/internal/controller"
 	"fadacontrol/internal/schema"
 	"fadacontrol/internal/service/unlock"
+	"fmt"
+	"github.com/getsentry/sentry-go"
 	"github.com/gin-gonic/gin"
 	"net/http"
 )
@@ -26,6 +28,26 @@ func NewUnlockController(u *unlock.UnLockService) *UnlockController {
 // @Failure	500		{object}	schema.ResponseData			"Internal errors"
 // @Router		/unlock [post]
 func (o *UnlockController) Unlock(c *gin.Context) {
+	ctx := c.Request.Context()
+	hub := sentry.GetHubFromContext(ctx)
+	if hub == nil {
+		// Check the concurrency guide for more details: https://docs.sentry.io/platforms/go/concurrency/
+		hub = sentry.CurrentHub().Clone()
+		ctx = sentry.SetHubOnContext(ctx, hub)
+	}
+
+	options := []sentry.SpanOption{
+		// Set the OP based on values from https://develop.sentry.dev/sdk/performance/span-operations/
+		sentry.WithOpName("http.server"),
+		sentry.ContinueFromRequest(c.Request),
+		sentry.WithTransactionSource(sentry.SourceURL),
+	}
+	transaction := sentry.StartTransaction(ctx,
+		fmt.Sprintf("HTTP: %s %s", c.Request.Method, c.Request.URL.Path),
+		options...,
+	)
+	defer transaction.Finish()
+
 	reqData := schema.PcUserInfo{}
 	if err := c.Bind(&reqData); err != nil {
 		c.Error(exception.ErrUserParameterError)
@@ -47,6 +69,7 @@ func (o *UnlockController) Unlock(c *gin.Context) {
 		c.Error(e)
 		return
 	}
+	logger.Info("Unlock successful")
 	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 
 }
