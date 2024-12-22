@@ -86,7 +86,7 @@ func (d *DiscoverService) listenAndSend(port int) {
 		d.ListenConn = conn
 		defer conn.Close()
 
-		logger.Info("Listening on port", port)
+		logger.Info("Listening on port: ", port)
 		buffer := make([]byte, 1024)
 		for {
 			n, remoteAddr, err := conn.ReadFromUDP(buffer)
