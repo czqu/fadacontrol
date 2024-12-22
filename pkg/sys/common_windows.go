@@ -152,7 +152,7 @@ func SendToNamedPipe(pipeName string, data []byte) error {
 	defer pipeHandle.Close()
 
 	if _, err := pipeHandle.Write(data); err != nil {
-		return fmt.Errorf("error writing JSON data to pipe: %v", err)
+		return fmt.Errorf("error writing  data to pipe: %v", err)
 	}
 
 	return nil

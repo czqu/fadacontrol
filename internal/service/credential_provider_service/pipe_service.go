@@ -168,11 +168,11 @@ func (p *CredentialProviderService) SendData(packet *entity.PipePacket) *excepti
 
 	maxTryCount := 5
 	for tryCount := 0; tryCount < maxTryCount; tryCount++ {
-		err = sys.SendToNamedPipe(RPipeName, data)
-		if err == nil {
+		ex := sys.SendToNamedPipe(RPipeName, data)
+		if ex == nil {
 			break
 		}
-		logger.Warn(fmt.Sprintf("send to named pipe failed, try count: %d", tryCount))
+		logger.Warn(fmt.Sprintf("send to named pipe failed, try count: %d", tryCount+1))
 		if tryCount == maxTryCount-1 {
 			return exception.ErrUserUnlockNotInLockScreenState
 		}
