@@ -56,12 +56,14 @@ func (d *DataInitBootstrap) initLogReport() {
 	}
 	err := d._db.AutoMigrate(&entity.LogReportSentry{})
 	if err != nil {
-		logger.InitLogReporter("unknown", "fatal")
+		logger.InitLogReporter(logger.NewDefaultSentryOptions(), "fatal")
 		logger.Fatal("failed to migrate database")
 		return
 	}
 	enableReport, _ := utils.GetRemoteConfig("log_report_enable", region, true)
 	reportLevel, _ := utils.GetRemoteConfig("log_report_min_level", region, "info")
+	profilesSampleRate, _ := utils.GetRemoteConfig("log_report_sentry_profiles_sample_rate", region, 0.2)
+	tracesSampleRate, _ := utils.GetRemoteConfig("log_report_sentry_traces_sample_rate", region, 0.2)
 	var cnt int64
 	err = d._db.Model(&entity.LogReportSentry{}).Count(&cnt).Error
 	if err != nil {
@@ -80,13 +82,18 @@ func (d *DataInitBootstrap) initLogReport() {
 	err = d._db.First(&sentryConfig).Error
 	if err != nil {
 		logger.Errorf("failed to get config %v", err)
-		logger.InitLogReporter("unknown", reportLevel.(string))
+		logger.InitLogReporter(logger.NewDefaultSentryOptions(), reportLevel.(string))
 		return
 	}
+	options := &logger.SentryOptions{
+		UserId:             sentryConfig.UserId,
+		TracesSampleRate:   tracesSampleRate.(float64),
+		ProfilesSampleRate: profilesSampleRate.(float64),
+	}
 	if !enableReport.(bool) {
-		logger.InitLogReporter(sentryConfig.UserId, reportLevel.(string))
+		logger.InitLogReporter(options, reportLevel.(string))
 	} else {
-		logger.InitLogReporter(sentryConfig.UserId, reportLevel.(string))
+		logger.InitLogReporter(options, reportLevel.(string))
 	}
 
 }
