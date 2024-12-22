@@ -66,16 +66,26 @@ type SentryReporter struct {
 
 var sentryInitLock sync.Mutex
 
-func NewSentryReporter(userId string) *SentryReporter {
+type SentryOptions struct {
+	TracesSampleRate   float64
+	ProfilesSampleRate float64
+	UserId             string
+}
+
+func NewDefaultSentryOptions() *SentryOptions {
+	return &SentryOptions{UserId: "unknown", TracesSampleRate: 0.2, ProfilesSampleRate: 0.2}
+}
+
+func NewSentryReporter(options *SentryOptions) *SentryReporter {
 	sentryInitLock.Lock()
 	defer sentryInitLock.Unlock()
-	ss := &SentryReporter{userId: userId}
+	ss := &SentryReporter{userId: options.UserId}
 	err := sentry.Init(sentry.ClientOptions{
 		Dsn:                "https://82431285059e21675920c08d0e172643@o4508488989605888.ingest.us.sentry.io/4508489034825728",
 		Debug:              false,
 		EnableTracing:      true,
-		TracesSampleRate:   1.0,
-		ProfilesSampleRate: 1.0,
+		TracesSampleRate:   options.TracesSampleRate,
+		ProfilesSampleRate: options.ProfilesSampleRate,
 	})
 	defer sentry.Flush(2 * time.Second)
 	if err != nil {
@@ -85,7 +95,7 @@ func NewSentryReporter(userId string) *SentryReporter {
 	if err != nil {
 		hostname = "unknown"
 	}
-	if userId == "" {
+	if options.UserId == "" {
 		sentry.ConfigureScope(func(scope *sentry.Scope) {
 			scope.SetTag("app_info", version.GetBuildInfo())
 			scope.SetTag("hostname", hostname)
@@ -193,11 +203,11 @@ func InitLog(c *conf.Conf) {
 	})
 
 }
-func InitLogReporter(userId string, reportLevel string) {
+func InitLogReporter(options *SentryOptions, reportLevel string) {
 	if logger == nil {
 		return
 	}
-	logger.LogReporter = NewSentryReporter(userId)
+	logger.LogReporter = NewSentryReporter(options)
 	logger.reportLevel = str2Loglevel(strings.ToLower(reportLevel))
 
 }
@@ -303,7 +313,7 @@ func (l *Logger) ReportErrorMsg(msg string) {
 }
 func (l *Logger) ReportFatalMsg(msg string) {
 	if l.LogReporter == nil {
-		l.LogReporter = NewSentryReporter("unknown")
+		l.LogReporter = NewSentryReporter(NewDefaultSentryOptions())
 	}
 	(l.LogReporter).ReportEvent(msg, FatalLevel)
 
@@ -439,7 +449,7 @@ func Error(args ...interface{}) {
 }
 func Fatal(args ...interface{}) {
 	if logger == nil {
-		r := NewSentryReporter("unknown")
+		r := NewSentryReporter(NewDefaultSentryOptions())
 		fmt.Println(args...)
 		log.Fatalf(nil, fmt.Sprintf("%v", args...))
 		r.ReportEvent(fmt.Sprintf("%v", args...), FatalLevel)
