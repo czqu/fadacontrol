@@ -166,7 +166,7 @@ func (p *CredentialProviderService) SendData(packet *entity.PipePacket) *excepti
 		return exception.ErrUnknownException
 	}
 
-	maxTryCount := 3
+	maxTryCount := 5
 	for tryCount := 0; tryCount < maxTryCount; tryCount++ {
 		err = sys.SendToNamedPipe(RPipeName, data)
 		if err == nil {
