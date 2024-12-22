@@ -71,8 +71,11 @@ func NewSentryReporter(userId string) *SentryReporter {
 	defer sentryInitLock.Unlock()
 	ss := &SentryReporter{userId: userId}
 	err := sentry.Init(sentry.ClientOptions{
-		Dsn:   "https://82431285059e21675920c08d0e172643@o4508488989605888.ingest.us.sentry.io/4508489034825728",
-		Debug: false,
+		Dsn:                "https://82431285059e21675920c08d0e172643@o4508488989605888.ingest.us.sentry.io/4508489034825728",
+		Debug:              false,
+		EnableTracing:      true,
+		TracesSampleRate:   1.0,
+		ProfilesSampleRate: 1.0,
 	})
 	defer sentry.Flush(2 * time.Second)
 	if err != nil {
