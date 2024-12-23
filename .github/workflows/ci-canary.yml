@@ -16,7 +16,7 @@ jobs:
       - name: Setup go
         uses: actions/setup-go@v5
         with:
-          go-version:  "1.23.3"
+          go-version:  "1.23.4"
       - name: Write date and git commit to file
         run: |
             {

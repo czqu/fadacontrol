@@ -250,13 +250,15 @@ func (d *DataInitBootstrap) initUdpConfig() {
 func (d *DataInitBootstrap) initCasbinConfig() {
 	_, err := d.enforcer.AddPolicy("root", "*", "*")
 	if err != nil {
-		logger.Errorf("failed to add default policy")
-		return
+		logger.Error("failed to add default policy", err)
 	}
-	_, err = d.enforcer.AddPolicy("*", "api:/api/v1//unlock", "*")
+
+	_, err = d.enforcer.AddPolicy("*", "api:/api/v1/unlock", "*")
 	if err != nil {
-		logger.Warn("failed to add default policy", err)
+		logger.Error("failed to add default policy", err)
 	}
+
+	d._db.Exec("UPDATE sqlite_sequence SET seq = 0 WHERE name = 'casbin_rule'")
 	err = d.enforcer.SavePolicy()
 	if err != nil {
 		logger.Error("failed to save policy", err)
