@@ -172,7 +172,11 @@ func (p *CredentialProviderService) SendData(packet *entity.PipePacket) *excepti
 		if ex == nil {
 			break
 		}
-		logger.Warn(fmt.Sprintf("send to named pipe failed, try count: %d", tryCount+1))
+		if packet.Tpe == entity.UnlockReq {
+			logger.Warn(fmt.Sprintf("unlock req send to named pipe failed, try count: %d", tryCount+1))
+		} else {
+			logger.Debug(fmt.Sprintf("send to named pipe failed, try count: %d", tryCount+1))
+		}
 		if tryCount == maxTryCount-1 {
 			return exception.ErrUserUnlockNotInLockScreenState
 		}

@@ -111,7 +111,7 @@ func (d *DiscoverService) listenAndSend(port int) {
 			if err != nil {
 				logger.Warn("Error sending response:", err)
 			} else {
-				logger.Warnf("Sent 'hello' to %s", remoteAddr)
+				logger.Warnf("Sent udp data to clinet: %s", remoteAddr)
 			}
 		}
 	}

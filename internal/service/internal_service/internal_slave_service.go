@@ -47,7 +47,7 @@ const (
 )
 
 func (s *InternalSlaveService) connectToServer(addr string) {
-	logger.Info("connect to server")
+	logger.Info("connecting")
 	backoff := initialBackoff
 	for {
 
@@ -72,7 +72,7 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 			}
 			if backoff >= maxBackoff {
 
-				logger.Debug("maxBackoff")
+				logger.Warn("max back off,will exit")
 				s._exitSignal.ExitChan <- 0
 				<-s._done
 				return
@@ -81,6 +81,7 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 			continue
 		}
 
+		logger.Info("connected")
 		tcpConn := conn.(*net.TCPConn)
 		err = tcpConn.SetKeepAlive(true)
 		if err != nil {
