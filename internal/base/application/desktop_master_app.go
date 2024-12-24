@@ -1,8 +1,10 @@
 package application
 
 import (
+	"context"
 	"fadacontrol/internal/base/bootstrap"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/pkg/utils"
 	"os"
@@ -11,16 +13,15 @@ import (
 )
 
 type DesktopServiceApp struct {
-	_conf *conf.Conf
-	db    *conf.DatabaseConf
+	db  *conf.DatabaseConf
+	ctx context.Context
 
-	logger *logger.Logger
-	root   *bootstrap.DesktopMasterServiceBootstrap
-	debug  bool
+	root  *bootstrap.DesktopMasterServiceBootstrap
+	debug bool
 }
 
-func NewDesktopServiceApp(lo *logger.Logger, _conf *conf.Conf, db *conf.DatabaseConf, root *bootstrap.DesktopMasterServiceBootstrap) *DesktopServiceApp {
-	return &DesktopServiceApp{logger: lo, _conf: _conf, db: db, root: root}
+func NewDesktopServiceApp(ctx context.Context, db *conf.DatabaseConf, root *bootstrap.DesktopMasterServiceBootstrap) *DesktopServiceApp {
+	return &DesktopServiceApp{db: db, root: root, ctx: ctx}
 }
 func (app *DesktopServiceApp) Stop() {
 
@@ -40,6 +41,7 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 	} else {
 		workDir = "./"
 	}
+
 	c := &conf.Conf{}
 	c.LogName = conf.DefaultMasterLogName
 	c.LogLevel = conf.DefaultLogLevel
@@ -60,7 +62,11 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 	if c.Debug {
 		c.LogLevel = "debug"
 	}
-	logger.InitLog(c)
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, constants.ConfKey, c)
+
+	logger.InitLog(ctx)
+	utils.NetworkChangeCallbackInit()
 	dbFile := filepath.Join(workDir, "data", "config.db")
 	dbFile, err = filepath.Abs(dbFile)
 	if err != nil {
@@ -88,7 +94,7 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 
 	connection := "file:" + dbFile + "?cache=shared&mode=rwc&_journal_mode=WAL"
 
-	app, err := initDesktopServiceApplication(c, &conf.DatabaseConf{Driver: "sqlite", Connection: connection, MaxIdleConnection: 10, MaxOpenConnection: 100, Debug: c.Debug})
+	app, err := initDesktopServiceApplication(ctx, &conf.DatabaseConf{Driver: "sqlite", Connection: connection, MaxIdleConnection: 10, MaxOpenConnection: 100, Debug: c.Debug})
 	if err != nil {
 		logger.Fatal("init desktop service err %v", err)
 		return

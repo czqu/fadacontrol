@@ -1,0 +1,44 @@
+syntax = "proto3";
+import "google/protobuf/any.proto";
+package internal_command;
+option go_package = ".;internal_command";
+
+service Base{
+  rpc RegisterClient (ClientInfo) returns (RpcResponse);
+  rpc GetSentryOptions (GetSentryOptionsRequest) returns (RpcResponse);
+}
+service ExecuteCommand {
+  rpc  RegisterInternalCommand(stream rpcStream)returns (stream rpcStream);
+}
+enum StreamMessageType {
+
+  Unknown = 0;
+  Response = 1;
+  LockPcRequest = 2;
+  ExitProcessRequest = 3;
+}
+message rpcStream{
+  StreamMessageType type = 1;
+  google.protobuf.Any data = 2;
+}
+message GetSentryOptionsRequest{
+
+}
+message RpcResponse {
+  int32 code = 1;
+  string message = 2;
+  google.protobuf.Any data = 3; // 任意类型的数据
+}
+message ClientInfo{
+  string username = 1;
+}
+message RegisterClientResponse{
+  string clientId = 1;
+}
+message SentryOptions{
+  bool enable = 1;
+  string user_id = 2;
+  string level = 3;
+  double traces_sample_rate = 4;
+  double profiles_sample_rate = 5;
+}

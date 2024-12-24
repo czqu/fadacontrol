@@ -1,8 +1,8 @@
 package common_controller
 
 import (
+	"context"
 	"errors"
-	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/schema/custom_command_schema"
 	"fadacontrol/internal/service/custom_command_service"
@@ -16,13 +16,13 @@ type chanGroup struct {
 	stderr *custom_command_schema.CustomWriter
 }
 type CustomCommandController struct {
-	_conf    *conf.Conf
+	ctx      context.Context
 	service  *custom_command_service.CustomCommandService
 	cmdCache map[string]*chanGroup
 }
 
-func NewCustomCommandController(_conf *conf.Conf, service *custom_command_service.CustomCommandService) *CustomCommandController {
-	return &CustomCommandController{_conf: _conf, service: service, cmdCache: make(map[string]*chanGroup)}
+func NewCustomCommandController(ctx context.Context, service *custom_command_service.CustomCommandService) *CustomCommandController {
+	return &CustomCommandController{ctx: ctx, service: service, cmdCache: make(map[string]*chanGroup)}
 }
 
 func (d *CustomCommandController) Execute(c *gin.Context) {

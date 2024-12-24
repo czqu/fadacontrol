@@ -1,24 +1,27 @@
 package application
 
 import (
+	"context"
 	"fadacontrol/internal/base/bootstrap"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/pkg/utils"
-	"os"
+	"fmt"
+	"github.com/btcsuite/btcutil/base58"
+	"os/user"
 	"path/filepath"
 	"runtime"
 )
 
 type DesktopSlaveServiceApp struct {
-	_conf  *conf.Conf
-	db     *conf.DatabaseConf
+	ctx    context.Context
 	root   *bootstrap.DesktopSlaveServiceBootstrap
 	logger *logger.Logger
 }
 
-func NewDesktopSlaveServiceApp(lo *logger.Logger, _conf *conf.Conf, db *conf.DatabaseConf, root *bootstrap.DesktopSlaveServiceBootstrap) *DesktopSlaveServiceApp {
-	return &DesktopSlaveServiceApp{logger: lo, _conf: _conf, db: db, root: root}
+func NewDesktopSlaveServiceApp(lo *logger.Logger, ctx context.Context, root *bootstrap.DesktopSlaveServiceBootstrap) *DesktopSlaveServiceApp {
+	return &DesktopSlaveServiceApp{logger: lo, ctx: ctx, root: root}
 }
 func (app *DesktopSlaveServiceApp) Stop() {
 
@@ -38,8 +41,17 @@ func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
 	} else {
 		workDir = "./"
 	}
+	currentUser, err := user.Current()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+	var currentUserName = "default"
+	if currentUser != nil {
+		currentUserName = base58.Encode([]byte(currentUser.Name))
+	}
 	c := &conf.Conf{}
-	c.LogName = conf.DefaultSlaveLogName
+	c.LogName = currentUserName + "_" + conf.DefaultSlaveLogName
 	c.LogLevel = conf.DefaultLogLevel
 	c.Debug = false
 	c.StartMode = mode
@@ -58,40 +70,15 @@ func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
 	if c.Debug {
 		c.LogLevel = "debug"
 	}
-	logger.InitLog(c)
-	dbFile := filepath.Join(workDir, "data", "config.db")
-	dbFile, err = filepath.Abs(dbFile)
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-
-	dbFile, err = filepath.Abs(dbFile)
-	if err != nil {
-		logger.Error(err)
-		return
-	}
-
-	if !utils.FileExists(dbFile) {
-		if err := os.MkdirAll(filepath.Dir(dbFile), os.ModePerm); err != nil {
-			logger.Error(err)
-			return
-		}
-
-		_, err = os.Create(dbFile)
-		if err != nil {
-			logger.Error(err)
-			return
-		}
-	}
-
-	connection := "file:" + dbFile + "?cache=shared&mode=rwc&_journal_mode=WAL"
+	ctx := context.Background()
+	ctx = context.WithValue(ctx, constants.ConfKey, c)
+	logger.InitLog(ctx)
 
 	c.Debug = c.Debug || debug
 	if c.Debug {
 		c.LogLevel = "debug"
 	}
-	app, _ := initDesktopDaemonApplication(c, &conf.DatabaseConf{Driver: "sqlite", Connection: connection, MaxIdleConnection: 10, MaxOpenConnection: 100, Debug: c.Debug})
+	app, _ := initDesktopDaemonApplication(ctx)
 	appDesktopDaemon = app
 	app.Start()
 }

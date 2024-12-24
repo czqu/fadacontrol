@@ -1,12 +1,15 @@
 package common_controller
 
 import (
+	"context"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/controller"
 	"fadacontrol/internal/service/internal_service"
 	"fadacontrol/pkg/goroutine"
+	"fadacontrol/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
@@ -16,12 +19,12 @@ import (
 )
 
 type DebugController struct {
-	_im   *internal_service.InternalMasterService
-	_conf *conf.Conf
+	_im *internal_service.InternalMasterService
+	ctx context.Context
 }
 
-func NewDebugController(im *internal_service.InternalMasterService, _conf *conf.Conf) *DebugController {
-	return &DebugController{_im: im, _conf: _conf}
+func NewDebugController(im *internal_service.InternalMasterService, ctx context.Context) *DebugController {
+	return &DebugController{_im: im, ctx: ctx}
 }
 
 var (
@@ -86,7 +89,8 @@ func (d *DebugController) Ping(c *gin.Context) {
 
 	}
 	if query == "full_status" {
-		if d._conf.StartMode == conf.ServiceMode && !d._im.HasClient() {
+		_conf := utils.GetValueFromContext(d.ctx, constants.ConfKey, conf.NewDefaultConf())
+		if _conf.StartMode == conf.ServiceMode && !d._im.HasClient() {
 			c.Error(exception.ErrSystemServiceNotFullyStarted)
 			return
 		}

@@ -16,7 +16,6 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
 	github.com/gorilla/websocket v1.5.3
-	github.com/mitchellh/mapstructure v1.5.0
 	github.com/quic-go/quic-go v0.48.2
 	github.com/skip2/go-qrcode v0.0.0-20200617195104-da1b6568686e
 	github.com/spf13/cobra v1.8.1
@@ -29,7 +28,8 @@ require (
 	golang.org/x/image v0.23.0
 	golang.org/x/net v0.33.0
 	golang.org/x/sys v0.28.0
-	google.golang.org/protobuf v1.36.0
+	google.golang.org/grpc v1.69.2
+	google.golang.org/protobuf v1.36.1
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1
 	gopkg.in/yaml.v3 v3.0.1
 	gorm.io/driver/sqlite v1.5.7
@@ -63,6 +63,7 @@ require (
 	github.com/goccy/go-json v0.10.4 // indirect
 	github.com/golang-sql/civil v0.0.0-20220223132316-b832511892a9 // indirect
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
+	github.com/golang/protobuf v1.5.4 // indirect
 	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
@@ -106,6 +107,8 @@ require (
 	golang.org/x/sync v0.10.0 // indirect
 	golang.org/x/text v0.21.0 // indirect
 	golang.org/x/tools v0.28.0 // indirect
+	google.golang.org/genproto v0.0.0-20241223144023-3abc09e42ca8 // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20241219192143-6b3ec007d9bb // indirect
 	gorm.io/driver/mysql v1.5.7 // indirect
 	gorm.io/driver/postgres v1.5.11 // indirect
 	gorm.io/driver/sqlserver v1.5.4 // indirect

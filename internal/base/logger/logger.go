@@ -1,13 +1,17 @@
 package logger
 
 import (
+	"context"
 	"errors"
-	"fadacontrol/internal/base/conf"
-	"fadacontrol/internal/base/version"
+	_ "fadacontrol/internal/base/conf"
+	conf "fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
+	_log "fadacontrol/internal/base/log"
 	"fadacontrol/pkg/syncer"
 	"fadacontrol/pkg/sys/log"
+	"fadacontrol/pkg/utils"
 	"fmt"
-	"github.com/getsentry/sentry-go"
+
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"io"
@@ -21,152 +25,22 @@ import "gopkg.in/natefinch/lumberjack.v2"
 
 var logger *Logger
 
-type Loglevel uint32
-
-const (
-	Unknown Loglevel = iota
-	DebugLevel
-	InfoLevel
-	WarnLevel
-	ErrorLevel
-	FatalLevel
-	END
-)
-
-func (l Loglevel) isValid() bool {
-	return l > Unknown && l < END
-
-}
-func (l Loglevel) zapLevel() zapcore.Level {
-	switch l {
-	case DebugLevel:
-		return zapcore.DebugLevel
-	case InfoLevel:
-		return zapcore.InfoLevel
-	case WarnLevel:
-		return zapcore.WarnLevel
-	case ErrorLevel:
-		return zapcore.ErrorLevel
-	case FatalLevel:
-		return zapcore.FatalLevel
-	default:
-		return zapcore.InfoLevel
-	}
-}
-
-type LogReporter interface {
-	ReportMsg(msg string)
-	ReportEvent(msg string, level Loglevel)
-	ReportException(err error)
-	Flush()
-}
-type SentryReporter struct {
-	userId string
-}
-
-var sentryInitLock sync.Mutex
-
-type SentryOptions struct {
-	TracesSampleRate   float64
-	ProfilesSampleRate float64
-	UserId             string
-}
-
-func NewDefaultSentryOptions() *SentryOptions {
-	return &SentryOptions{UserId: "unknown", TracesSampleRate: 0.2, ProfilesSampleRate: 0.2}
-}
-
-func NewSentryReporter(options *SentryOptions) *SentryReporter {
-	sentryInitLock.Lock()
-	defer sentryInitLock.Unlock()
-	ss := &SentryReporter{userId: options.UserId}
-	err := sentry.Init(sentry.ClientOptions{
-		Dsn:                "https://82431285059e21675920c08d0e172643@o4508488989605888.ingest.us.sentry.io/4508489034825728",
-		Debug:              false,
-		EnableTracing:      true,
-		TracesSampleRate:   options.TracesSampleRate,
-		ProfilesSampleRate: options.ProfilesSampleRate,
-	})
-	defer sentry.Flush(2 * time.Second)
-	if err != nil {
-		Error(err)
-	}
-	hostname, err := os.Hostname()
-	if err != nil {
-		hostname = "unknown"
-	}
-	if options.UserId == "" {
-		sentry.ConfigureScope(func(scope *sentry.Scope) {
-			scope.SetTag("app_info", version.GetBuildInfo())
-			scope.SetTag("hostname", hostname)
-		})
-	} else {
-		sentry.ConfigureScope(func(scope *sentry.Scope) {
-			scope.SetUser(sentry.User{ID: ss.userId})
-			scope.SetTag("app_info", version.GetBuildInfo())
-			scope.SetTag("hostname", hostname)
-		})
-	}
-	return ss
-}
-func LoglevelToSentryLevel(level Loglevel) sentry.Level {
-	switch level {
-	case DebugLevel:
-		return sentry.LevelDebug
-	case InfoLevel:
-		return sentry.LevelInfo
-	case WarnLevel:
-		return sentry.LevelWarning
-	case ErrorLevel:
-		return sentry.LevelError
-	case FatalLevel:
-		return sentry.LevelFatal
-	default:
-		return sentry.LevelInfo
-	}
-}
-func (s *SentryReporter) ReportMsg(msg string) {
-	sentry.CaptureMessage(msg)
-}
-func (s *SentryReporter) ReportException(err error) {
-	sentry.CaptureException(err)
-}
-func (s *SentryReporter) ReportEvent(msg string, level Loglevel) {
-	event := sentry.NewEvent()
-	event.Level = LoglevelToSentryLevel(level)
-	event.Message = msg
-	if level == FatalLevel || level == ErrorLevel {
-		event.Exception = []sentry.Exception{{
-			Value: msg,
-			Type:  msg,
-		}}
-		event.Threads = []sentry.Thread{{
-			Stacktrace: sentry.NewStacktrace(),
-			Current:    true,
-		}}
-	}
-	sentry.CaptureEvent(event)
-}
-func (s *SentryReporter) Flush() {
-
-}
-
 type Logger struct {
 	logger          *zap.Logger
 	sugar           *zap.SugaredLogger
-	level           Loglevel
-	reportLevel     Loglevel
-	r               *conf.Conf
+	level           _log.Loglevel
+	reportLevel     _log.Loglevel
+	ctx             context.Context
 	logPath         string
 	logLevel        string
 	logOutputSyncer *syncer.MultiBufferSyncWriteSyncer
-	LogReporter     LogReporter
+	LogReporter     _log.LogReporter
 }
 
 var once sync.Once
 
-func NewLogger(r *conf.Conf) *Logger {
-	return &Logger{r: r}
+func NewLogger(ctx context.Context) *Logger {
+	return &Logger{ctx: ctx}
 }
 
 func (l *Logger) AddReader(reader io.Writer) int {
@@ -178,18 +52,18 @@ func (l *Logger) RemoveWriter(id int) {
 
 	l.logOutputSyncer.Remove(id)
 }
-func InitLog(c *conf.Conf) {
+func InitLog(ctx context.Context) {
 	once.Do(func() {
 		if logger != nil {
 			return
 		}
 		l := new(Logger)
 		logger = l
-		l.r = c
 		l.logOutputSyncer = syncer.NewMultiBufferSyncWriteSyncer(100)
 		var err error
-		logger.logLevel = l.r.LogLevel
-		logger.logPath, err = filepath.Abs(l.r.GetWorkdir() + "/log/" + l.r.LogName)
+		_conf := utils.GetValueFromContext(ctx, constants.ConfKey, conf.NewDefaultConf())
+
+		logger.logPath, err = filepath.Abs(_conf.GetWorkdir() + "/log/" + _conf.LogName)
 		if err != nil {
 			logger = nil
 			return
@@ -203,14 +77,15 @@ func InitLog(c *conf.Conf) {
 	})
 
 }
-func InitLogReporter(options *SentryOptions, reportLevel string) {
+func InitLogReporter(options *_log.SentryOptions) {
 	if logger == nil {
 		return
 	}
-	logger.LogReporter = NewSentryReporter(options)
-	logger.reportLevel = str2Loglevel(strings.ToLower(reportLevel))
+	logger.LogReporter = _log.NewSentryReporter(options)
+	logger.reportLevel = str2Loglevel(strings.ToLower(options.Level))
 
 }
+
 func GetLogPath() string {
 	if logger == nil {
 		return ""
@@ -224,7 +99,7 @@ func GetLogLevel() string {
 	return logger.logLevel
 }
 
-func (l *Logger) Init(logPath string, loglevel Loglevel) error {
+func (l *Logger) Init(logPath string, loglevel _log.Loglevel) error {
 
 	_, err := os.Stat(logPath)
 
@@ -245,13 +120,13 @@ func (l *Logger) Init(logPath string, loglevel Loglevel) error {
 		}
 	}
 
-	if !loglevel.isValid() {
+	if !loglevel.IsValid() {
 
 		return errors.New("invalid log level")
 	}
 	l.level = loglevel
 	atomicLevel := zap.NewAtomicLevel()
-	atomicLevel.SetLevel(l.level.zapLevel())
+	atomicLevel.SetLevel(l.level.ZapLevel())
 	logHook := lumberjack.Logger{
 		Filename:   logPath,
 		MaxSize:    1,
@@ -278,7 +153,7 @@ func (l *Logger) Init(logPath string, loglevel Loglevel) error {
 	var coreArr []zapcore.Core
 
 	coreArr = append(coreArr, core)
-	if loglevel == DebugLevel {
+	if loglevel == _log.DebugLevel {
 		l.logger = zap.New(zapcore.NewTee(coreArr...), zap.AddCallerSkip(2), zap.AddCaller(), zap.AddStacktrace(zapcore.ErrorLevel))
 	} else {
 		l.logger = zap.New(zapcore.NewTee(coreArr...), zap.AddCallerSkip(2), zap.AddCaller(), zap.AddStacktrace(zapcore.FatalLevel))
@@ -288,34 +163,34 @@ func (l *Logger) Init(logPath string, loglevel Loglevel) error {
 	return nil
 }
 func (l *Logger) ReportInfoMsg(msg string) {
-	if l.reportLevel > InfoLevel {
+	if l.reportLevel > _log.InfoLevel {
 		return
 	}
 	if l.LogReporter != nil {
-		(l.LogReporter).ReportEvent(msg, InfoLevel)
+		(l.LogReporter).ReportEvent(msg, _log.InfoLevel)
 	}
 }
 func (l *Logger) ReportWarnMsg(msg string) {
-	if l.reportLevel > WarnLevel {
+	if l.reportLevel > _log.WarnLevel {
 		return
 	}
 	if l.LogReporter != nil {
-		(l.LogReporter).ReportEvent(msg, WarnLevel)
+		(l.LogReporter).ReportEvent(msg, _log.WarnLevel)
 	}
 }
 func (l *Logger) ReportErrorMsg(msg string) {
-	if l.reportLevel > ErrorLevel {
+	if l.reportLevel > _log.ErrorLevel {
 		return
 	}
 	if l.LogReporter != nil {
-		(l.LogReporter).ReportEvent(msg, ErrorLevel)
+		(l.LogReporter).ReportEvent(msg, _log.ErrorLevel)
 	}
 }
 func (l *Logger) ReportFatalMsg(msg string) {
 	if l.LogReporter == nil {
-		l.LogReporter = NewSentryReporter(NewDefaultSentryOptions())
+		l.LogReporter = _log.NewSentryReporter(_log.NewDefaultSentryOptions())
 	}
-	(l.LogReporter).ReportEvent(msg, FatalLevel)
+	(l.LogReporter).ReportEvent(msg, _log.FatalLevel)
 
 }
 func (l *Logger) ReportException(err error) {
@@ -381,32 +256,35 @@ func (l *Logger) Fatalf(format string, v ...interface{}) {
 	l.ReportFatalMsg(fmt.Sprintf(format, v...))
 }
 
-var loglevel Loglevel = InfoLevel
+var loglevel _log.Loglevel = _log.InfoLevel
 
-func str2Loglevel(level string) Loglevel {
+func str2Loglevel(level string) _log.Loglevel {
 	switch level {
 	case "debug":
-		loglevel = DebugLevel
+		loglevel = _log.DebugLevel
 		break
 	case "info":
-		loglevel = InfoLevel
+		loglevel = _log.InfoLevel
 		break
 	case "warn":
-		loglevel = WarnLevel
+		loglevel = _log.WarnLevel
 		break
 	case "error":
-		loglevel = ErrorLevel
+		loglevel = _log.ErrorLevel
 		break
 	case "fatal":
-		loglevel = FatalLevel
+		loglevel = _log.FatalLevel
 	default:
-		loglevel = InfoLevel
+		loglevel = _log.InfoLevel
 
 	}
 	return loglevel
 }
 
 func Sync() {
+	if logger == nil {
+		return
+	}
 	logger.Sync()
 
 }
@@ -449,10 +327,10 @@ func Error(args ...interface{}) {
 }
 func Fatal(args ...interface{}) {
 	if logger == nil {
-		r := NewSentryReporter(NewDefaultSentryOptions())
+		r := _log.NewSentryReporter(_log.NewDefaultSentryOptions())
 		fmt.Println(args...)
 		log.Fatalf(nil, fmt.Sprintf("%v", args...))
-		r.ReportEvent(fmt.Sprintf("%v", args...), FatalLevel)
+		r.ReportEvent(fmt.Sprintf("%v", args...), _log.FatalLevel)
 		return
 	}
 	logger.Fatal(args...)
@@ -500,19 +378,19 @@ func GetLogger() *Logger {
 }
 func (l *Logger) Println(v ...interface{}) {
 	switch l.level {
-	case DebugLevel:
+	case _log.DebugLevel:
 		l.Debug(v...)
 		break
-	case InfoLevel:
+	case _log.InfoLevel:
 		l.Info(v...)
 		break
-	case WarnLevel:
+	case _log.WarnLevel:
 		l.Warn(v...)
 		break
-	case ErrorLevel:
+	case _log.ErrorLevel:
 		l.Error(v...)
 		break
-	case FatalLevel:
+	case _log.FatalLevel:
 		l.Fatal(v...)
 	default:
 		fmt.Println(v...)
@@ -522,19 +400,19 @@ func (l *Logger) Println(v ...interface{}) {
 }
 func (l *Logger) Printf(format string, v ...interface{}) {
 	switch l.level {
-	case DebugLevel:
+	case _log.DebugLevel:
 		l.Debugf(format, v...)
 		break
-	case InfoLevel:
+	case _log.InfoLevel:
 		l.Infof(format, v...)
 		break
-	case WarnLevel:
+	case _log.WarnLevel:
 		l.Warnf(format, v...)
 		break
-	case ErrorLevel:
+	case _log.ErrorLevel:
 		l.Errorf(format, v...)
 		break
-	case FatalLevel:
+	case _log.FatalLevel:
 		l.Fatalf(format, v...)
 	default:
 		fmt.Printf(format, v...)

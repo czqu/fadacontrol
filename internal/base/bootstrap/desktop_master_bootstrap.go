@@ -3,15 +3,18 @@ package bootstrap
 import (
 	"context"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/data"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/credential_provider_service"
 	"fadacontrol/internal/service/internal_service"
 	"fadacontrol/pkg/goroutine"
+	"fadacontrol/pkg/sys"
 	"fadacontrol/pkg/utils"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -22,7 +25,7 @@ type DesktopMasterServiceBootstrap struct {
 	discover *DiscoverBootstrap
 	_http    *HttpBootstrap
 	lo       *logger.Logger
-	_conf    *conf.Conf
+	ctx      context.Context
 	master   *internal_service.InternalMasterService
 
 	done        chan interface{}
@@ -36,11 +39,16 @@ type DesktopMasterServiceBootstrap struct {
 	stopOnce    sync.Once
 }
 
-func NewDesktopMasterServiceBootstrap(_exitSignal *conf.ExitChanStruct, pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, master *internal_service.InternalMasterService, _conf *conf.Conf, _db *data.Data, lo *logger.Logger, d *DiscoverBootstrap, http_ *HttpBootstrap) *DesktopMasterServiceBootstrap {
-	return &DesktopMasterServiceBootstrap{_exitSignal: _exitSignal, pf: pf, _co: _co, di: di, cp: cp, rcb: rcb, done: make(chan interface{}), master: master, _conf: _conf, _db: _db, lo: lo, discover: d, _http: http_}
+func NewDesktopMasterServiceBootstrap(_exitSignal *conf.ExitChanStruct, pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, master *internal_service.InternalMasterService, _context context.Context, _db *data.Data, lo *logger.Logger, d *DiscoverBootstrap, http_ *HttpBootstrap) *DesktopMasterServiceBootstrap {
+	return &DesktopMasterServiceBootstrap{_exitSignal: _exitSignal, pf: pf, _co: _co, di: di, cp: cp, rcb: rcb, done: make(chan interface{}), master: master, ctx: _context, _db: _db, lo: lo, discover: d, _http: http_}
 }
 func (r *DesktopMasterServiceBootstrap) Start() {
 	r.startOnce.Do(func() {
+		_conf := utils.GetValueFromContext(r.ctx, constants.ConfKey, conf.NewDefaultConf())
+		if _conf.StartMode == conf.UnknownMode {
+			logger.Error("unknown start mode")
+			return
+		}
 		logger.Info("starting app")
 		goroutine.RecoverGO(func() {
 			r.pf.Start()
@@ -50,7 +58,8 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 		if !conf.ResetPassword {
 			r._co.RunPowerSavingMode()
 			r._http.Start()
-			if r._conf.StartMode == conf.ServiceMode {
+
+			if _conf.StartMode == conf.ServiceMode {
 				logger.Info("service mode")
 				r.master.Start()
 			}
@@ -68,6 +77,24 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 				r.rcb.Restart()
 				r.discover.Restart()
 			})
+
+			goroutine.RecoverGO(
+				func() {
+					logger.Info("starting slave program")
+
+					path, err := os.Executable()
+					if err != nil {
+						logger.Error("cannot get executable path", err)
+					}
+					logger.Info("slave program path", path)
+					dir := filepath.Dir(path)
+					logger.Sync()
+					err = sys.RunProgramForAllUser(path, "\""+path+"\" --slave", dir)
+					if err != nil {
+						logger.Error("cannot run slave program", err)
+					}
+				})
+
 		}
 
 		goroutine.RecoverGO(

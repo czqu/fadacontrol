@@ -1,10 +1,13 @@
 package custom_command_service
 
 import (
+	"context"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/schema/custom_command_schema"
 	"fadacontrol/pkg/goroutine"
+	"fadacontrol/pkg/utils"
 	"fmt"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -15,11 +18,11 @@ type cmdConfig struct {
 	Commands []custom_command_schema.Command `yaml:"commands"`
 }
 type CustomCommandService struct {
-	_conf *conf.Conf
+	ctx context.Context
 }
 
-func NewCustomCommandService(_conf *conf.Conf) *CustomCommandService {
-	return &CustomCommandService{_conf: _conf}
+func NewCustomCommandService(ctx context.Context) *CustomCommandService {
+	return &CustomCommandService{ctx: ctx}
 }
 func (u *CustomCommandService) ReadConfig(filePath string) (map[string]custom_command_schema.Command, error) {
 	data, err := os.ReadFile(filePath)
@@ -41,7 +44,8 @@ func (u *CustomCommandService) ReadConfig(filePath string) (map[string]custom_co
 	return ret, nil
 }
 func (u *CustomCommandService) ExecuteCommand(cmd custom_command_schema.Command, stdout, stderr *custom_command_schema.CustomWriter) error {
-	if u._conf.StartMode == conf.CommonMode || u._conf.StartMode == conf.SlaveMode {
+	_conf := utils.GetValueFromContext(u.ctx, constants.ConfKey, conf.NewDefaultConf())
+	if _conf.StartMode == conf.CommonMode || _conf.StartMode == conf.SlaveMode {
 		return u.executeCommand(cmd, stdout, stderr)
 	}
 

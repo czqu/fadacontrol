@@ -1,7 +1,7 @@
 syntax = "proto3";
 import "google/protobuf/timestamp.proto";
 package remote_schema;
-option go_package = "fadacontrol/internal/schema;remote_schema";
+option go_package = ".;remote_schema";
 enum ShutdownType {
   E_UNKNOWN = 0;
   // E=>通用

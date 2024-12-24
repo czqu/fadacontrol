@@ -1,17 +1,23 @@
 package internal_service
 
 import (
-	"encoding/json"
+	"context"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/exception"
+	"fadacontrol/internal/base/log"
 	"fadacontrol/internal/base/logger"
-	"fadacontrol/internal/schema"
-	"fadacontrol/internal/schema/custom_command_schema"
+	"fadacontrol/internal/schema/internal_command"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/custom_command_service"
 	"fadacontrol/pkg/goroutine"
-	"github.com/mitchellh/mapstructure"
-	"net"
+	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/protobuf/types/known/anypb"
+	"os/user"
+
+	"google.golang.org/grpc"
+	"os"
 	"strconv"
 	"time"
 )
@@ -19,14 +25,14 @@ import (
 type InternalSlaveService struct {
 	_done chan bool
 
-	conf        *conf.Conf
+	ctx         context.Context
 	cu          *custom_command_service.CustomCommandService
 	co          *control_pc.ControlPCService
 	_exitSignal *conf.ExitChanStruct
 }
 
-func NewInternalSlaveService(_exitSignal *conf.ExitChanStruct, cu *custom_command_service.CustomCommandService, co *control_pc.ControlPCService, conf *conf.Conf) *InternalSlaveService {
-	return &InternalSlaveService{_exitSignal: _exitSignal, cu: cu, co: co, conf: conf, _done: make(chan bool)}
+func NewInternalSlaveService(_exitSignal *conf.ExitChanStruct, cu *custom_command_service.CustomCommandService, co *control_pc.ControlPCService, ctx context.Context) *InternalSlaveService {
+	return &InternalSlaveService{_exitSignal: _exitSignal, cu: cu, co: co, ctx: ctx, _done: make(chan bool)}
 }
 func (s *InternalSlaveService) Start() {
 	port := 2095
@@ -34,6 +40,7 @@ func (s *InternalSlaveService) Start() {
 	addr := host + ":" + strconv.Itoa(port)
 	goroutine.RecoverGO(func() {
 		s.connectToServer(addr)
+		os.Exit(-1)
 	})
 
 }
@@ -47,21 +54,29 @@ const (
 )
 
 func (s *InternalSlaveService) connectToServer(addr string) {
-	logger.Info("connecting")
+	defer func() {
+		logger.Info("slave will exit")
+		os.Exit(-1)
+	}()
+	logger.Info("slave connecting.")
 	backoff := initialBackoff
+
 	for {
 
-		conn, err := net.Dial("tcp", addr)
-		logger.Debug("connecting")
+		conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+
+		logger.Info("slave connecting..")
 		select {
 		case <-s._done:
 			return
 		default:
 			break
 		}
+		logger.Info("slave connecting...")
 		if err != nil || conn == nil {
 			logger.Infof("Error connecting to server: %v\n", err)
 
+			logger.Infof("will sleep %v\n", backoff)
 			// Wait for the backoff time and try again
 			time.Sleep(backoff)
 
@@ -73,105 +88,110 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 			if backoff >= maxBackoff {
 
 				logger.Warn("max back off,will exit")
-				s._exitSignal.ExitChan <- 0
-				<-s._done
+				logger.Info("slave exit")
+
 				return
 
 			}
 			continue
 		}
 
-		logger.Info("connected")
-		tcpConn := conn.(*net.TCPConn)
-		err = tcpConn.SetKeepAlive(true)
-		if err != nil {
-			logger.Warn("Error setting keep-alive:", err)
-		}
-		// Reset the backoff time after a successful connection ,if we have a successful connection,only retry once
+		logger.Info("slave connected")
+
 		backoff = maxBackoff / 2
+		client := internal_command.NewBaseClient(conn)
+		_user, err := user.Current()
+		if err != nil {
+			logger.Error("Error getting current user: %v\n", err)
+			return
+		}
+		registerResp, err := client.RegisterClient(context.Background(), &internal_command.ClientInfo{
+			Username: _user.Username,
+		})
+
+		if err != nil || registerResp.Code != int32(exception.ErrSuccess.Code) {
+			logger.Warnf("Error registering client: %v", err)
+			return
+		}
+		var registerClientResponse internal_command.RegisterClientResponse
+		err = registerResp.GetData().UnmarshalTo(&registerClientResponse)
+		if err != nil {
+			logger.Warnf("Error unmarshalling registerClientResponse: %v", err)
+			return
+		}
+		clientId := registerClientResponse.ClientId
+		logger.Debug("register success clientId:", clientId)
+		sentryResp, err := client.GetSentryOptions(context.Background(), &internal_command.GetSentryOptionsRequest{})
+		if err != nil || sentryResp.Code != int32(exception.ErrSuccess.Code) {
+			logger.Warnf("Error getting sentry options: %v", err)
+			return
+		}
+		var sentryOptions internal_command.SentryOptions
+		err = sentryResp.GetData().UnmarshalTo(&sentryOptions)
+		if err != nil {
+			logger.Warnf("Error unmarshalling sentry options: %v", err)
+			return
+		}
+		opt := &log.SentryOptions{}
+		opt.Enable = sentryOptions.Enable
+		opt.Level = sentryOptions.Level
+		opt.UserId = sentryOptions.UserId
+		opt.ProfilesSampleRate = sentryOptions.ProfilesSampleRate
+		opt.TracesSampleRate = sentryOptions.TracesSampleRate
+		logger.InitLogReporter(opt)
+		logger.Debug("Sentry init success")
+		executeClient := internal_command.NewExecuteCommandClient(conn)
+		if err != nil {
+			logger.Fatal("Failed to create ExecuteCommand client:", err)
+		}
+		md := metadata.New(map[string]string{
+			constants.ClientIdKey: clientId,
+		})
+		ctx := metadata.NewOutgoingContext(context.Background(), md)
+		stream, err := executeClient.RegisterInternalCommand(ctx)
+		if err != nil {
+			logger.Fatal("Failed to create stream:", err)
+		}
+
+		// Receive response from server
 		for {
-			packet := &schema.InternalDataPacket{}
-			err := packet.Unpack(conn)
+			rpcData, err := stream.Recv()
 			if err != nil {
-				logger.Warnf("Error unpacking packet: %v", err)
-				break
+				logger.Fatal("Failed to receive response:", err)
+				return
 			}
-			logger.Debug("recv a packet from server")
-			if packet.DataType == schema.JsonData {
-				logger.Debug("JsonData")
-				err := s.JsonDataHandler(conn, packet)
-				if err != nil {
-					logger.Warnf("JsonDataHandler err: %v", err)
-					break
+
+			if rpcData.GetType() == internal_command.StreamMessageType_Unknown {
+				continue
+			}
+			switch rpcData.GetType() {
+			case internal_command.StreamMessageType_LockPcRequest:
+				lockErr := s.co.LockWindows(false)
+				if !lockErr.Equal(exception.ErrSuccess) {
+					logger.Warnf("LockWindows err: %v", err)
+					resp := &internal_command.RpcResponse{
+						Code:    int32(lockErr.Code),
+						Message: lockErr.Error(),
+					}
+					respData, err := anypb.New(resp)
+					if err != nil {
+						logger.Warnf("Error marshalling rpc response: %v", err)
+						continue
+					}
+					stream.Send(&internal_command.RpcStream{
+						Type: internal_command.StreamMessageType_Response,
+						Data: respData,
+					})
 				}
+			case internal_command.StreamMessageType_ExitProcessRequest:
+				logger.Info("recv exit cmd,exit process")
+
+				s._exitSignal.ExitChan <- 0
+				<-s._done
+				return
 			}
-			if packet.DataType == schema.BinaryData {
-				err := s.BinaryDataHandler(conn, packet)
-				if err != nil {
-					logger.Warnf("BinaryDataHandler err: %v", err)
-					break
-				}
-			}
 
 		}
-		conn.Close()
 
 	}
-}
-func (s *InternalSlaveService) JsonDataHandler(conn net.Conn, packet *schema.InternalDataPacket) error {
-	if packet.DataType != schema.JsonData {
-		return nil
-	}
-	j := packet.Data
-	cmd := schema.InternalCommand{}
-	err := json.Unmarshal(j, &cmd)
-	if err != nil {
-		return err
-	}
-	if cmd.CommandType == schema.LockPC {
-		logger.Debug("Lock PC")
-		err := s.co.LockWindows(false)
-
-		if !err.Equal(exception.ErrSuccess) {
-			logger.Warnf("LockWindows err: %v", err)
-			return err
-		}
-		return nil
-
-	}
-	if cmd.CommandType == schema.Hello {
-		logger.Debug("Hello from server")
-		return nil
-	}
-	if cmd.CommandType == schema.KeepLive {
-		logger.Debug("Keep Live")
-		return nil
-	}
-	if cmd.CommandType == schema.CustomCommand {
-		logger.Debug("Custom Command")
-		data := cmd.Data
-		ccs := custom_command_schema.Command{}
-		err := mapstructure.Decode(data, &ccs)
-		if err != nil {
-			return err
-		}
-		stdout := custom_command_schema.NewCustomWriter()
-		stderr := custom_command_schema.NewCustomWriter()
-		err = s.cu.ExecuteCommand(ccs, stdout, stderr)
-		if err != nil {
-			return err
-		}
-
-	}
-	if cmd.CommandType == schema.Exit {
-		logger.Debug("Exit")
-		s._exitSignal.ExitChan <- 0
-		<-s._done
-		return nil
-	}
-	return nil
-}
-
-func (s *InternalSlaveService) BinaryDataHandler(conn net.Conn, packet *schema.InternalDataPacket) error {
-	return nil
 }

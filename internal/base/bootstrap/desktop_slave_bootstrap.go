@@ -3,11 +3,13 @@ package bootstrap
 import (
 	"context"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/internal_service"
 	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/sys"
+	"fadacontrol/pkg/utils"
 	"os"
 	"os/signal"
 	"syscall"
@@ -15,26 +17,29 @@ import (
 )
 
 type DesktopSlaveServiceBootstrap struct {
-	_conf       *conf.Conf
+	ctx         context.Context
 	lo          *logger.Logger
 	slave       *internal_service.InternalSlaveService
 	done        chan interface{}
-	di          *DataInitBootstrap
 	_co         *control_pc.ControlPCService
 	pf          *ProfilingBootstrap
 	_exitSignal *conf.ExitChanStruct
 }
 
-func NewDesktopSlaveServiceBootstrap(_exitSignal *conf.ExitChanStruct, pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, _conf *conf.Conf, lo *logger.Logger, slave *internal_service.InternalSlaveService) *DesktopSlaveServiceBootstrap {
-	return &DesktopSlaveServiceBootstrap{_exitSignal: _exitSignal, pf: pf, _co: _co, di: di, _conf: _conf, lo: lo, slave: slave, done: make(chan interface{})}
+func NewDesktopSlaveServiceBootstrap(ctx context.Context, _exitSignal *conf.ExitChanStruct, pf *ProfilingBootstrap, _co *control_pc.ControlPCService, lo *logger.Logger, slave *internal_service.InternalSlaveService) *DesktopSlaveServiceBootstrap {
+	return &DesktopSlaveServiceBootstrap{ctx: ctx, _exitSignal: _exitSignal, pf: pf, _co: _co, lo: lo, slave: slave, done: make(chan interface{})}
 }
 
 func (r *DesktopSlaveServiceBootstrap) Start() {
 
+	_conf := utils.GetValueFromContext(r.ctx, constants.ConfKey, conf.NewDefaultConf())
+	if _conf.StartMode == conf.UnknownMode {
+		logger.Error("unknown start mode")
+		return
+	}
 	goroutine.RecoverGO(func() {
 		r.pf.Start()
 	})
-	r.di.Start()
 
 	r._co.RunPowerSavingMode()
 	ret := sys.SetPowerSavingMode(true)
@@ -89,4 +94,5 @@ func (r *DesktopSlaveServiceBootstrap) Stop() {
 	}
 	logger.Sync()
 	r.done <- struct{}{}
+	logger.Info("slave exit")
 }

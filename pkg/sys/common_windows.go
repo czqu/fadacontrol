@@ -374,3 +374,273 @@ func EnumerateUsers() ([]UserInfo, error) {
 
 	return users, nil
 }
+
+// Constants
+const (
+	WTS_CURRENT_SERVER_HANDLE = 0
+	WTS_ACTIVE                = 0
+	WTS_USER_NAME             = 5
+)
+
+var (
+	wtsapi32                 = windows.NewLazySystemDLL("wtsapi32.dll")
+	procWTSEnumerateSessions = wtsapi32.NewProc("WTSEnumerateSessionsW")
+	procWTSQuerySessionInfo  = wtsapi32.NewProc("WTSQuerySessionInformationW")
+	procWTSFreeMemory        = wtsapi32.NewProc("WTSFreeMemory")
+	procWTSQueryUserToken    = wtsapi32.NewProc("WTSQueryUserToken")
+)
+
+type WTSSessionInfo struct {
+	SessionID      uint32
+	WinStationName *uint16
+	State          uint32
+}
+
+// WTS_SESSION_INFO structure
+type WTSSessionInfoExtended struct {
+	SessionID      uint32
+	WinStationName string
+	State          uint32
+	Username       string
+}
+
+// Imports from advapi32.dll
+var (
+	advapi32             = windows.NewLazySystemDLL("advapi32.dll")
+	procDuplicateTokenEx = advapi32.NewProc("DuplicateTokenEx")
+)
+
+// Imports from kernel32.dll
+var (
+	moduserenv              *windows.LazyDLL = windows.NewLazySystemDLL("userenv.dll")
+	kernel32                                 = windows.NewLazySystemDLL("kernel32.dll")
+	procCreateProcessAsUser                  = kernel32.NewProc("CreateProcessAsUserW")
+)
+var (
+	procCreateProcessAsUserW                     = advapi32.NewProc("CreateProcessAsUserW")
+	procCreateEnvironmentBlock *windows.LazyProc = moduserenv.NewProc("CreateEnvironmentBlock")
+)
+
+func GetLastErrorMessage() string {
+	// Get the last error code
+	lastError := syscall.GetLastError()
+
+	// If there's no error, return a success message
+	if lastError == nil {
+		return ""
+	}
+
+	// Return the formatted error message
+	return fmt.Sprintf("%s", lastError)
+}
+
+const (
+	CREATE_UNICODE_ENVIRONMENT uint16 = 0x00000400
+	CREATE_NO_WINDOW                  = 0x08000000
+	CREATE_NEW_CONSOLE                = 0x00000010
+)
+
+type SW int
+
+const (
+	SW_HIDE            SW = 0
+	SW_SHOWNORMAL         = 1
+	SW_NORMAL             = 1
+	SW_SHOWMINIMIZED      = 2
+	SW_SHOWMAXIMIZED      = 3
+	SW_MAXIMIZE           = 3
+	SW_SHOWNOACTIVATE     = 4
+	SW_SHOW               = 5
+	SW_MINIMIZE           = 6
+	SW_SHOWMINNOACTIVE    = 7
+	SW_SHOWNA             = 8
+	SW_RESTORE            = 9
+	SW_SHOWDEFAULT        = 10
+	SW_MAX                = 1
+)
+
+func StartProcessForSession(sessionID uint32, appPath, cmdLine string, workDir string, runas bool) error {
+	var (
+		envInfo windows.Handle
+
+		startupInfo windows.StartupInfo
+		processInfo windows.ProcessInformation
+
+		commandLine uintptr = 0
+		workingDir  uintptr = 0
+
+		err error
+	)
+	var userToken windows.Token
+
+	// Get the user token for the session
+	ret, _, err := procWTSQueryUserToken.Call(
+		uintptr(sessionID),
+		uintptr(unsafe.Pointer(&userToken)),
+	)
+	if ret == 0 {
+		return fmt.Errorf("failed to query user token for session %d: %v %v", sessionID, err, GetLastErrorMessage())
+	}
+	defer userToken.Close()
+
+	if returnCode, _, err := procCreateEnvironmentBlock.Call(uintptr(unsafe.Pointer(&envInfo)), uintptr(userToken), 0); returnCode == 0 {
+		return fmt.Errorf("create environment details for process: %s", err)
+	}
+
+	creationFlags := CREATE_UNICODE_ENVIRONMENT | CREATE_NEW_CONSOLE
+	startupInfo.ShowWindow = SW_SHOW
+	startupInfo.Desktop = windows.StringToUTF16Ptr("winsta0\\default")
+
+	if len(cmdLine) > 0 {
+		commandLine = uintptr(unsafe.Pointer(windows.StringToUTF16Ptr(cmdLine)))
+	}
+	if len(workDir) > 0 {
+		workingDir = uintptr(unsafe.Pointer(windows.StringToUTF16Ptr(workDir)))
+	}
+	if returnCode, _, err := procCreateProcessAsUser.Call(
+		uintptr(userToken), uintptr(unsafe.Pointer(windows.StringToUTF16Ptr(appPath))), commandLine, 0, 0, 0,
+		uintptr(creationFlags), uintptr(envInfo), workingDir, uintptr(unsafe.Pointer(&startupInfo)), uintptr(unsafe.Pointer(&processInfo)),
+	); returnCode == 0 {
+		return fmt.Errorf("create process as user: %s", err)
+	}
+	return nil
+}
+
+// EnumerateSessions retrieves all active sessions on the system.
+func EnumerateSessions() ([]WTSSessionInfoExtended, error) {
+	var sessionInfo uintptr
+	var count uint32
+
+	ret, _, err := procWTSEnumerateSessions.Call(
+		WTS_CURRENT_SERVER_HANDLE,
+		0,
+		1,
+		uintptr(unsafe.Pointer(&sessionInfo)),
+		uintptr(unsafe.Pointer(&count)),
+	)
+	if ret == 0 {
+		return nil, fmt.Errorf("failed to enumerate sessions: %v", err)
+	}
+	defer procWTSFreeMemory.Call(sessionInfo)
+
+	// Parse session information
+	sessions := make([]WTSSessionInfoExtended, count)
+	rawSessions := (*[1 << 16]WTSSessionInfo)(unsafe.Pointer(sessionInfo))[:count:count]
+
+	for i, rawSession := range rawSessions {
+		username, err := GetSessionUsername(rawSession.SessionID)
+		if err != nil {
+			username = "(unknown)"
+		}
+
+		sessions[i] = WTSSessionInfoExtended{
+			SessionID:      rawSession.SessionID,
+			WinStationName: windows.UTF16PtrToString(rawSession.WinStationName),
+			State:          rawSession.State,
+			Username:       username,
+		}
+	}
+
+	return sessions, nil
+}
+
+func GetSessionUsername(sessionID uint32) (string, error) {
+	var buffer *uint16
+	var bytesReturned uint32
+
+	ret, _, err := procWTSQuerySessionInfo.Call(
+		WTS_CURRENT_SERVER_HANDLE,
+		uintptr(sessionID),
+		WTS_USER_NAME,
+		uintptr(unsafe.Pointer(&buffer)),
+		uintptr(unsafe.Pointer(&bytesReturned)),
+	)
+	if ret == 0 {
+		return "", fmt.Errorf("failed to query session information: %v", err)
+	}
+	defer procWTSFreeMemory.Call(uintptr(unsafe.Pointer(buffer)))
+
+	username := windows.UTF16PtrToString(buffer)
+	return username, nil
+}
+
+func RunProgramForAllUser(programPath string, commandline, workdir string) error {
+
+	if programPath == "" {
+		return fmt.Errorf("program path is empty")
+	}
+	sessions, err := EnumerateSessions()
+	if err != nil {
+
+		return err
+	}
+	err = EnablePrivilege("SeTcbPrivilege")
+	if err != nil {
+		return err
+	}
+	for _, session := range sessions {
+		if session.State == WTS_ACTIVE && session.Username != "" {
+			err := StartProcessForSession(session.SessionID, programPath, commandline, workdir, true)
+			if err != nil {
+				logger.Errorf("failed to launch program for session %d: %v", session.SessionID, err)
+				continue
+			}
+			logger.Debugf("launched program for session %d,username: %s", session.SessionID, session.Username)
+		}
+	}
+	return nil
+}
+
+const (
+	SE_PRIVILEGE_ENABLED = 0x00000002
+)
+
+var (
+	procAdjustTokenPrivileges = advapi32.NewProc("AdjustTokenPrivileges")
+	procLookupPrivilegeValue  = advapi32.NewProc("LookupPrivilegeValueW")
+)
+
+func EnablePrivilege(privilegeName string) error {
+	var token windows.Token
+	err := windows.OpenProcessToken(windows.CurrentProcess(), windows.TOKEN_ADJUST_PRIVILEGES|windows.TOKEN_QUERY, &token)
+	if err != nil {
+		return fmt.Errorf("failed to open process token: %w", err)
+	}
+	defer token.Close()
+
+	var luid windows.LUID
+	privName, err := windows.UTF16PtrFromString(privilegeName)
+	if err != nil {
+		return fmt.Errorf("failed to encode privilege name: %w", err)
+	}
+
+	ret, _, err := procLookupPrivilegeValue.Call(
+		0,
+		uintptr(unsafe.Pointer(privName)),
+		uintptr(unsafe.Pointer(&luid)),
+	)
+	if ret == 0 {
+		return fmt.Errorf("failed to lookup privilege value: %w", err)
+	}
+
+	tp := windows.Tokenprivileges{
+		PrivilegeCount: 1,
+		Privileges: [1]windows.LUIDAndAttributes{
+			{Luid: luid, Attributes: SE_PRIVILEGE_ENABLED},
+		},
+	}
+
+	ret, _, err = procAdjustTokenPrivileges.Call(
+		uintptr(token),
+		0,
+		uintptr(unsafe.Pointer(&tp)),
+		0,
+		0,
+		0,
+	)
+	if ret == 0 {
+		return fmt.Errorf("failed to adjust token privileges: %w", err)
+	}
+
+	return nil
+}

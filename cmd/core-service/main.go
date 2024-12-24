@@ -3,7 +3,6 @@ package main
 import (
 	"fadacontrol/internal/base/application"
 	"fadacontrol/internal/base/logger"
-	"fadacontrol/pkg/utils"
 	"github.com/getsentry/sentry-go"
 	"time"
 )
@@ -17,6 +16,6 @@ func main() {
 			sentry.Flush(time.Second * 5)
 		}
 	}()
-	utils.NetworkChangeCallbackInit()
+
 	application.Execute()
 }

@@ -1,6 +1,7 @@
 package discovery_service
 
 import (
+	"context"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/entity"
 	"fadacontrol/internal/schema"
@@ -16,6 +17,7 @@ import (
 )
 
 type DiscoverService struct {
+	ctx          context.Context
 	_db          *gorm.DB
 	config       entity.DiscoverConfig
 	ipFail       cache.Cache[string, int]
@@ -34,13 +36,14 @@ const udpSendInterval = 2 * time.Second
 const udpMaxTryTime = 10
 const connTimeout = 5 * time.Second
 
-func NewDiscoverService(db *gorm.DB) *DiscoverService {
+func NewDiscoverService(db *gorm.DB, ctx context.Context) *DiscoverService {
 	d := DiscoverService{
 		_db: db, config: entity.DiscoverConfig{},
 		port: 4084, hostname: "",
 		ipFail:       cache.NewSyncMapMemCache[string, int](4 * 1024),
 		ipAlwaysFail: cache.NewSyncMapMemCache[string, int](4 * 1024),
 		ipFailRetry:  30 * time.Second,
+		ctx:          ctx,
 	}
 	d.ipFail.StartAutoClean(d.ipFailRetry / 2)
 	d.ipAlwaysFail.StartAutoClean(1 * time.Minute)

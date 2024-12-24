@@ -3,6 +3,8 @@ package utils
 import (
 	"errors"
 	"fadacontrol/internal/base/conf"
+	_log "fadacontrol/internal/base/log"
+	"fadacontrol/internal/base/version"
 	"fmt"
 	"golang.org/x/sys/windows"
 	"net"
@@ -132,4 +134,17 @@ func networkMonitorCallback(callerContext, row, notificationType uintptr) uintpt
 	}
 
 	return 0
+}
+func GetLogReporterOPtions(region version.ProductRegion) *_log.SentryOptions {
+	enableReport, _ := GetRemoteConfig("log_report_enable", region, true)
+	reportLevel, _ := GetRemoteConfig("log_report_min_level", region, "info")
+	profilesSampleRate, _ := GetRemoteConfig("log_report_sentry_profiles_sample_rate", region, 0.2)
+	tracesSampleRate, _ := GetRemoteConfig("log_report_sentry_traces_sample_rate", region, 0.2)
+
+	return &_log.SentryOptions{
+		Enable:             enableReport.(bool),
+		Level:              reportLevel.(string),
+		ProfilesSampleRate: profilesSampleRate.(float64),
+		TracesSampleRate:   tracesSampleRate.(float64),
+	}
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fadacontrol/internal/base/version"
+	"golang.org/x/net/context"
 	"reflect"
 	"strings"
 	"time"
@@ -78,4 +79,18 @@ func SplitWindowsAccount(account string) (domain, username string) {
 		return "", account
 	}
 	return parts[0], parts[1]
+}
+func GetValueFromContext[T any](ctx context.Context, key string, defaultValue T) T {
+
+	value := ctx.Value(key)
+	if value == nil {
+		return defaultValue
+	}
+
+	castedValue, ok := value.(T)
+	if !ok {
+		return defaultValue
+	}
+
+	return castedValue
 }

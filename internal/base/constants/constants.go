@@ -15,3 +15,5 @@ const (
 	LanguageCodeCN LanguageCode = "cn"
 )
 const ServiceName = "FadaControlService"
+const ConfKey = "conf"
+const ClientIdKey = "client_id"

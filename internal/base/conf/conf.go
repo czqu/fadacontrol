@@ -1,6 +1,7 @@
 package conf
 
 import (
+	_log "fadacontrol/internal/base/log"
 	"gopkg.in/yaml.v3"
 	"os"
 	"path/filepath"
@@ -9,7 +10,7 @@ import (
 type StartMode uint8
 
 const (
-	Unknown StartMode = iota
+	UnknownMode StartMode = iota
 	SlaveMode
 	ServiceMode
 	CommonMode
@@ -23,8 +24,21 @@ type Conf struct {
 	EnableProfiling bool   `yaml:"enable_profiling"`
 	StartMode       StartMode
 	path            string
+	LogReporterOpt  *_log.SentryOptions
 }
 
+func NewDefaultConf() *Conf {
+	return &Conf{
+		workdir:         ".",
+		Debug:           false,
+		LogName:         "log.log",
+		LogLevel:        "info",
+		EnableProfiling: false,
+		StartMode:       UnknownMode,
+		LogReporterOpt: &_log.SentryOptions{
+			Enable: false},
+	}
+}
 func (c *Conf) ReadConfigFromYml(filePath string) (string, error) {
 
 	bytes, err := os.ReadFile(filePath)

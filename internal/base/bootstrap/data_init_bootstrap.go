@@ -1,8 +1,11 @@
 package bootstrap
 
 import (
+	"context"
 	"encoding/base64"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
+	_log "fadacontrol/internal/base/log"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/base/version"
 	"fadacontrol/internal/entity"
@@ -23,26 +26,27 @@ type DataInitBootstrap struct {
 	enforcer    *casbin.Enforcer
 	_exitSignal *conf.ExitChanStruct
 	startOnce   sync.Once
+	ctx         context.Context
 }
 
 const HttpsServiceApi = "HTTPS_SERVICE_API"
 const HttpServiceAdmin = "HTTP_SERVICE_ADMIN"
 
-func NewDataInitBootstrap(_exitSignal *conf.ExitChanStruct, adapter *gormadapter.Adapter, enforcer *casbin.Enforcer, _db *gorm.DB) *DataInitBootstrap {
-	return &DataInitBootstrap{_exitSignal: _exitSignal, _db: _db, adapter: adapter, enforcer: enforcer}
+func NewDataInitBootstrap(ctx context.Context, _exitSignal *conf.ExitChanStruct, adapter *gormadapter.Adapter, enforcer *casbin.Enforcer, _db *gorm.DB) *DataInitBootstrap {
+	return &DataInitBootstrap{ctx: ctx, _exitSignal: _exitSignal, _db: _db, adapter: adapter, enforcer: enforcer}
 
 }
 func (d *DataInitBootstrap) Stop() error {
 	return nil
 }
 func (d *DataInitBootstrap) Start() error {
+	d.initSysConfig()
 	d.initLogReport()
 	d.initUser()
 	d.initHttpConfig()
 	d.initRemoteConfig()
 	d.initUdpConfig()
 	d.initCasbinConfig()
-	d.initSysConfig()
 	return nil
 }
 func (d *DataInitBootstrap) initLogReport() {
@@ -56,14 +60,15 @@ func (d *DataInitBootstrap) initLogReport() {
 	}
 	err := d._db.AutoMigrate(&entity.LogReportSentry{})
 	if err != nil {
-		logger.InitLogReporter(logger.NewDefaultSentryOptions(), "fatal")
+		logger.InitLogReporter(_log.NewDefaultSentryOptions())
 		logger.Fatal("failed to migrate database")
 		return
 	}
-	enableReport, _ := utils.GetRemoteConfig("log_report_enable", region, true)
-	reportLevel, _ := utils.GetRemoteConfig("log_report_min_level", region, "info")
-	profilesSampleRate, _ := utils.GetRemoteConfig("log_report_sentry_profiles_sample_rate", region, 0.2)
-	tracesSampleRate, _ := utils.GetRemoteConfig("log_report_sentry_traces_sample_rate", region, 0.2)
+	opt := utils.GetLogReporterOPtions(region)
+	defer func() {
+		_conf := utils.GetValueFromContext(d.ctx, constants.ConfKey, conf.NewDefaultConf())
+		_conf.LogReporterOpt = opt
+	}()
 	var cnt int64
 	err = d._db.Model(&entity.LogReportSentry{}).Count(&cnt).Error
 	if err != nil {
@@ -72,9 +77,9 @@ func (d *DataInitBootstrap) initLogReport() {
 	}
 	if cnt == 0 {
 		sentryConfig := entity.LogReportSentry{
-			Enable:      enableReport.(bool),
+			Enable:      opt.Enable,
 			UserId:      uuid.New().String(),
-			ReportLevel: reportLevel.(string),
+			ReportLevel: opt.Level,
 		}
 		d._db.Create(&sentryConfig)
 	}
@@ -82,18 +87,15 @@ func (d *DataInitBootstrap) initLogReport() {
 	err = d._db.First(&sentryConfig).Error
 	if err != nil {
 		logger.Errorf("failed to get config %v", err)
-		logger.InitLogReporter(logger.NewDefaultSentryOptions(), reportLevel.(string))
+		logger.InitLogReporter(opt)
 		return
 	}
-	options := &logger.SentryOptions{
-		UserId:             sentryConfig.UserId,
-		TracesSampleRate:   tracesSampleRate.(float64),
-		ProfilesSampleRate: profilesSampleRate.(float64),
-	}
-	if !enableReport.(bool) {
-		logger.InitLogReporter(options, reportLevel.(string))
+	opt.UserId = sentryConfig.UserId
+	opt.Enable = sentryConfig.Enable
+	if opt.Enable {
+		logger.InitLogReporter(opt)
 	} else {
-		logger.InitLogReporter(options, reportLevel.(string))
+		logger.InitLogReporter(opt)
 	}
 
 }

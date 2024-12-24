@@ -4,9 +4,11 @@ import (
 	"crypto/tls"
 	"errors"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/pkg/goroutine"
+	"fadacontrol/pkg/utils"
 	"golang.org/x/net/context"
 	"time"
 
@@ -25,14 +27,14 @@ import (
 type HttpService struct {
 	signalChanMap        map[string]chan interface{}
 	_db                  *gorm.DB
-	_conf                *conf.Conf
+	ctx                  context.Context
 	adminRouter          router.FadaControlRouter
 	commonRouter         router.FadaControlRouter
 	restartAllServerFunc func() error
 }
 
-func NewHttpService(_db *gorm.DB, _conf *conf.Conf) *HttpService {
-	return &HttpService{_db: _db, _conf: _conf, signalChanMap: make(map[string]chan interface{})}
+func NewHttpService(_db *gorm.DB, ctx context.Context) *HttpService {
+	return &HttpService{_db: _db, ctx: ctx, signalChanMap: make(map[string]chan interface{})}
 }
 
 const HttpServiceApi = "HTTP_SERVICE_API"
@@ -157,7 +159,8 @@ func (s *HttpService) PatchHttpConfig(data map[string]interface{}, serviceName s
 func (s *HttpService) StartServer(r router.FadaControlRouter, serviceName string) error {
 	enableQuic := false
 
-	if s._conf.Debug {
+	_conf := utils.GetValueFromContext(s.ctx, constants.ConfKey, conf.NewDefaultConf())
+	if _conf.Debug {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)

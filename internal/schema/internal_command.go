@@ -9,12 +9,10 @@ import (
 type InternalCommandType uint32
 
 const (
-	Unknown InternalCommandType = iota
-	KeepLive
-	Hello
-	LockPC
-	CustomCommand
-	Exit
+	UnknownCommandType InternalCommandType = iota
+
+	LockPCCommandType
+	ExitCommandType
 )
 
 type InternalCommand struct {
