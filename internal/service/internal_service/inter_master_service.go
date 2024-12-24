@@ -100,16 +100,24 @@ func (s *InternalMasterService) StopServer() error {
 	return nil
 }
 func (s *InternalMasterService) Handler(conn net.Conn) {
+	if len(s._activeConn) > 0 {
+		s.StopAllSlave()
+	}
+	logger.Debug("lock")
 	s._lock.Lock()
+
 	s._activeConn[conn.RemoteAddr().String()] = conn
 	s.hasClient = true
+	logger.Debug("unlock")
 	s._lock.Unlock()
 
 	defer func() {
+		logger.Debug("lock...")
 		s._lock.Lock()
 		s.hasClient = false
 		delete(s._activeConn, conn.RemoteAddr().String())
-		s._lock.Unlock()
+		logger.Debug("unlock...")
+		defer s._lock.Unlock()
 		conn.Close()
 
 	}()
@@ -184,17 +192,26 @@ func (s *InternalMasterService) SendCommandAll(cmd *schema.InternalCommand) erro
 		logger.Error(err)
 		return err
 	}
-
+	logger.Debug("lock..")
 	s._lock.Lock()
 
 	for _, conn := range s._activeConn {
-		_, err = conn.Write(data)
-		if err != nil {
-			logger.Debug(err)
-			return err
-		}
+		goroutine.RecoverGO(
+			func() {
+				err := conn.SetWriteDeadline(time.Now().Add(5 * time.Second))
+				if err != nil {
+					logger.Warn(err)
+				}
+				_, err = conn.Write(data)
+				if err != nil {
+					logger.Warn(err)
+
+				}
+			})
+
 	}
-	s._lock.Unlock()
+	logger.Debug("unlock..")
+	defer s._lock.Unlock()
 	logger.Debug("send command")
 	return nil
 }

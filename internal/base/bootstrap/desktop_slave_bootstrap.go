@@ -34,7 +34,6 @@ func (r *DesktopSlaveServiceBootstrap) Start() {
 	goroutine.RecoverGO(func() {
 		r.pf.Start()
 	})
-	r.di.Start()
 
 	r._co.RunPowerSavingMode()
 	ret := sys.SetPowerSavingMode(true)
@@ -89,4 +88,5 @@ func (r *DesktopSlaveServiceBootstrap) Stop() {
 	}
 	logger.Sync()
 	r.done <- struct{}{}
+	logger.Info("slave exit")
 }

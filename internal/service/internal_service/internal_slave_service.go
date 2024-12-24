@@ -12,6 +12,7 @@ import (
 	"fadacontrol/pkg/goroutine"
 	"github.com/mitchellh/mapstructure"
 	"net"
+	"os"
 	"strconv"
 	"time"
 )
@@ -34,6 +35,7 @@ func (s *InternalSlaveService) Start() {
 	addr := host + ":" + strconv.Itoa(port)
 	goroutine.RecoverGO(func() {
 		s.connectToServer(addr)
+		os.Exit(-1)
 	})
 
 }
@@ -47,21 +49,26 @@ const (
 )
 
 func (s *InternalSlaveService) connectToServer(addr string) {
-	logger.Info("connecting")
+	defer func() {
+		logger.Info("slave will exit")
+	}()
+	logger.Info("slave connecting.")
 	backoff := initialBackoff
 	for {
 
 		conn, err := net.Dial("tcp", addr)
-		logger.Debug("connecting")
+		logger.Info("slave connecting..")
 		select {
 		case <-s._done:
 			return
 		default:
 			break
 		}
+		logger.Info("slave connecting...")
 		if err != nil || conn == nil {
 			logger.Infof("Error connecting to server: %v\n", err)
 
+			logger.Infof("will sleep %v\n", backoff)
 			// Wait for the backoff time and try again
 			time.Sleep(backoff)
 
@@ -73,15 +80,15 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 			if backoff >= maxBackoff {
 
 				logger.Warn("max back off,will exit")
-				s._exitSignal.ExitChan <- 0
-				<-s._done
+				logger.Info("slave exit")
+				os.Exit(-1)
 				return
 
 			}
 			continue
 		}
 
-		logger.Info("connected")
+		logger.Info("slave connected")
 		tcpConn := conn.(*net.TCPConn)
 		err = tcpConn.SetKeepAlive(true)
 		if err != nil {
@@ -114,8 +121,11 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 			}
 
 		}
-		conn.Close()
-
+		err = conn.Close()
+		if err != nil {
+			logger.Warnf("Error closing connection: %v", err)
+		}
+		logger.Info("connection closed")
 	}
 }
 func (s *InternalSlaveService) JsonDataHandler(conn net.Conn, packet *schema.InternalDataPacket) error {
