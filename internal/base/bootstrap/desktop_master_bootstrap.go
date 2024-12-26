@@ -14,7 +14,6 @@ import (
 	"fadacontrol/pkg/utils"
 	"os"
 	"os/signal"
-	"path/filepath"
 	"sync"
 	"syscall"
 	"time"
@@ -88,19 +87,7 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 
 			goroutine.RecoverGO(
 				func() {
-					logger.Info("starting slave program")
-
-					path, err := os.Executable()
-					if err != nil {
-						logger.Error("cannot get executable path", err)
-					}
-					logger.Info("slave program path", path)
-					dir := filepath.Dir(path)
-					logger.Sync()
-					err = sys.RunProgramForAllUser(path, "\""+path+"\" --slave", dir)
-					if err != nil {
-						logger.Error("cannot run slave program", err)
-					}
+					sys.RunSlave()
 				})
 
 		}

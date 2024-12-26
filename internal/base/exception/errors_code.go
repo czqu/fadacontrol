@@ -124,6 +124,9 @@ var (
 		Code: 11205,
 		Msg:  "Too many requests",
 	}
+	ErrUserAlreadyExistsOneSlave = &Exception{
+		Code: 11206,
+	}
 	//2xx
 
 	ErrSystemInsufficientMemory = &Exception{
@@ -216,6 +219,8 @@ var errorMap = map[int]*Exception{
 	10018: ErrUserCertificateFormatError,
 	10019: ErrUserMethodNotAllowed,
 	10020: ErrUserUnlockNotInLockScreenState,
+	11205: ErrUserTooManyRequests,
+	11206: ErrUserAlreadyExistsOneSlave,
 
 	20001: ErrSystemInsufficientMemory,
 	20002: ErrSystemCredentialProviderError,

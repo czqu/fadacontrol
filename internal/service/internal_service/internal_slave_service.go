@@ -10,6 +10,7 @@ import (
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/custom_command_service"
 	"fadacontrol/pkg/goroutine"
+	"fmt"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -42,7 +43,7 @@ func (s *InternalSlaveService) Start() {
 
 const (
 	initialBackoff = 1 * time.Second
-	maxBackoff     = 15 * time.Second
+	maxBackoff     = 5 * time.Second
 )
 
 func (s *InternalSlaveService) connectToServer(addr string) {
@@ -102,14 +103,32 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 			lastErr = err
 			goto newConn
 		}
+		logger.Infof("current user: %v\n", _user.Username)
 		registerResp, err := client.RegisterClient(context.Background(), &internal_command.ClientInfo{
 			Username: _user.Username,
 		})
 
-		if err != nil || registerResp.Code != int32(exception.ErrSuccess.Code) {
+		if registerResp != nil && (registerResp.Code == int32(exception.ErrUserAlreadyExistsOneSlave.Code)) {
+			logger.Debug("user already exists,will exit")
+			return
+		} else if err != nil {
 			logger.Warnf("Error registering client: %v", err)
 			lastErr = err
 			goto newConn
+		} else if registerResp != nil && (registerResp.Code != int32(exception.ErrSuccess.Code)) {
+			logger.Warnf("Error registering client: %v", registerResp.Message)
+			lastErr = fmt.Errorf("Error registering client: %v", registerResp.Message)
+			return
+		} else if registerResp == nil {
+			logger.Warnf("Error registering client: %v", "registerResp is nil")
+			return
+
+		} else if registerResp != nil && (registerResp.Code == int32(exception.ErrSuccess.Code)) {
+			//do nothing
+		} else {
+			logger.Warnf("Error registering client: %v", "unknown")
+
+			return
 		}
 		var registerClientResponse internal_command.RegisterClientResponse
 		err = registerResp.GetData().UnmarshalTo(&registerClientResponse)

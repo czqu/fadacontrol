@@ -13,7 +13,9 @@ import (
 	"github.com/Microsoft/go-winio"
 	"golang.org/x/sys/windows"
 	"net"
+	"os"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"syscall"
 	"unsafe"
@@ -380,6 +382,7 @@ const (
 	WTS_CURRENT_SERVER_HANDLE = 0
 	WTS_ACTIVE                = 0
 	WTS_USER_NAME             = 5
+	WTSDisconnected           = 4
 )
 
 var (
@@ -579,12 +582,14 @@ func RunProgramForAllUser(programPath string, commandline, workdir string) error
 		return err
 	}
 	for _, session := range sessions {
-		if session.State == WTS_ACTIVE && session.Username != "" {
+		logger.Debug("username: ", session.Username)
+		if (session.State == WTS_ACTIVE || session.State == WTSDisconnected) && session.Username != "" {
 			err := StartProcessForSession(session.SessionID, programPath, commandline, workdir, true)
 			if err != nil {
 				logger.Errorf("failed to launch program for session %d: %v", session.SessionID, err)
 				continue
 			}
+			logger.Info("launched program for session: ", session.SessionID)
 			logger.Debugf("launched program for session %d,username: %s", session.SessionID, session.Username)
 		}
 	}
@@ -643,4 +648,19 @@ func EnablePrivilege(privilegeName string) error {
 	}
 
 	return nil
+}
+func RunSlave() {
+	logger.Info("starting slave program")
+
+	path, err := os.Executable()
+	if err != nil {
+		logger.Error("cannot get executable path", err)
+	}
+	logger.Info("slave program path", path)
+	dir := filepath.Dir(path)
+	logger.Sync()
+	err = RunProgramForAllUser(path, "\""+path+"\" --slave", dir)
+	if err != nil {
+		logger.Error("cannot run slave program", err)
+	}
 }

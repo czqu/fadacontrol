@@ -27,6 +27,7 @@ func (app *DesktopSlaveServiceApp) Stop() {
 func (app *DesktopSlaveServiceApp) Start() {
 
 	app.root.Start()
+
 }
 
 var appDesktopSlaveApp *DesktopSlaveServiceApp

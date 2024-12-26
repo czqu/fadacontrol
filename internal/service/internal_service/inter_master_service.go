@@ -100,8 +100,9 @@ func (r *rpcClient) Close() {
 		default:
 			logger.Warn("Command channel is full")
 		}
+		close(r.SendChan)
 	}
-	close(r.SendChan)
+
 	r.status = Disconnected
 }
 
@@ -113,6 +114,19 @@ var usernameClientMapLock sync.RWMutex
 func (s *internalRpcServer) RegisterClient(ctx context.Context, req *internal_command.ClientInfo) (*internal_command.RpcResponse, error) {
 	// Handle the RegisterClient RPC
 	logger.Debug("Registering client from ", req.Username)
+	usernameClientMapLock.RLock()
+
+	_, ok := usernameClientMap[req.Username]
+	usernameClientMapLock.RUnlock()
+	if ok {
+		logger.Debug("Duplicate client from ", req.Username)
+		return &internal_command.RpcResponse{
+			Code:    int32(exception.ErrUserAlreadyExistsOneSlave.Code),
+			Message: exception.ErrUserAlreadyExistsOneSlave.Error(),
+			Data:    nil,
+		}, nil
+	}
+
 	client := &rpcClient{
 		Id:       uuid.NewString(),
 		Username: req.Username,
@@ -136,12 +150,9 @@ func (s *internalRpcServer) RegisterClient(ctx context.Context, req *internal_co
 	activeRpcClientMap[client.Id] = client
 	activeRpcClientMapLock.Unlock()
 	usernameClientMapLock.Lock()
-	if _, ok := usernameClientMap[client.Username]; ok {
-		client = usernameClientMap[client.Username]
-		client.Close()
-	}
 	usernameClientMap[client.Username] = client
 	usernameClientMapLock.Unlock()
+
 	defer func() {
 		logger.Debug("success Registering client from ", req.Username)
 	}()
@@ -278,7 +289,10 @@ func (s *InternalMasterService) StartServer() error {
 		logger.Errorf("failed to listen: %v", err)
 		return err
 	}
-	grpcServer := grpc.NewServer()
+	grpcServer := grpc.NewServer(
+		grpc.UnaryInterceptor(goroutine.UnaryServerInterceptor),
+		grpc.StreamInterceptor(goroutine.StreamServerInterceptor),
+	)
 
 	_conf := utils.GetValueFromContext(s.ctx, constants.ConfKey, conf.NewDefaultConf())
 	internal_command.RegisterBaseServer(grpcServer, &internalRpcServer{ProgramConf: _conf})
