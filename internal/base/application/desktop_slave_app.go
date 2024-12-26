@@ -7,9 +7,6 @@ import (
 	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/pkg/utils"
-	"fmt"
-	"github.com/btcsuite/btcutil/base58"
-	"os/user"
 	"path/filepath"
 	"runtime"
 )
@@ -41,17 +38,9 @@ func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
 	} else {
 		workDir = "./"
 	}
-	currentUser, err := user.Current()
-	if err != nil {
-		fmt.Println("Error:", err)
-		return
-	}
-	var currentUserName = "default"
-	if currentUser != nil {
-		currentUserName = base58.Encode([]byte(currentUser.Name))
-	}
+
 	c := &conf.Conf{}
-	c.LogName = currentUserName + "_" + conf.DefaultSlaveLogName
+	c.LogName = conf.DefaultSlaveLogName
 	c.LogLevel = conf.DefaultLogLevel
 	c.Debug = false
 	c.StartMode = mode
