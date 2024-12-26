@@ -17,19 +17,20 @@ import (
 )
 
 type DiscoverService struct {
-	ctx          context.Context
-	_db          *gorm.DB
-	config       entity.DiscoverConfig
-	ipFail       cache.Cache[string, int]
-	ipAlwaysFail cache.Cache[string, int]
-	port         int
-	ipFailRetry  time.Duration
-	udpDone      chan int
-	hostname     string
-	ListenConn   *net.UDPConn
-	StartLock    sync.Mutex
-	StopLock     sync.Mutex
-	RestartLock  sync.Mutex
+	ctx                   context.Context
+	discoverServiceCtx    context.Context
+	discoverServiceCancel context.CancelFunc
+	_db                   *gorm.DB
+	config                entity.DiscoverConfig
+	ipFail                cache.Cache[string, int]
+	ipAlwaysFail          cache.Cache[string, int]
+	port                  int
+	ipFailRetry           time.Duration
+	hostname              string
+	ListenConn            *net.UDPConn
+	StartLock             sync.Mutex
+	StopLock              sync.Mutex
+	RestartLock           sync.Mutex
 }
 
 const udpSendInterval = 2 * time.Second
@@ -45,6 +46,7 @@ func NewDiscoverService(db *gorm.DB, ctx context.Context) *DiscoverService {
 		ipFailRetry:  30 * time.Second,
 		ctx:          ctx,
 	}
+	d.discoverServiceCtx, d.discoverServiceCancel = context.WithCancel(ctx)
 	d.ipFail.StartAutoClean(d.ipFailRetry / 2)
 	d.ipAlwaysFail.StartAutoClean(1 * time.Minute)
 	return &d
@@ -87,7 +89,6 @@ func (d *DiscoverService) listenAndSend(port int) {
 			return
 		}
 		d.ListenConn = conn
-		defer conn.Close()
 
 		logger.Info("Listening on port: ", port)
 		buffer := make([]byte, 1024)
@@ -99,6 +100,7 @@ func (d *DiscoverService) listenAndSend(port int) {
 					return
 				}
 				logger.Warn("Error reading from UDP:", err)
+				conn.Close()
 				continue
 			}
 
@@ -116,7 +118,9 @@ func (d *DiscoverService) listenAndSend(port int) {
 			} else {
 				logger.Warnf("Sent udp data to clinet: %s", remoteAddr)
 			}
+			conn.Close()
 		}
+
 	}
 
 }
@@ -125,12 +129,10 @@ func (d *DiscoverService) StopService() error {
 		return nil
 	}
 	defer d.StopLock.Unlock()
-
+	d.discoverServiceCancel()
 	if d.ListenConn != nil {
 		d.ListenConn.Close()
 	}
-	d.udpDone <- 1
-	close(d.udpDone)
 	logger.Info("The UDP service service is stopped")
 	return nil
 }
@@ -151,8 +153,10 @@ func (d *DiscoverService) StartBroadcast() {
 		logger.Debug("Sending UDP Broadcast ")
 		for {
 			select {
-			case <-d.udpDone:
+			case <-d.discoverServiceCtx.Done():
+
 				return
+
 			case <-time.After(udpSendInterval):
 				d.udpBroadcast()
 			}
@@ -284,7 +288,7 @@ func (d *DiscoverService) StartService() {
 		return
 	}
 	defer d.StartLock.Unlock()
-	d.udpDone = make(chan int)
+	d.discoverServiceCtx, d.discoverServiceCancel = context.WithCancel(d.ctx)
 	d.readConfig()
 	if d.config.Enabled == false {
 		return

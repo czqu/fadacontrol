@@ -17,3 +17,4 @@ const (
 const ServiceName = "FadaControlService"
 const ConfKey = "conf"
 const ClientIdKey = "client_id"
+const CancelFuncKey = "cancel_func"

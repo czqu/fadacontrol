@@ -62,7 +62,7 @@ func InitLog(ctx context.Context) {
 		l.logOutputSyncer = syncer.NewMultiBufferSyncWriteSyncer(100)
 		var err error
 		_conf := utils.GetValueFromContext(ctx, constants.ConfKey, conf.NewDefaultConf())
-
+		l.logLevel = _conf.LogLevel
 		logger.logPath, err = filepath.Abs(_conf.GetWorkdir() + "/log/" + _conf.LogName)
 		if err != nil {
 			logger = nil

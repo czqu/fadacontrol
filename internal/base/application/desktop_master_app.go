@@ -13,9 +13,8 @@ import (
 )
 
 type DesktopServiceApp struct {
-	db  *conf.DatabaseConf
-	ctx context.Context
-
+	db    *conf.DatabaseConf
+	ctx   context.Context
 	root  *bootstrap.DesktopMasterServiceBootstrap
 	debug bool
 }
@@ -63,6 +62,8 @@ func DesktopServiceMain(debug bool, mode conf.StartMode, workDir string) {
 		c.LogLevel = "debug"
 	}
 	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	ctx = context.WithValue(ctx, constants.CancelFuncKey, cancel)
 	ctx = context.WithValue(ctx, constants.ConfKey, c)
 
 	logger.InitLog(ctx)

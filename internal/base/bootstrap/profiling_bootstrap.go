@@ -16,14 +16,13 @@ import (
 
 type ProfilingBootstrap struct {
 	ctx       context.Context
-	done      chan struct{}
 	startOnce sync.Once
 	stopOnce  sync.Once
 	enable    bool
 }
 
 func NewProfilingBootstrap(ctx context.Context) *ProfilingBootstrap {
-	return &ProfilingBootstrap{ctx: ctx, done: make(chan struct{})}
+	return &ProfilingBootstrap{ctx: ctx}
 }
 func (p *ProfilingBootstrap) Start() error {
 	p.startOnce.Do(func() {
@@ -60,20 +59,18 @@ func (p *ProfilingBootstrap) Start() error {
 		}
 		pprof.WriteHeapProfile(fm)
 		defer fm.Close()
-		<-p.done
-		runtime.GC()
+		select {
+		case <-p.ctx.Done():
+			logger.Info("stop profiling")
+			runtime.GC()
+			return
+		}
+
 	})
 
 	return nil
 }
 func (p *ProfilingBootstrap) Stop() error {
-	p.stopOnce.Do(func() {
-		if p.enable == false {
-			return
-		}
-		p.done <- struct{}{}
-		logger.Info("stop profiling")
-	})
 
 	return nil
 }

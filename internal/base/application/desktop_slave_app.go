@@ -32,7 +32,7 @@ func (app *DesktopSlaveServiceApp) Start() {
 	app.root.Start()
 }
 
-var appDesktopDaemon *DesktopSlaveServiceApp
+var appDesktopSlaveApp *DesktopSlaveServiceApp
 
 func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
 	runtime.GOMAXPROCS(runtime.NumCPU())
@@ -71,6 +71,8 @@ func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
 		c.LogLevel = "debug"
 	}
 	ctx := context.Background()
+	ctx, cancel := context.WithCancel(ctx)
+	ctx = context.WithValue(ctx, constants.CancelFuncKey, cancel)
 	ctx = context.WithValue(ctx, constants.ConfKey, c)
 	logger.InitLog(ctx)
 
@@ -78,13 +80,11 @@ func DesktopSlaveAppMain(debug bool, mode conf.StartMode, workDir string) {
 	if c.Debug {
 		c.LogLevel = "debug"
 	}
-	app, _ := initDesktopDaemonApplication(ctx)
-	appDesktopDaemon = app
-	app.Start()
-}
-func StopDesktopDaemon() {
-	if appDesktopDaemon != nil {
-		appDesktopDaemon.Stop()
+	app, err := initDesktopSlaveApplication(ctx)
+	if err != nil {
+		logger.Fatal("init desktop service err %v", err)
+		return
 	}
-
+	appDesktopSlaveApp = app
+	app.Start()
 }

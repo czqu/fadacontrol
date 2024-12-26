@@ -1,7 +1,8 @@
 package admin_controller
 
 import (
-	"fadacontrol/internal/base/conf"
+	"context"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/controller"
 	"fadacontrol/internal/schema/http_schema"
@@ -10,17 +11,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
 	"net/http"
-	"time"
 )
 
 type HttpController struct {
-	_db         *gorm.DB
-	hs          *http_service.HttpService
-	_exitSignal *conf.ExitChanStruct
+	_db *gorm.DB
+	hs  *http_service.HttpService
+	ctx context.Context
 }
 
-func NewHttpController(_exitSignal *conf.ExitChanStruct, db *gorm.DB, hs *http_service.HttpService) *HttpController {
-	return &HttpController{_exitSignal: _exitSignal, _db: db, hs: hs}
+func NewHttpController(ctx context.Context, db *gorm.DB, hs *http_service.HttpService) *HttpController {
+	return &HttpController{ctx: ctx, _db: db, hs: hs}
 }
 
 // @Summary Get HTTP Configuration
@@ -152,8 +152,14 @@ func (h *HttpController) PatchHttpConfig(c *gin.Context) {
 // @Router /sys/stop [post]
 func (h *HttpController) StopService(c *gin.Context) {
 	goroutine.RecoverGO(func() {
-		time.Sleep(1 * time.Second)
-		h._exitSignal.ExitChan <- 0
+		cancelFunc := h.ctx.Value(constants.CancelFuncKey).(context.CancelFunc)
+		if cancelFunc != nil {
+			cancelFunc()
+		} else {
+			c.Error(exception.ErrUnknownException)
+			return
+		}
+
 	})
 
 	c.JSON(http.StatusOK, controller.GetGinSuccess(c))

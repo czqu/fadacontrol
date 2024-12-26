@@ -38,13 +38,13 @@ func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (
 		admin_controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, admin_controller.NewDiscoverController, credential_provider_service.NewCredentialProviderService,
 		bootstrap.NewDataInitBootstrap, data.NewAdapterByDB, data.NewEnforcer, common_controller.NewAuthController,
 		middleware.NewJwtMiddleware, jwt_service.NewJwtService, auth_service.NewAuthService, user_service.NewUserService, discovery_service.NewDiscoverService,
-		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap, update_service.NewUpdateService, conf.NewExitChanStruct, common_controller.NewDebugController,
+		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap, update_service.NewUpdateService, common_controller.NewDebugController,
 	)
 	return &DesktopServiceApp{ctx: ctx, db: db}, nil
 }
-func initDesktopDaemonApplication(ctx context.Context) (*DesktopSlaveServiceApp, error) {
+func initDesktopSlaveApplication(ctx context.Context) (*DesktopSlaveServiceApp, error) {
 	wire.Build(NewDesktopSlaveServiceApp, bootstrap.NewDesktopSlaveServiceBootstrap, internal_service.NewInternalSlaveService,
-		custom_command_service.NewCustomCommandService, logger.NewLogger, control_pc.NewControlPCService, bootstrap.NewProfilingBootstrap, conf.NewExitChanStruct,
+		custom_command_service.NewCustomCommandService, logger.NewLogger, control_pc.NewControlPCService, bootstrap.NewProfilingBootstrap,
 	)
 
 	return &DesktopSlaveServiceApp{ctx: ctx}, nil

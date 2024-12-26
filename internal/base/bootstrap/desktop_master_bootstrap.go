@@ -21,29 +21,37 @@ import (
 )
 
 type DesktopMasterServiceBootstrap struct {
-	_db      *data.Data
-	discover *DiscoverBootstrap
-	_http    *HttpBootstrap
-	lo       *logger.Logger
-	ctx      context.Context
-	master   *internal_service.InternalMasterService
-
-	done        chan interface{}
-	rcb         *RemoteConnectBootstrap
-	cp          *credential_provider_service.CredentialProviderService
-	di          *DataInitBootstrap
-	_co         *control_pc.ControlPCService
-	pf          *ProfilingBootstrap
-	_exitSignal *conf.ExitChanStruct
-	startOnce   sync.Once
-	stopOnce    sync.Once
+	_db       *data.Data
+	discover  *DiscoverBootstrap
+	_http     *HttpBootstrap
+	lo        *logger.Logger
+	ctx       context.Context
+	master    *internal_service.InternalMasterService
+	rcb       *RemoteConnectBootstrap
+	cp        *credential_provider_service.CredentialProviderService
+	di        *DataInitBootstrap
+	_co       *control_pc.ControlPCService
+	pf        *ProfilingBootstrap
+	startOnce sync.Once
+	stopOnce  sync.Once
+	cancel    context.CancelFunc
 }
 
-func NewDesktopMasterServiceBootstrap(_exitSignal *conf.ExitChanStruct, pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, master *internal_service.InternalMasterService, _context context.Context, _db *data.Data, lo *logger.Logger, d *DiscoverBootstrap, http_ *HttpBootstrap) *DesktopMasterServiceBootstrap {
-	return &DesktopMasterServiceBootstrap{_exitSignal: _exitSignal, pf: pf, _co: _co, di: di, cp: cp, rcb: rcb, done: make(chan interface{}), master: master, ctx: _context, _db: _db, lo: lo, discover: d, _http: http_}
+func NewDesktopMasterServiceBootstrap(pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, master *internal_service.InternalMasterService, _context context.Context, _db *data.Data, lo *logger.Logger, d *DiscoverBootstrap, http_ *HttpBootstrap) *DesktopMasterServiceBootstrap {
+	return &DesktopMasterServiceBootstrap{pf: pf, _co: _co, di: di, cp: cp, rcb: rcb, master: master, ctx: _context, _db: _db, lo: lo, discover: d, _http: http_}
 }
 func (r *DesktopMasterServiceBootstrap) Start() {
 	r.startOnce.Do(func() {
+		cancelFunc := r.ctx.Value(constants.CancelFuncKey)
+		if cancelFunc == nil {
+			if _, ok := cancelFunc.(context.CancelFunc); !ok {
+				logger.Error("cancel func not found")
+				return
+			}
+
+		}
+		r.cancel = cancelFunc.(context.CancelFunc)
+
 		_conf := utils.GetValueFromContext(r.ctx, constants.ConfKey, conf.NewDefaultConf())
 		if _conf.StartMode == conf.UnknownMode {
 			logger.Error("unknown start mode")
@@ -108,14 +116,13 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 				logger.Debug("stopping...")
 				r.Stop()
 			})
-		goroutine.RecoverGO(
-			func() {
-				<-r._exitSignal.ExitChan
-				logger.Debug("stopping...")
-				r.Stop()
-			})
 
-		r.Wait()
+		select {
+		case <-r.ctx.Done():
+			logger.Debug("stopping...")
+			r.Stop()
+		}
+
 	})
 
 }
@@ -125,11 +132,11 @@ func (r *DesktopMasterServiceBootstrap) Stop() {
 			defer func() {
 				logger.Info("app stopped")
 			}()
+			r.cancel()
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
 			logger.Debug("stopping root bootstrap")
 			logger.Sync()
-			stopCh := make(chan struct{}, 1)
 			goroutine.RecoverGO(
 				func() {
 					r.pf.Stop()
@@ -143,19 +150,12 @@ func (r *DesktopMasterServiceBootstrap) Stop() {
 
 				})
 			select {
-			case <-stopCh:
 
 			case <-ctx.Done():
+				return
 
 			}
 
-			r.done <- struct{}{}
 		})
 
-}
-func (r *DesktopMasterServiceBootstrap) Wait() {
-	select {
-	case <-r.done:
-		return
-	}
 }

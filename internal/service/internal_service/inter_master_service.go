@@ -25,8 +25,7 @@ import (
 )
 
 type InternalMasterService struct {
-	ctx   context.Context
-	_done chan bool
+	ctx context.Context
 
 	cp *control_pc.ControlPCService
 
@@ -35,7 +34,7 @@ type InternalMasterService struct {
 }
 
 func NewInternalMasterService(cp *control_pc.ControlPCService, ctx context.Context) *InternalMasterService {
-	return &InternalMasterService{ctx: ctx, _done: make(chan bool), cp: cp}
+	return &InternalMasterService{ctx: ctx, cp: cp}
 
 }
 func (s *InternalMasterService) Start() error {
@@ -291,20 +290,26 @@ func (s *InternalMasterService) StartServer() error {
 			logger.Fatal("rpc server failed to serve: %v", err)
 		}
 	})
-	<-s._done
-	logger.Info("rpc server will be stopped")
-	grpcServer.GracefulStop()
-	logger.Info("rpc server stopped")
-	return nil
-
+	select {
+	case <-s.ctx.Done():
+		s.StopServer()
+		logger.Info("rpc server will be stopped")
+		grpcServer.GracefulStop()
+		logger.Info("rpc server stopped")
+		return nil
+	}
 }
 
 func (s *InternalMasterService) StopServer() error {
-	err := s.StopAllSlave()
-	if err != nil {
-		logger.Error(err)
-	}
-	s._done <- true
+	s.stopOnce.Do(func() {
+		err := s.StopAllSlave()
+		if err != nil {
+			logger.Error(err)
+
+		}
+
+	})
+
 	return nil
 }
 

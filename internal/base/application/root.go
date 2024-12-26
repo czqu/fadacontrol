@@ -43,7 +43,6 @@ var rootCmd = &cobra.Command{
 			return
 		}
 		if dryRunMode {
-			panic("test")
 			return
 		}
 		if slaveMode {

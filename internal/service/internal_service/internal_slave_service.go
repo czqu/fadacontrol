@@ -2,7 +2,6 @@ package internal_service
 
 import (
 	"context"
-	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/log"
@@ -17,22 +16,18 @@ import (
 	"os/user"
 
 	"google.golang.org/grpc"
-	"os"
 	"strconv"
 	"time"
 )
 
 type InternalSlaveService struct {
-	_done chan bool
-
-	ctx         context.Context
-	cu          *custom_command_service.CustomCommandService
-	co          *control_pc.ControlPCService
-	_exitSignal *conf.ExitChanStruct
+	ctx context.Context
+	cu  *custom_command_service.CustomCommandService
+	co  *control_pc.ControlPCService
 }
 
-func NewInternalSlaveService(_exitSignal *conf.ExitChanStruct, cu *custom_command_service.CustomCommandService, co *control_pc.ControlPCService, ctx context.Context) *InternalSlaveService {
-	return &InternalSlaveService{_exitSignal: _exitSignal, cu: cu, co: co, ctx: ctx, _done: make(chan bool)}
+func NewInternalSlaveService(cu *custom_command_service.CustomCommandService, co *control_pc.ControlPCService, ctx context.Context) *InternalSlaveService {
+	return &InternalSlaveService{cu: cu, co: co, ctx: ctx}
 }
 func (s *InternalSlaveService) Start() {
 	port := 2095
@@ -40,41 +35,45 @@ func (s *InternalSlaveService) Start() {
 	addr := host + ":" + strconv.Itoa(port)
 	goroutine.RecoverGO(func() {
 		s.connectToServer(addr)
-		os.Exit(-1)
+
 	})
 
-}
-func (s *InternalSlaveService) Stop() {
-	s._done <- true
 }
 
 const (
 	initialBackoff = 1 * time.Second
-	maxBackoff     = 8 * time.Second
+	maxBackoff     = 15 * time.Second
 )
 
 func (s *InternalSlaveService) connectToServer(addr string) {
 	defer func() {
 		logger.Info("slave will exit")
-		os.Exit(-1)
+		cancelFunc := s.ctx.Value(constants.CancelFuncKey).(context.CancelFunc)
+		if cancelFunc != nil {
+			cancelFunc()
+		} else {
+			logger.Fatal("cancel func is nil")
+		}
+
 	}()
 	logger.Info("slave connecting.")
 	backoff := initialBackoff
 
+	var lastErr error
 	for {
-
+	newConn:
 		conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 
 		logger.Info("slave connecting..")
 		select {
-		case <-s._done:
+		case <-s.ctx.Done():
 			return
 		default:
 			break
 		}
 		logger.Info("slave connecting...")
-		if err != nil || conn == nil {
-			logger.Infof("Error connecting to server: %v\n", err)
+		if lastErr != nil || conn == nil {
+			logger.Infof("Error connecting to server: %v\n", lastErr)
 
 			logger.Infof("will sleep %v\n", backoff)
 			// Wait for the backoff time and try again
@@ -82,7 +81,7 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 
 			// Increase the backoff time until maxBackoff is reached
 			if backoff < maxBackoff {
-				backoff *= 2
+				backoff += 1 * time.Second
 
 			}
 			if backoff >= maxBackoff {
@@ -93,17 +92,15 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 				return
 
 			}
-			continue
+			lastErr = nil
 		}
 
-		logger.Info("slave connected")
-
-		backoff = maxBackoff / 2
 		client := internal_command.NewBaseClient(conn)
 		_user, err := user.Current()
 		if err != nil {
 			logger.Error("Error getting current user: %v\n", err)
-			return
+			lastErr = err
+			goto newConn
 		}
 		registerResp, err := client.RegisterClient(context.Background(), &internal_command.ClientInfo{
 			Username: _user.Username,
@@ -111,26 +108,30 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 
 		if err != nil || registerResp.Code != int32(exception.ErrSuccess.Code) {
 			logger.Warnf("Error registering client: %v", err)
-			return
+			lastErr = err
+			goto newConn
 		}
 		var registerClientResponse internal_command.RegisterClientResponse
 		err = registerResp.GetData().UnmarshalTo(&registerClientResponse)
 		if err != nil {
 			logger.Warnf("Error unmarshalling registerClientResponse: %v", err)
-			return
+			lastErr = err
+			goto newConn
 		}
 		clientId := registerClientResponse.ClientId
 		logger.Debug("register success clientId:", clientId)
 		sentryResp, err := client.GetSentryOptions(context.Background(), &internal_command.GetSentryOptionsRequest{})
 		if err != nil || sentryResp.Code != int32(exception.ErrSuccess.Code) {
 			logger.Warnf("Error getting sentry options: %v", err)
-			return
+			lastErr = err
+			goto newConn
 		}
 		var sentryOptions internal_command.SentryOptions
 		err = sentryResp.GetData().UnmarshalTo(&sentryOptions)
 		if err != nil {
 			logger.Warnf("Error unmarshalling sentry options: %v", err)
-			return
+			lastErr = err
+			goto newConn
 		}
 		opt := &log.SentryOptions{}
 		opt.Enable = sentryOptions.Enable
@@ -152,13 +153,16 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 		if err != nil {
 			logger.Fatal("Failed to create stream:", err)
 		}
-
+		logger.Info("slave connected")
+		backoff = initialBackoff
 		// Receive response from server
 		for {
+			logger.Debug("recv data...")
 			rpcData, err := stream.Recv()
 			if err != nil {
 				logger.Fatal("Failed to receive response:", err)
-				return
+				lastErr = err
+				goto newConn
 			}
 
 			if rpcData.GetType() == internal_command.StreamMessageType_Unknown {
@@ -186,8 +190,12 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 			case internal_command.StreamMessageType_ExitProcessRequest:
 				logger.Info("recv exit cmd,exit process")
 
-				s._exitSignal.ExitChan <- 0
-				<-s._done
+				cancelFunc := s.ctx.Value(constants.CancelFuncKey).(context.CancelFunc)
+				if cancelFunc != nil {
+					cancelFunc()
+				} else {
+					logger.Warn("cancel func is nil")
+				}
 				return
 			}
 

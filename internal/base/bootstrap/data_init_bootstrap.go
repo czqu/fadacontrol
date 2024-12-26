@@ -16,24 +16,25 @@ import (
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
+	"os"
 	"sync"
 	"time"
 )
 
 type DataInitBootstrap struct {
-	_db         *gorm.DB
-	adapter     *gormadapter.Adapter
-	enforcer    *casbin.Enforcer
-	_exitSignal *conf.ExitChanStruct
-	startOnce   sync.Once
-	ctx         context.Context
+	_db      *gorm.DB
+	adapter  *gormadapter.Adapter
+	enforcer *casbin.Enforcer
+
+	startOnce sync.Once
+	ctx       context.Context
 }
 
 const HttpsServiceApi = "HTTPS_SERVICE_API"
 const HttpServiceAdmin = "HTTP_SERVICE_ADMIN"
 
-func NewDataInitBootstrap(ctx context.Context, _exitSignal *conf.ExitChanStruct, adapter *gormadapter.Adapter, enforcer *casbin.Enforcer, _db *gorm.DB) *DataInitBootstrap {
-	return &DataInitBootstrap{ctx: ctx, _exitSignal: _exitSignal, _db: _db, adapter: adapter, enforcer: enforcer}
+func NewDataInitBootstrap(ctx context.Context, adapter *gormadapter.Adapter, enforcer *casbin.Enforcer, _db *gorm.DB) *DataInitBootstrap {
+	return &DataInitBootstrap{ctx: ctx, _db: _db, adapter: adapter, enforcer: enforcer}
 
 }
 func (d *DataInitBootstrap) Stop() error {
@@ -296,7 +297,12 @@ func (d *DataInitBootstrap) initUser() {
 		logger.Info("root password reset")
 		goroutine.RecoverGO(
 			func() {
-				d._exitSignal.ExitChan <- 0
+				cancelFunc := d.ctx.Value(constants.CancelFuncKey).(context.CancelFunc)
+				if cancelFunc != nil {
+					cancelFunc()
+				} else {
+					os.Exit(0)
+				}
 			})
 	}
 

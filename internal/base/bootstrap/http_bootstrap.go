@@ -48,14 +48,12 @@ func (s *HttpBootstrap) Start() error {
 
 }
 func (s *HttpBootstrap) Stop() error {
-	s.stopOnce.Do(func() {
-		s._http.StopAllServer()
-	})
+	//use context to stop
 	return nil
 
 }
 func (s *HttpBootstrap) killOther() error {
-	client, err := utils.NewClientBuilder().SetTimeout(1 * time.Second).Build()
+	client, err := utils.NewClientBuilder().SetTimeout(500 * time.Microsecond).Build()
 	if err != nil {
 		return err
 	}
