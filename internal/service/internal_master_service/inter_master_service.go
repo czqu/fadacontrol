@@ -1,4 +1,4 @@
-package internal_service
+package internal_master_service
 
 import (
 	"context"
@@ -8,8 +8,8 @@ import (
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/schema"
 	"fadacontrol/internal/schema/internal_command"
-	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/pkg/goroutine"
+	"fadacontrol/pkg/sys"
 	"fadacontrol/pkg/utils"
 	"fmt"
 	"github.com/google/uuid"
@@ -19,27 +19,40 @@ import (
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/anypb"
 	"net"
+	"os"
+	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 	_ "time"
 )
 
 type InternalMasterService struct {
-	ctx context.Context
-
-	cp *control_pc.ControlPCService
-
-	startOnce sync.Once
-	stopOnce  sync.Once
+	ctx          context.Context
+	slavePath    string
+	slaveWorkDir string
+	startOnce    sync.Once
+	stopOnce     sync.Once
 }
 
-func NewInternalMasterService(cp *control_pc.ControlPCService, ctx context.Context) *InternalMasterService {
-	return &InternalMasterService{ctx: ctx, cp: cp}
+func NewInternalMasterService(ctx context.Context) *InternalMasterService {
+	return &InternalMasterService{ctx: ctx}
 
 }
 func (s *InternalMasterService) Start() error {
+	logger.Info("starting slave program")
+
+	path, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("cannot get executable path %v", err)
+	}
+
+	s.slaveWorkDir = filepath.Dir(path)
+	s.slavePath = path
+	logger.Info("slave program path", s.slavePath)
+	logger.Sync()
 	s.startOnce.Do(func() {
-		s.cp.SetCommandSender(s.SendCommandAll)
+
 		goroutine.RecoverGO(func() {
 			s.StartServer()
 		})
@@ -48,6 +61,7 @@ func (s *InternalMasterService) Start() error {
 	return nil
 
 }
+
 func (s *InternalMasterService) Stop() error {
 	s.stopOnce.Do(func() {
 		s.StopServer()
@@ -256,6 +270,12 @@ func (s *internalRpcServer) RegisterInternalCommand(stream internal_command.Exec
 			}
 		}
 	})
+
+	slaveBlockerLock.Lock()
+	if slaveBlocker != nil {
+		slaveBlocker.Cancel()
+	}
+	slaveBlockerLock.Unlock()
 	for {
 		logger.Debug("start recv data")
 		req, err := stream.Recv()
@@ -369,14 +389,33 @@ func (s *InternalMasterService) SendCommandAll(cmd *schema.InternalCommand) erro
 	logger.Debug("send command")
 	return nil
 }
-func (s *InternalMasterService) HasClient() bool {
-	activeRpcClientMapLock.RLock()
-	defer activeRpcClientMapLock.RUnlock()
-	if activeRpcClientMap == nil {
-		return false
+
+var slaveBlocker *goroutine.Blocker
+var slaveBlockerLock sync.Mutex
+
+func (s *InternalMasterService) RunSlave() error {
+	if s.slavePath == "" || s.slaveWorkDir == "" {
+		return fmt.Errorf("slave path or work dir is empty")
 	}
-	if len(activeRpcClientMap) == 0 {
-		return false
+
+	excludedUsers := make(map[string]bool)
+	usernameClientMapLock.RLock()
+	for _, client := range usernameClientMap {
+		_, usernameNoDomain := utils.SplitWindowsAccount(client.Username)
+		excludedUsers[client.Username] = true
+		excludedUsers[usernameNoDomain] = true
 	}
-	return true
+	usernameClientMapLock.RUnlock()
+	cnt, err := sys.RunProgramForAllUser(s.slavePath, "\""+s.slavePath+"\" --slave", s.slaveWorkDir, excludedUsers)
+	if err != nil {
+		return fmt.Errorf("cannot run slave program:%v", err)
+	}
+	if cnt > 0 {
+		slaveBlockerLock.Lock()
+		slaveBlocker = goroutine.NewBlocker(5 * time.Second)
+		slaveBlockerLock.Unlock()
+		slaveBlocker.Wait()
+	}
+
+	return nil
 }

@@ -23,7 +23,8 @@ import (
 	"fadacontrol/internal/service/custom_command_service"
 	"fadacontrol/internal/service/discovery_service"
 	"fadacontrol/internal/service/http_service"
-	"fadacontrol/internal/service/internal_service"
+	"fadacontrol/internal/service/internal_master_service"
+	"fadacontrol/internal/service/internal_slave_service"
 	"fadacontrol/internal/service/jwt_service"
 	"fadacontrol/internal/service/remote_service"
 	"fadacontrol/internal/service/unlock"
@@ -35,7 +36,8 @@ import (
 
 func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (*DesktopServiceApp, error) {
 	profilingBootstrap := bootstrap.NewProfilingBootstrap(ctx)
-	controlPCService := control_pc.NewControlPCService()
+	internalMasterService := internal_master_service.NewInternalMasterService(ctx)
+	controlPCService := control_pc.NewControlPCService(internalMasterService)
 	gormDB, err := data.NewDB(db)
 	if err != nil {
 		return nil, err
@@ -53,7 +55,6 @@ func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (
 	unLockService := unlock.NewUnLockService(credentialProviderService)
 	remoteService := remote_service.NewRemoteService(controlPCService, unLockService, ctx, gormDB)
 	remoteConnectBootstrap := bootstrap.NewRemoteConnectBootstrap(ctx, gormDB, remoteService)
-	internalMasterService := internal_service.NewInternalMasterService(controlPCService, ctx)
 	dataData := data.NewData(gormDB)
 	loggerLogger := logger.NewLogger(ctx)
 	discoverService := discovery_service.NewDiscoverService(gormDB, ctx)
@@ -85,9 +86,10 @@ func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (
 func initDesktopSlaveApplication(ctx context.Context) (*DesktopSlaveServiceApp, error) {
 	loggerLogger := logger.NewLogger(ctx)
 	profilingBootstrap := bootstrap.NewProfilingBootstrap(ctx)
-	controlPCService := control_pc.NewControlPCService()
+	internalMasterService := internal_master_service.NewInternalMasterService(ctx)
+	controlPCService := control_pc.NewControlPCService(internalMasterService)
 	customCommandService := custom_command_service.NewCustomCommandService(ctx)
-	internalSlaveService := internal_service.NewInternalSlaveService(customCommandService, controlPCService, ctx)
+	internalSlaveService := internal_slave_service.NewInternalSlaveService(customCommandService, controlPCService, ctx)
 	desktopSlaveServiceBootstrap := bootstrap.NewDesktopSlaveServiceBootstrap(ctx, profilingBootstrap, controlPCService, loggerLogger, internalSlaveService)
 	desktopSlaveServiceApp := NewDesktopSlaveServiceApp(loggerLogger, ctx, desktopSlaveServiceBootstrap)
 	return desktopSlaveServiceApp, nil

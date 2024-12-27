@@ -4,15 +4,16 @@ import (
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/schema"
+	"fadacontrol/internal/service/internal_master_service"
 	"fadacontrol/pkg/sys"
 )
 
 type ControlPCService struct {
-	_cmdSender func(cmd *schema.InternalCommand) error
+	_im *internal_master_service.InternalMasterService
 }
 
-func NewControlPCService() *ControlPCService {
-	return &ControlPCService{}
+func NewControlPCService(_im *internal_master_service.InternalMasterService) *ControlPCService {
+	return &ControlPCService{_im: _im}
 
 }
 
@@ -23,22 +24,21 @@ func (control *ControlPCService) Standby() *exception.Exception {
 func (control *ControlPCService) Shutdown(tpe sys.ShutdownType) *exception.Exception {
 	return sys.Shutdown(tpe)
 }
-func (control *ControlPCService) SetCommandSender(f func(cmd *schema.InternalCommand) error) {
-	control._cmdSender = f
 
-}
 func (control *ControlPCService) LockWindows(useAgent bool) *exception.Exception {
 
 	logger.Debug("lock windows")
 	if !useAgent {
 		return sys.LockWindows()
 	}
-	if control._cmdSender == nil {
-		return exception.ErrSystemUnknownException
+	ex := control._im.RunSlave()
+	if ex != nil {
+		logger.Warn("run slave failed")
+		return exception.ErrSystemUnknownException.SetMsg(ex.Error())
 	}
 
 	cmd := &schema.InternalCommand{CommandType: schema.LockPCCommandType, Data: nil}
-	err := control._cmdSender(cmd)
+	err := control._im.SendCommandAll(cmd)
 	if err != nil {
 		logger.Warn("lock windows marshal failed")
 		return exception.ErrSystemUnknownException

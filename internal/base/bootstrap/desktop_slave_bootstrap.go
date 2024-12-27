@@ -6,7 +6,7 @@ import (
 	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/service/control_pc"
-	"fadacontrol/internal/service/internal_service"
+	"fadacontrol/internal/service/internal_slave_service"
 	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/sys"
 	"fadacontrol/pkg/utils"
@@ -19,7 +19,7 @@ import (
 type DesktopSlaveServiceBootstrap struct {
 	ctx   context.Context
 	lo    *logger.Logger
-	slave *internal_service.InternalSlaveService
+	slave *internal_slave_service.InternalSlaveService
 
 	_co       *control_pc.ControlPCService
 	pf        *ProfilingBootstrap
@@ -28,7 +28,7 @@ type DesktopSlaveServiceBootstrap struct {
 	cancel    context.CancelFunc
 }
 
-func NewDesktopSlaveServiceBootstrap(ctx context.Context, pf *ProfilingBootstrap, _co *control_pc.ControlPCService, lo *logger.Logger, slave *internal_service.InternalSlaveService) *DesktopSlaveServiceBootstrap {
+func NewDesktopSlaveServiceBootstrap(ctx context.Context, pf *ProfilingBootstrap, _co *control_pc.ControlPCService, lo *logger.Logger, slave *internal_slave_service.InternalSlaveService) *DesktopSlaveServiceBootstrap {
 	return &DesktopSlaveServiceBootstrap{ctx: ctx, pf: pf, _co: _co, lo: lo, slave: slave}
 }
 

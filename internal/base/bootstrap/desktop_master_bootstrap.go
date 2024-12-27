@@ -8,9 +8,8 @@ import (
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/credential_provider_service"
-	"fadacontrol/internal/service/internal_service"
+	"fadacontrol/internal/service/internal_master_service"
 	"fadacontrol/pkg/goroutine"
-	"fadacontrol/pkg/sys"
 	"fadacontrol/pkg/utils"
 	"os"
 	"os/signal"
@@ -25,7 +24,7 @@ type DesktopMasterServiceBootstrap struct {
 	_http     *HttpBootstrap
 	lo        *logger.Logger
 	ctx       context.Context
-	master    *internal_service.InternalMasterService
+	master    *internal_master_service.InternalMasterService
 	rcb       *RemoteConnectBootstrap
 	cp        *credential_provider_service.CredentialProviderService
 	di        *DataInitBootstrap
@@ -36,7 +35,7 @@ type DesktopMasterServiceBootstrap struct {
 	cancel    context.CancelFunc
 }
 
-func NewDesktopMasterServiceBootstrap(pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, master *internal_service.InternalMasterService, _context context.Context, _db *data.Data, lo *logger.Logger, d *DiscoverBootstrap, http_ *HttpBootstrap) *DesktopMasterServiceBootstrap {
+func NewDesktopMasterServiceBootstrap(pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, master *internal_master_service.InternalMasterService, _context context.Context, _db *data.Data, lo *logger.Logger, d *DiscoverBootstrap, http_ *HttpBootstrap) *DesktopMasterServiceBootstrap {
 	return &DesktopMasterServiceBootstrap{pf: pf, _co: _co, di: di, cp: cp, rcb: rcb, master: master, ctx: _context, _db: _db, lo: lo, discover: d, _http: http_}
 }
 func (r *DesktopMasterServiceBootstrap) Start() {
@@ -84,11 +83,6 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 				r.rcb.Restart()
 				r.discover.Restart()
 			})
-
-			goroutine.RecoverGO(
-				func() {
-					sys.RunSlave()
-				})
 
 		}
 

@@ -1,4 +1,4 @@
-package internal_service
+package internal_slave_service
 
 import (
 	"context"
@@ -117,7 +117,7 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 			goto newConn
 		} else if registerResp != nil && (registerResp.Code != int32(exception.ErrSuccess.Code)) {
 			logger.Warnf("Error registering client: %v", registerResp.Message)
-			lastErr = fmt.Errorf("Error registering client: %v", registerResp.Message)
+			lastErr = fmt.Errorf("error registering client: %v", registerResp.Message)
 			return
 		} else if registerResp == nil {
 			logger.Warnf("Error registering client: %v", "registerResp is nil")
@@ -183,12 +183,15 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 				lastErr = err
 				goto newConn
 			}
+			logger.Debug("recv a data")
 
 			if rpcData.GetType() == internal_command.StreamMessageType_Unknown {
+				logger.Debug("Received unknown data")
 				continue
 			}
 			switch rpcData.GetType() {
 			case internal_command.StreamMessageType_LockPcRequest:
+				logger.Debug("Received LockPc Request")
 				lockErr := s.co.LockWindows(false)
 				if !lockErr.Equal(exception.ErrSuccess) {
 					logger.Warnf("LockWindows err: %v", err)
@@ -207,7 +210,7 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 					})
 				}
 			case internal_command.StreamMessageType_ExitProcessRequest:
-				logger.Info("recv exit cmd,exit process")
+				logger.Debug("recv exit cmd,exit process")
 
 				cancelFunc := s.ctx.Value(constants.CancelFuncKey).(context.CancelFunc)
 				if cancelFunc != nil {
@@ -216,6 +219,9 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 					logger.Warn("cancel func is nil")
 				}
 				return
+			default:
+				logger.Warnf("Received unsupport data: %v", rpcData.GetType())
+				continue
 			}
 
 		}

@@ -13,9 +13,9 @@ import (
 	"github.com/Microsoft/go-winio"
 	"golang.org/x/sys/windows"
 	"net"
-	"os"
+
 	"os/user"
-	"path/filepath"
+
 	"strconv"
 	"syscall"
 	"unsafe"
@@ -567,23 +567,33 @@ func GetSessionUsername(sessionID uint32) (string, error) {
 	return username, nil
 }
 
-func RunProgramForAllUser(programPath string, commandline, workdir string) error {
+func RunProgramForAllUser(programPath string, commandline, workdir string, excludeUsers map[string]bool) (int, error) {
 
+	var cnt = 0
+	defer func() {
+		logger.Debug("cnt is %d", cnt)
+	}()
 	if programPath == "" {
-		return fmt.Errorf("program path is empty")
+		return cnt, fmt.Errorf("program path is empty")
 	}
 	sessions, err := EnumerateSessions()
 	if err != nil {
 
-		return err
+		return cnt, err
 	}
 	err = EnablePrivilege("SeTcbPrivilege")
 	if err != nil {
-		return err
+		return cnt, err
 	}
 	for _, session := range sessions {
-		logger.Debug("username: ", session.Username)
+
 		if (session.State == WTS_ACTIVE || session.State == WTSDisconnected) && session.Username != "" {
+			if excludeUsers != nil && excludeUsers[session.Username] {
+				logger.Debug("excluded user: ", session.Username)
+				continue
+			}
+			cnt++
+			logger.Debug("launch for username: ", session.Username)
 			err := StartProcessForSession(session.SessionID, programPath, commandline, workdir, true)
 			if err != nil {
 				logger.Errorf("failed to launch program for session %d: %v", session.SessionID, err)
@@ -593,7 +603,7 @@ func RunProgramForAllUser(programPath string, commandline, workdir string) error
 			logger.Debugf("launched program for session %d,username: %s", session.SessionID, session.Username)
 		}
 	}
-	return nil
+	return cnt, nil
 }
 
 const (
@@ -648,19 +658,4 @@ func EnablePrivilege(privilegeName string) error {
 	}
 
 	return nil
-}
-func RunSlave() {
-	logger.Info("starting slave program")
-
-	path, err := os.Executable()
-	if err != nil {
-		logger.Error("cannot get executable path", err)
-	}
-	logger.Info("slave program path", path)
-	dir := filepath.Dir(path)
-	logger.Sync()
-	err = RunProgramForAllUser(path, "\""+path+"\" --slave", dir)
-	if err != nil {
-		logger.Error("cannot run slave program", err)
-	}
 }

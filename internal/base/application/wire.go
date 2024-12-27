@@ -20,7 +20,8 @@ import (
 	"fadacontrol/internal/service/custom_command_service"
 	"fadacontrol/internal/service/discovery_service"
 	"fadacontrol/internal/service/http_service"
-	"fadacontrol/internal/service/internal_service"
+	"fadacontrol/internal/service/internal_master_service"
+	"fadacontrol/internal/service/internal_slave_service"
 	"fadacontrol/internal/service/jwt_service"
 	"fadacontrol/internal/service/remote_service"
 	"fadacontrol/internal/service/unlock"
@@ -33,7 +34,7 @@ func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (
 	wire.Build(NewDesktopServiceApp, bootstrap.NewHttpBootstrap, bootstrap.NewDiscoverBootstrap,
 		logger.NewLogger, unlock.NewUnLockService, data.NewDB, common_router.NewCommonRouter, admin_router.NewAdminRouter, bootstrap.NewDesktopMasterServiceBootstrap,
 		control_pc.NewControlPCService, data.NewData, common_controller.NewControlPCController, common_controller.NewUnlockController,
-		common_controller.NewCustomCommandController, internal_service.NewInternalMasterService,
+		common_controller.NewCustomCommandController, internal_master_service.NewInternalMasterService,
 		custom_command_service.NewCustomCommandService, remote_service.NewRemoteService,
 		admin_controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, admin_controller.NewDiscoverController, credential_provider_service.NewCredentialProviderService,
 		bootstrap.NewDataInitBootstrap, data.NewAdapterByDB, data.NewEnforcer, common_controller.NewAuthController,
@@ -43,8 +44,8 @@ func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (
 	return &DesktopServiceApp{ctx: ctx, db: db}, nil
 }
 func initDesktopSlaveApplication(ctx context.Context) (*DesktopSlaveServiceApp, error) {
-	wire.Build(NewDesktopSlaveServiceApp, bootstrap.NewDesktopSlaveServiceBootstrap, internal_service.NewInternalSlaveService,
-		custom_command_service.NewCustomCommandService, logger.NewLogger, control_pc.NewControlPCService, bootstrap.NewProfilingBootstrap,
+	wire.Build(NewDesktopSlaveServiceApp, bootstrap.NewDesktopSlaveServiceBootstrap, internal_slave_service.NewInternalSlaveService,
+		custom_command_service.NewCustomCommandService, logger.NewLogger, control_pc.NewControlPCService, bootstrap.NewProfilingBootstrap, internal_master_service.NewInternalMasterService,
 	)
 
 	return &DesktopSlaveServiceApp{ctx: ctx}, nil
