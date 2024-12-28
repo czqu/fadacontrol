@@ -12,6 +12,7 @@ import (
 	"fadacontrol/pkg/goroutine"
 	"fmt"
 	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/anypb"
 	"os/user"
@@ -63,7 +64,12 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 	var lastErr error
 	for {
 	newConn:
-		conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err := grpc.NewClient(addr, grpc.WithTransportCredentials(insecure.NewCredentials()),
+			grpc.WithKeepaliveParams(keepalive.ClientParameters{
+				Time:                10 * time.Second,
+				Timeout:             30 * time.Second,
+				PermitWithoutStream: true,
+			}))
 
 		logger.Info("slave connecting..")
 		select {
@@ -75,10 +81,6 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 		logger.Info("slave connecting...")
 		if lastErr != nil || conn == nil {
 			logger.Infof("Error connecting to server: %v\n", lastErr)
-
-			logger.Infof("will sleep %v\n", backoff)
-			// Wait for the backoff time and try again
-			time.Sleep(backoff)
 
 			// Increase the backoff time until maxBackoff is reached
 			if backoff < maxBackoff {
@@ -93,6 +95,9 @@ func (s *InternalSlaveService) connectToServer(addr string) {
 				return
 
 			}
+			logger.Infof("will sleep %v\n", backoff)
+			// Wait for the backoff time and try again
+			time.Sleep(backoff)
 			lastErr = nil
 		}
 
