@@ -49,7 +49,7 @@ func (s *InternalMasterService) Start() error {
 
 	s.slaveWorkDir = filepath.Dir(path)
 	s.slavePath = path
-	logger.Info("slave program path", s.slavePath)
+	logger.Info("slave program path: ", s.slavePath)
 	logger.Sync()
 	s.startOnce.Do(func() {
 
