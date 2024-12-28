@@ -1,7 +1,7 @@
 package bootstrap
 
 import (
-	"fadacontrol/internal/base/conf"
+	"context"
 	"fadacontrol/internal/router/admin_router"
 	"fadacontrol/internal/router/common_router"
 	"fadacontrol/internal/service/http_service"
@@ -15,15 +15,15 @@ import (
 type HttpBootstrap struct {
 	_common   *common_router.CommonRouter
 	_adr      *admin_router.AdminRouter
-	_conf     *conf.Conf
+	ctx       context.Context
 	_http     *http_service.HttpService
 	_jwt      *jwt_service.JwtService
 	startOnce sync.Once
 	stopOnce  sync.Once
 }
 
-func NewHttpBootstrap(_jwt *jwt_service.JwtService, _conf *conf.Conf, _http *http_service.HttpService, _common *common_router.CommonRouter, _adr *admin_router.AdminRouter) *HttpBootstrap {
-	return &HttpBootstrap{_jwt: _jwt, _conf: _conf, _http: _http, _common: _common, _adr: _adr}
+func NewHttpBootstrap(_jwt *jwt_service.JwtService, ctx context.Context, _http *http_service.HttpService, _common *common_router.CommonRouter, _adr *admin_router.AdminRouter) *HttpBootstrap {
+	return &HttpBootstrap{_jwt: _jwt, ctx: ctx, _http: _http, _common: _common, _adr: _adr}
 }
 
 func (s *HttpBootstrap) Start() error {
@@ -48,14 +48,12 @@ func (s *HttpBootstrap) Start() error {
 
 }
 func (s *HttpBootstrap) Stop() error {
-	s.stopOnce.Do(func() {
-		s._http.StopAllServer()
-	})
+	//use context to stop
 	return nil
 
 }
 func (s *HttpBootstrap) killOther() error {
-	client, err := utils.NewClientBuilder().SetTimeout(1 * time.Second).Build()
+	client, err := utils.NewClientBuilder().SetTimeout(500 * time.Microsecond).Build()
 	if err != nil {
 		return err
 	}

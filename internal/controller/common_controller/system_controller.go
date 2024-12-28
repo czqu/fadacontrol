@@ -1,7 +1,9 @@
 package common_controller
 
 import (
+	"context"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/base/version"
@@ -12,19 +14,20 @@ import (
 	"fadacontrol/pkg/secure"
 	"fadacontrol/pkg/syncer"
 	"fadacontrol/pkg/sys"
+	"fadacontrol/pkg/utils"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
 )
 
 type SystemController struct {
-	_conf *conf.Conf
-	_co   *control_pc.ControlPCService
-	_up   *update_service.UpdateService
+	ctx context.Context
+	_co *control_pc.ControlPCService
+	_up *update_service.UpdateService
 }
 
-func NewSystemController(_co *control_pc.ControlPCService, _conf *conf.Conf, _up *update_service.UpdateService) *SystemController {
-	return &SystemController{_co: _co, _conf: _conf, _up: _up}
+func NewSystemController(_co *control_pc.ControlPCService, ctx context.Context, _up *update_service.UpdateService) *SystemController {
+	return &SystemController{_co: _co, ctx: ctx, _up: _up}
 }
 
 // @Summary Get Software Info
@@ -51,6 +54,7 @@ func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
 	}
 
 	i18nInfo := s._up.GetI18nInfo()
+	_conf := utils.GetValueFromContext(s.ctx, constants.ConfKey, conf.NewDefaultConf())
 	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c,
 		schema.SoftwareInfo{
 			Path:       path,
@@ -65,7 +69,7 @@ func (s *SystemController) GetSoftwareInfo(c *gin.Context) {
 			},
 			Language:      i18nInfo.Language,
 			Region:        i18nInfo.Region,
-			WorkDir:       s._conf.GetWorkdir(),
+			WorkDir:       _conf.GetWorkdir(),
 			LogLevel:      logger.GetLogLevel(),
 			LogPath:       logger.GetLogPath(),
 			AlgorithmInfo: supportAlgo,
@@ -118,11 +122,8 @@ func (s *SystemController) SetPowerSavingMode(c *gin.Context) {
 // @Failure 500 {object} schema.ResponseData "Internal Server Error"
 // @Router /power-saving/status [get]
 func (s *SystemController) GetPowerSavingModeStatus(c *gin.Context) {
-	ret, err := s._co.GetPowerSavingModeStatus()
-	if err != nil {
-		c.Error(err)
-		return
-	}
+	ret := true
+
 	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c, ret))
 }
 

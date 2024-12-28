@@ -7,6 +7,7 @@
 package application
 
 import (
+	"context"
 	"fadacontrol/internal/base/bootstrap"
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/data"
@@ -22,7 +23,8 @@ import (
 	"fadacontrol/internal/service/custom_command_service"
 	"fadacontrol/internal/service/discovery_service"
 	"fadacontrol/internal/service/http_service"
-	"fadacontrol/internal/service/internal_service"
+	"fadacontrol/internal/service/internal_master_service"
+	"fadacontrol/internal/service/internal_slave_service"
 	"fadacontrol/internal/service/jwt_service"
 	"fadacontrol/internal/service/remote_service"
 	"fadacontrol/internal/service/unlock"
@@ -32,15 +34,14 @@ import (
 
 // Injectors from wire.go:
 
-func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopServiceApp, error) {
-	loggerLogger := logger.NewLogger(_conf)
-	exitChanStruct := conf.NewExitChanStruct()
-	profilingBootstrap := bootstrap.NewProfilingBootstrap(_conf)
+func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (*DesktopServiceApp, error) {
+	profilingBootstrap := bootstrap.NewProfilingBootstrap(ctx)
+	internalMasterService := internal_master_service.NewInternalMasterService(ctx)
+	controlPCService := control_pc.NewControlPCService(internalMasterService)
 	gormDB, err := data.NewDB(db)
 	if err != nil {
 		return nil, err
 	}
-	controlPCService := control_pc.NewControlPCService(gormDB)
 	adapter, err := data.NewAdapterByDB(gormDB)
 	if err != nil {
 		return nil, err
@@ -49,60 +50,47 @@ func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*De
 	if err != nil {
 		return nil, err
 	}
-	dataInitBootstrap := bootstrap.NewDataInitBootstrap(exitChanStruct, adapter, enforcer, gormDB)
+	dataInitBootstrap := bootstrap.NewDataInitBootstrap(ctx, adapter, enforcer, gormDB)
 	credentialProviderService := credential_provider_service.NewCredentialProviderService(gormDB)
 	unLockService := unlock.NewUnLockService(credentialProviderService)
-	remoteService := remote_service.NewRemoteService(controlPCService, unLockService, _conf, gormDB)
-	remoteConnectBootstrap := bootstrap.NewRemoteConnectBootstrap(_conf, gormDB, remoteService)
-	internalMasterService := internal_service.NewInternalMasterService(controlPCService)
+	remoteService := remote_service.NewRemoteService(controlPCService, unLockService, ctx, gormDB)
+	remoteConnectBootstrap := bootstrap.NewRemoteConnectBootstrap(ctx, gormDB, remoteService)
 	dataData := data.NewData(gormDB)
-	discoverService := discovery_service.NewDiscoverService(gormDB)
+	loggerLogger := logger.NewLogger(ctx)
+	discoverService := discovery_service.NewDiscoverService(gormDB, ctx)
 	discoverBootstrap := bootstrap.NewDiscoverBootstrap(discoverService)
 	jwtService := jwt_service.NewJwtService(gormDB)
-	httpService := http_service.NewHttpService(gormDB, _conf)
-	debugController := common_controller.NewDebugController(internalMasterService, _conf)
+	httpService := http_service.NewHttpService(gormDB, ctx)
+	debugController := common_controller.NewDebugController(internalMasterService, ctx)
 	updateService := update_service.NewUpdateService(gormDB)
-	systemController := common_controller.NewSystemController(controlPCService, _conf, updateService)
+	systemController := common_controller.NewSystemController(controlPCService, ctx, updateService)
 	authService := auth_service.NewAuthService(enforcer)
 	jwtMiddleware := middleware.NewJwtMiddleware(jwtService, authService)
 	userService := user_service.NewUserService(gormDB)
 	authController := common_controller.NewAuthController(userService, jwtService)
-	customCommandService := custom_command_service.NewCustomCommandService(_conf)
-	customCommandController := common_controller.NewCustomCommandController(_conf, customCommandService)
+	customCommandService := custom_command_service.NewCustomCommandService(ctx)
+	customCommandController := common_controller.NewCustomCommandController(ctx, customCommandService)
 	unlockController := common_controller.NewUnlockController(unLockService)
-	controlPCController := common_controller.NewControlPCController(_conf, controlPCService)
+	controlPCController := common_controller.NewControlPCController(ctx, controlPCService)
 	commonRouter := common_router.NewCommonRouter(debugController, systemController, jwtMiddleware, authController, customCommandController, unlockController, controlPCController)
-	httpController := admin_controller.NewHttpController(exitChanStruct, gormDB, httpService)
+	httpController := admin_controller.NewHttpController(ctx, gormDB, httpService)
 	remoteController := admin_controller.NewRemoteController(gormDB, remoteService)
 	discoverController := admin_controller.NewDiscoverController(discoverService)
 	adminRouter := admin_router.NewAdminRouter(debugController, httpController, systemController, jwtMiddleware, remoteController, unlockController, controlPCController, discoverController, authController)
-	httpBootstrap := bootstrap.NewHttpBootstrap(jwtService, _conf, httpService, commonRouter, adminRouter)
-	desktopMasterServiceBootstrap := bootstrap.NewDesktopMasterServiceBootstrap(exitChanStruct, profilingBootstrap, controlPCService, dataInitBootstrap, credentialProviderService, remoteConnectBootstrap, internalMasterService, _conf, dataData, loggerLogger, discoverBootstrap, httpBootstrap)
-	desktopServiceApp := NewDesktopServiceApp(loggerLogger, _conf, db, desktopMasterServiceBootstrap)
+	httpBootstrap := bootstrap.NewHttpBootstrap(jwtService, ctx, httpService, commonRouter, adminRouter)
+	desktopMasterServiceBootstrap := bootstrap.NewDesktopMasterServiceBootstrap(profilingBootstrap, controlPCService, dataInitBootstrap, credentialProviderService, remoteConnectBootstrap, internalMasterService, ctx, dataData, loggerLogger, discoverBootstrap, httpBootstrap)
+	desktopServiceApp := NewDesktopServiceApp(ctx, db, desktopMasterServiceBootstrap)
 	return desktopServiceApp, nil
 }
 
-func initDesktopDaemonApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopSlaveServiceApp, error) {
-	loggerLogger := logger.NewLogger(_conf)
-	exitChanStruct := conf.NewExitChanStruct()
-	profilingBootstrap := bootstrap.NewProfilingBootstrap(_conf)
-	gormDB, err := data.NewDB(db)
-	if err != nil {
-		return nil, err
-	}
-	controlPCService := control_pc.NewControlPCService(gormDB)
-	adapter, err := data.NewAdapterByDB(gormDB)
-	if err != nil {
-		return nil, err
-	}
-	enforcer, err := data.NewEnforcer(adapter)
-	if err != nil {
-		return nil, err
-	}
-	dataInitBootstrap := bootstrap.NewDataInitBootstrap(exitChanStruct, adapter, enforcer, gormDB)
-	customCommandService := custom_command_service.NewCustomCommandService(_conf)
-	internalSlaveService := internal_service.NewInternalSlaveService(exitChanStruct, customCommandService, controlPCService, _conf)
-	desktopSlaveServiceBootstrap := bootstrap.NewDesktopSlaveServiceBootstrap(exitChanStruct, profilingBootstrap, controlPCService, dataInitBootstrap, _conf, loggerLogger, internalSlaveService)
-	desktopSlaveServiceApp := NewDesktopSlaveServiceApp(loggerLogger, _conf, db, desktopSlaveServiceBootstrap)
+func initDesktopSlaveApplication(ctx context.Context) (*DesktopSlaveServiceApp, error) {
+	loggerLogger := logger.NewLogger(ctx)
+	profilingBootstrap := bootstrap.NewProfilingBootstrap(ctx)
+	internalMasterService := internal_master_service.NewInternalMasterService(ctx)
+	controlPCService := control_pc.NewControlPCService(internalMasterService)
+	customCommandService := custom_command_service.NewCustomCommandService(ctx)
+	internalSlaveService := internal_slave_service.NewInternalSlaveService(customCommandService, controlPCService, ctx)
+	desktopSlaveServiceBootstrap := bootstrap.NewDesktopSlaveServiceBootstrap(ctx, profilingBootstrap, controlPCService, loggerLogger, internalSlaveService)
+	desktopSlaveServiceApp := NewDesktopSlaveServiceApp(loggerLogger, ctx, desktopSlaveServiceBootstrap)
 	return desktopSlaveServiceApp, nil
 }

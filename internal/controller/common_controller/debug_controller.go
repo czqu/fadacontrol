@@ -1,12 +1,14 @@
 package common_controller
 
 import (
-	"fadacontrol/internal/base/conf"
+	"context"
+
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/controller"
-	"fadacontrol/internal/service/internal_service"
+	"fadacontrol/internal/service/internal_master_service"
 	"fadacontrol/pkg/goroutine"
+
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 	"net/http"
@@ -16,12 +18,12 @@ import (
 )
 
 type DebugController struct {
-	_im   *internal_service.InternalMasterService
-	_conf *conf.Conf
+	_im *internal_master_service.InternalMasterService
+	ctx context.Context
 }
 
-func NewDebugController(im *internal_service.InternalMasterService, _conf *conf.Conf) *DebugController {
-	return &DebugController{_im: im, _conf: _conf}
+func NewDebugController(im *internal_master_service.InternalMasterService, ctx context.Context) *DebugController {
+	return &DebugController{_im: im, ctx: ctx}
 }
 
 var (
@@ -86,11 +88,8 @@ func (d *DebugController) Ping(c *gin.Context) {
 
 	}
 	if query == "full_status" {
-		if d._conf.StartMode == conf.ServiceMode && !d._im.HasClient() {
-			c.Error(exception.ErrSystemServiceNotFullyStarted)
-			return
-		}
-
+		c.JSON(http.StatusOK, controller.GetGinSuccess(c))
+		return
 	}
 	if query == "pairing" {
 

@@ -2,11 +2,11 @@ package remote_service
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
 	"errors"
-	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/entity"
@@ -29,7 +29,7 @@ import (
 type RemoteService struct {
 	co          *control_pc.ControlPCService
 	un          *unlock.UnLockService
-	_conf       *conf.Conf
+	ctx         context.Context
 	db          *gorm.DB
 	config      entity.RemoteConnectConfig
 	Client      RMTT.Client
@@ -41,8 +41,8 @@ type RemoteService struct {
 
 const DefaultGenKeyLength = 48
 
-func NewRemoteService(co *control_pc.ControlPCService, un *unlock.UnLockService, _conf *conf.Conf, db *gorm.DB) *RemoteService {
-	return &RemoteService{co: co, un: un, _conf: _conf, db: db, config: entity.RemoteConnectConfig{}}
+func NewRemoteService(co *control_pc.ControlPCService, un *unlock.UnLockService, ctx context.Context, db *gorm.DB) *RemoteService {
+	return &RemoteService{co: co, un: un, ctx: ctx, db: db, config: entity.RemoteConnectConfig{}}
 }
 
 const (

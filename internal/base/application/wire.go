@@ -4,6 +4,7 @@
 package application
 
 import (
+	"context"
 	"fadacontrol/internal/base/bootstrap"
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/data"
@@ -19,7 +20,8 @@ import (
 	"fadacontrol/internal/service/custom_command_service"
 	"fadacontrol/internal/service/discovery_service"
 	"fadacontrol/internal/service/http_service"
-	"fadacontrol/internal/service/internal_service"
+	"fadacontrol/internal/service/internal_master_service"
+	"fadacontrol/internal/service/internal_slave_service"
 	"fadacontrol/internal/service/jwt_service"
 	"fadacontrol/internal/service/remote_service"
 	"fadacontrol/internal/service/unlock"
@@ -28,23 +30,23 @@ import (
 	"github.com/google/wire"
 )
 
-func initDesktopServiceApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopServiceApp, error) {
+func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (*DesktopServiceApp, error) {
 	wire.Build(NewDesktopServiceApp, bootstrap.NewHttpBootstrap, bootstrap.NewDiscoverBootstrap,
 		logger.NewLogger, unlock.NewUnLockService, data.NewDB, common_router.NewCommonRouter, admin_router.NewAdminRouter, bootstrap.NewDesktopMasterServiceBootstrap,
 		control_pc.NewControlPCService, data.NewData, common_controller.NewControlPCController, common_controller.NewUnlockController,
-		common_controller.NewCustomCommandController, internal_service.NewInternalMasterService,
+		common_controller.NewCustomCommandController, internal_master_service.NewInternalMasterService,
 		custom_command_service.NewCustomCommandService, remote_service.NewRemoteService,
 		admin_controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, admin_controller.NewDiscoverController, credential_provider_service.NewCredentialProviderService,
 		bootstrap.NewDataInitBootstrap, data.NewAdapterByDB, data.NewEnforcer, common_controller.NewAuthController,
 		middleware.NewJwtMiddleware, jwt_service.NewJwtService, auth_service.NewAuthService, user_service.NewUserService, discovery_service.NewDiscoverService,
-		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap, update_service.NewUpdateService, conf.NewExitChanStruct, common_controller.NewDebugController,
+		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap, update_service.NewUpdateService, common_controller.NewDebugController,
 	)
-	return &DesktopServiceApp{_conf: _conf, db: db}, nil
+	return &DesktopServiceApp{ctx: ctx, db: db}, nil
 }
-func initDesktopDaemonApplication(_conf *conf.Conf, db *conf.DatabaseConf) (*DesktopSlaveServiceApp, error) {
-	wire.Build(NewDesktopSlaveServiceApp, bootstrap.NewDesktopSlaveServiceBootstrap, internal_service.NewInternalSlaveService,
-		custom_command_service.NewCustomCommandService, logger.NewLogger, bootstrap.NewDataInitBootstrap, data.NewDB, control_pc.NewControlPCService, bootstrap.NewProfilingBootstrap, conf.NewExitChanStruct,
-		data.NewAdapterByDB, data.NewEnforcer)
+func initDesktopSlaveApplication(ctx context.Context) (*DesktopSlaveServiceApp, error) {
+	wire.Build(NewDesktopSlaveServiceApp, bootstrap.NewDesktopSlaveServiceBootstrap, internal_slave_service.NewInternalSlaveService,
+		custom_command_service.NewCustomCommandService, logger.NewLogger, control_pc.NewControlPCService, bootstrap.NewProfilingBootstrap, internal_master_service.NewInternalMasterService,
+	)
 
-	return &DesktopSlaveServiceApp{}, nil
+	return &DesktopSlaveServiceApp{ctx: ctx}, nil
 }

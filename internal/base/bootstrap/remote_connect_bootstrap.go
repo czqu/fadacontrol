@@ -1,7 +1,7 @@
 package bootstrap
 
 import (
-	"fadacontrol/internal/base/conf"
+	"context"
 	"fadacontrol/internal/service/remote_service"
 	"fadacontrol/pkg/goroutine"
 	"gorm.io/gorm"
@@ -10,14 +10,14 @@ import (
 var RemoteConnectBootstrapInstance *RemoteConnectBootstrap
 
 type RemoteConnectBootstrap struct {
-	_conf *conf.Conf
+	ctx context.Context
 
 	db *gorm.DB
 	re *remote_service.RemoteService
 }
 
-func NewRemoteConnectBootstrap(_conf *conf.Conf, db *gorm.DB, re *remote_service.RemoteService) *RemoteConnectBootstrap {
-	RemoteConnectBootstrapInstance = &RemoteConnectBootstrap{re: re, _conf: _conf, db: db}
+func NewRemoteConnectBootstrap(ctx context.Context, db *gorm.DB, re *remote_service.RemoteService) *RemoteConnectBootstrap {
+	RemoteConnectBootstrapInstance = &RemoteConnectBootstrap{re: re, ctx: ctx, db: db}
 	return RemoteConnectBootstrapInstance
 }
 func (r *RemoteConnectBootstrap) Start() error {

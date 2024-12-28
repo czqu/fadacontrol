@@ -3,11 +3,12 @@ package bootstrap
 import (
 	"context"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/data"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/credential_provider_service"
-	"fadacontrol/internal/service/internal_service"
+	"fadacontrol/internal/service/internal_master_service"
 	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/utils"
 	"os"
@@ -18,29 +19,42 @@ import (
 )
 
 type DesktopMasterServiceBootstrap struct {
-	_db      *data.Data
-	discover *DiscoverBootstrap
-	_http    *HttpBootstrap
-	lo       *logger.Logger
-	_conf    *conf.Conf
-	master   *internal_service.InternalMasterService
-
-	done        chan interface{}
-	rcb         *RemoteConnectBootstrap
-	cp          *credential_provider_service.CredentialProviderService
-	di          *DataInitBootstrap
-	_co         *control_pc.ControlPCService
-	pf          *ProfilingBootstrap
-	_exitSignal *conf.ExitChanStruct
-	startOnce   sync.Once
-	stopOnce    sync.Once
+	_db       *data.Data
+	discover  *DiscoverBootstrap
+	_http     *HttpBootstrap
+	lo        *logger.Logger
+	ctx       context.Context
+	master    *internal_master_service.InternalMasterService
+	rcb       *RemoteConnectBootstrap
+	cp        *credential_provider_service.CredentialProviderService
+	di        *DataInitBootstrap
+	_co       *control_pc.ControlPCService
+	pf        *ProfilingBootstrap
+	startOnce sync.Once
+	stopOnce  sync.Once
+	cancel    context.CancelFunc
 }
 
-func NewDesktopMasterServiceBootstrap(_exitSignal *conf.ExitChanStruct, pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, master *internal_service.InternalMasterService, _conf *conf.Conf, _db *data.Data, lo *logger.Logger, d *DiscoverBootstrap, http_ *HttpBootstrap) *DesktopMasterServiceBootstrap {
-	return &DesktopMasterServiceBootstrap{_exitSignal: _exitSignal, pf: pf, _co: _co, di: di, cp: cp, rcb: rcb, done: make(chan interface{}), master: master, _conf: _conf, _db: _db, lo: lo, discover: d, _http: http_}
+func NewDesktopMasterServiceBootstrap(pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, master *internal_master_service.InternalMasterService, _context context.Context, _db *data.Data, lo *logger.Logger, d *DiscoverBootstrap, http_ *HttpBootstrap) *DesktopMasterServiceBootstrap {
+	return &DesktopMasterServiceBootstrap{pf: pf, _co: _co, di: di, cp: cp, rcb: rcb, master: master, ctx: _context, _db: _db, lo: lo, discover: d, _http: http_}
 }
 func (r *DesktopMasterServiceBootstrap) Start() {
 	r.startOnce.Do(func() {
+		cancelFunc := r.ctx.Value(constants.CancelFuncKey)
+		if cancelFunc == nil {
+			if _, ok := cancelFunc.(context.CancelFunc); !ok {
+				logger.Error("cancel func not found")
+				return
+			}
+
+		}
+		r.cancel = cancelFunc.(context.CancelFunc)
+
+		_conf := utils.GetValueFromContext(r.ctx, constants.ConfKey, conf.NewDefaultConf())
+		if _conf.StartMode == conf.UnknownMode {
+			logger.Error("unknown start mode")
+			return
+		}
 		logger.Info("starting app")
 		goroutine.RecoverGO(func() {
 			r.pf.Start()
@@ -50,7 +64,8 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 		if !conf.ResetPassword {
 			r._co.RunPowerSavingMode()
 			r._http.Start()
-			if r._conf.StartMode == conf.ServiceMode {
+
+			if _conf.StartMode == conf.ServiceMode {
 				logger.Info("service mode")
 				r.master.Start()
 			}
@@ -68,6 +83,7 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 				r.rcb.Restart()
 				r.discover.Restart()
 			})
+
 		}
 
 		goroutine.RecoverGO(
@@ -81,14 +97,13 @@ func (r *DesktopMasterServiceBootstrap) Start() {
 				logger.Debug("stopping...")
 				r.Stop()
 			})
-		goroutine.RecoverGO(
-			func() {
-				<-r._exitSignal.ExitChan
-				logger.Debug("stopping...")
-				r.Stop()
-			})
 
-		r.Wait()
+		select {
+		case <-r.ctx.Done():
+			logger.Debug("stopping...")
+			r.Stop()
+		}
+
 	})
 
 }
@@ -98,11 +113,11 @@ func (r *DesktopMasterServiceBootstrap) Stop() {
 			defer func() {
 				logger.Info("app stopped")
 			}()
+			r.cancel()
 			ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 			defer cancel()
 			logger.Debug("stopping root bootstrap")
 			logger.Sync()
-			stopCh := make(chan struct{}, 1)
 			goroutine.RecoverGO(
 				func() {
 					r.pf.Stop()
@@ -116,19 +131,12 @@ func (r *DesktopMasterServiceBootstrap) Stop() {
 
 				})
 			select {
-			case <-stopCh:
 
 			case <-ctx.Done():
+				return
 
 			}
 
-			r.done <- struct{}{}
 		})
 
-}
-func (r *DesktopMasterServiceBootstrap) Wait() {
-	select {
-	case <-r.done:
-		return
-	}
 }

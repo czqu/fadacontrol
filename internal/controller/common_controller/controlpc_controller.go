@@ -1,7 +1,9 @@
 package common_controller
 
 import (
+	"context"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/controller"
 	"fadacontrol/internal/service/control_pc"
@@ -16,12 +18,12 @@ import (
 )
 
 type ControlPCController struct {
-	p     *control_pc.ControlPCService
-	_conf *conf.Conf
+	p   *control_pc.ControlPCService
+	ctx context.Context
 }
 
-func NewControlPCController(_conf *conf.Conf, p *control_pc.ControlPCService) *ControlPCController {
-	return &ControlPCController{_conf: _conf, p: p}
+func NewControlPCController(ctx context.Context, p *control_pc.ControlPCService) *ControlPCController {
+	return &ControlPCController{ctx: ctx, p: p}
 }
 
 // ControlPC Control computer interface
@@ -70,7 +72,8 @@ func (o *ControlPCController) ControlPC(c *gin.Context) {
 		})
 
 	case "lock":
-		if o._conf.StartMode == conf.ServiceMode {
+		_conf := utils.GetValueFromContext(o.ctx, constants.ConfKey, conf.NewDefaultConf())
+		if _conf.StartMode == conf.ServiceMode {
 			ret = o.p.LockWindows(true)
 		} else {
 			ret = o.p.LockWindows(false)

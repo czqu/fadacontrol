@@ -2,11 +2,12 @@ package http_service
 
 import (
 	"crypto/tls"
-	"errors"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/exception"
 	"fadacontrol/internal/base/logger"
 	"fadacontrol/pkg/goroutine"
+	"fadacontrol/pkg/utils"
 	"golang.org/x/net/context"
 	"time"
 
@@ -23,16 +24,15 @@ import (
 )
 
 type HttpService struct {
-	signalChanMap        map[string]chan interface{}
 	_db                  *gorm.DB
-	_conf                *conf.Conf
+	ctx                  context.Context
 	adminRouter          router.FadaControlRouter
 	commonRouter         router.FadaControlRouter
 	restartAllServerFunc func() error
 }
 
-func NewHttpService(_db *gorm.DB, _conf *conf.Conf) *HttpService {
-	return &HttpService{_db: _db, _conf: _conf, signalChanMap: make(map[string]chan interface{})}
+func NewHttpService(_db *gorm.DB, ctx context.Context) *HttpService {
+	return &HttpService{_db: _db, ctx: ctx}
 }
 
 const HttpServiceApi = "HTTP_SERVICE_API"
@@ -157,7 +157,8 @@ func (s *HttpService) PatchHttpConfig(data map[string]interface{}, serviceName s
 func (s *HttpService) StartServer(r router.FadaControlRouter, serviceName string) error {
 	enableQuic := false
 
-	if s._conf.Debug {
+	_conf := utils.GetValueFromContext(s.ctx, constants.ConfKey, conf.NewDefaultConf())
+	if _conf.Debug {
 		gin.SetMode(gin.DebugMode)
 	} else {
 		gin.SetMode(gin.ReleaseMode)
@@ -204,10 +205,9 @@ func (s *HttpService) StartServer(r router.FadaControlRouter, serviceName string
 		}
 
 		_router := r.GetRouter()
-		sign := make(chan interface{})
-		s.signalChanMap[config.ServiceName] = sign
+
 		goroutine.RecoverGO(func() {
-			startHttpServer(config.Host, config.Port, cert, _router, enableQuic, sign)
+			startHttpServer(config.Host, config.Port, cert, _router, enableQuic, s.ctx)
 		})
 		return nil
 	}
@@ -215,7 +215,7 @@ func (s *HttpService) StartServer(r router.FadaControlRouter, serviceName string
 	return nil
 }
 
-func startHttpServer(host string, port int, cert tls.Certificate, router *gin.Engine, enableEnableHttp3 bool, sign chan interface{}) {
+func startHttpServer(host string, port int, cert tls.Certificate, router *gin.Engine, enableEnableHttp3 bool, ctx context.Context) {
 	var srv *http.Server
 	var http3Server *http3.Server
 	tlsFlag := false
@@ -265,12 +265,13 @@ func startHttpServer(host string, port int, cert tls.Certificate, router *gin.En
 
 	}
 	goroutine.RecoverGO(func() {
-		<-sign
-		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
+		<-ctx.Done()
+
+		_ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
 		defer cancel()
-		if err := srv.Shutdown(ctx); err != nil {
+		if err := srv.Shutdown(_ctx); err != nil {
 			logger.Errorf("server Shutdown: %s", err)
-			close(sign)
+
 		}
 		if http3Server == nil {
 			return
@@ -293,22 +294,4 @@ func startHttpServer(host string, port int, cert tls.Certificate, router *gin.En
 		logger.Warnf("server errors: %s", err)
 	}
 
-}
-func (s *HttpService) StopServer(serviceName string) error {
-
-	if sign, ok := s.signalChanMap[serviceName]; ok {
-		sign <- 0
-		return nil
-	}
-
-	return errors.New("not found http service,name: " + serviceName)
-}
-
-func (s *HttpService) StopAllServer() error {
-
-	for name, sign := range s.signalChanMap {
-		logger.Info("stopping http service: " + name)
-		sign <- 0
-	}
-	return nil
 }

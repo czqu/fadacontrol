@@ -1,8 +1,11 @@
 package bootstrap
 
 import (
+	"context"
 	"fadacontrol/internal/base/conf"
+	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/pkg/utils"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -12,22 +15,24 @@ import (
 )
 
 type ProfilingBootstrap struct {
-	conf      *conf.Conf
-	done      chan struct{}
+	ctx       context.Context
 	startOnce sync.Once
 	stopOnce  sync.Once
+	enable    bool
 }
 
-func NewProfilingBootstrap(conf *conf.Conf) *ProfilingBootstrap {
-	return &ProfilingBootstrap{conf: conf, done: make(chan struct{})}
+func NewProfilingBootstrap(ctx context.Context) *ProfilingBootstrap {
+	return &ProfilingBootstrap{ctx: ctx}
 }
 func (p *ProfilingBootstrap) Start() error {
 	p.startOnce.Do(func() {
-		if p.conf.EnableProfiling == false {
+		_conf := utils.GetValueFromContext(p.ctx, constants.ConfKey, conf.NewDefaultConf())
+		p.enable = _conf.EnableProfiling
+		if _conf.EnableProfiling == false {
 			return
 		}
 		logger.Info("start profiling")
-		profPath := filepath.Join(p.conf.GetWorkdir(), "prof")
+		profPath := filepath.Join(_conf.GetWorkdir(), "prof")
 		err := os.MkdirAll(profPath, os.ModePerm)
 		if err != nil {
 			logger.Error("create prof dir error: %v", err)
@@ -54,20 +59,18 @@ func (p *ProfilingBootstrap) Start() error {
 		}
 		pprof.WriteHeapProfile(fm)
 		defer fm.Close()
-		<-p.done
-		runtime.GC()
+		select {
+		case <-p.ctx.Done():
+			logger.Info("stop profiling")
+			runtime.GC()
+			return
+		}
+
 	})
 
 	return nil
 }
 func (p *ProfilingBootstrap) Stop() error {
-	p.stopOnce.Do(func() {
-		if p.conf.EnableProfiling == false {
-			return
-		}
-		p.done <- struct{}{}
-		logger.Info("stop profiling")
-	})
 
 	return nil
 }
