@@ -38,7 +38,7 @@ var rootCmd = &cobra.Command{
 			return
 		}
 
-		if commonMode {
+		if commonMode || rootPassword != "" {
 			DesktopServiceMain(debugMode, conf.CommonMode, workDir)
 			return
 		}
