@@ -373,49 +373,62 @@ func Errorf(format string, v ...interface{}) {
 
 }
 
+type RmttLogger interface {
+	Println(v ...interface{})
+	Printf(format string, v ...interface{})
+}
+type DebugLogger struct {
+}
+
+func (l *DebugLogger) Println(v ...interface{}) {
+	logger.Debug(v...)
+}
+func (l *DebugLogger) Printf(format string, v ...interface{}) {
+	logger.Debugf(format, v...)
+}
+
+type InfoLogger struct {
+}
+
+func (l *InfoLogger) Println(v ...interface{}) {
+	logger.Info(v...)
+}
+func (l *InfoLogger) Printf(format string, v ...interface{}) {
+	logger.Infof(format, v...)
+}
+
+type WarnLogger struct {
+}
+
+func (l *WarnLogger) Println(v ...interface{}) {
+	logger.Warn(v...)
+}
+func (l *WarnLogger) Printf(format string, v ...interface{}) {
+	logger.Warnf(format, v...)
+}
+
+type ErrorLogger struct {
+}
+
+func (l *ErrorLogger) Println(v ...interface{}) {
+	logger.Error(v...)
+}
+func (l *ErrorLogger) Printf(format string, v ...interface{}) {
+	logger.Errorf(format, v...)
+}
+func GetDebugLogger() RmttLogger {
+	return &DebugLogger{}
+}
+func GetInfoLogger() RmttLogger {
+	return &InfoLogger{}
+}
+func GetWarnLogger() RmttLogger {
+	return &WarnLogger{}
+}
+func GetErrorLogger() RmttLogger {
+	return &ErrorLogger{}
+}
+
 func GetLogger() *Logger {
 	return logger
-}
-func (l *Logger) Println(v ...interface{}) {
-	switch l.level {
-	case _log.DebugLevel:
-		l.Debug(v...)
-		break
-	case _log.InfoLevel:
-		l.Info(v...)
-		break
-	case _log.WarnLevel:
-		l.Warn(v...)
-		break
-	case _log.ErrorLevel:
-		l.Error(v...)
-		break
-	case _log.FatalLevel:
-		l.Fatal(v...)
-	default:
-		fmt.Println(v...)
-		break
-
-	}
-}
-func (l *Logger) Printf(format string, v ...interface{}) {
-	switch l.level {
-	case _log.DebugLevel:
-		l.Debugf(format, v...)
-		break
-	case _log.InfoLevel:
-		l.Infof(format, v...)
-		break
-	case _log.WarnLevel:
-		l.Warnf(format, v...)
-		break
-	case _log.ErrorLevel:
-		l.Errorf(format, v...)
-		break
-	case _log.FatalLevel:
-		l.Fatalf(format, v...)
-	default:
-		fmt.Printf(format, v...)
-
-	}
 }

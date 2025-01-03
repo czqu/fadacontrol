@@ -797,7 +797,14 @@ func (r *RemoteService) UpdateRemoteApiServerConfig(id int, request *remote_sche
 		logger.Errorf("failed to find database: %v", err)
 		return nil, fmt.Errorf("failed to find database: %v", err)
 	}
+	if server.ApiServerUrl != request.ApiServerUrl || server.AccessKey != request.AccessKey || server.AccessSecret != request.AccessSecret {
+
+		server.ClientId = ""
+		server.Token = ""
+	}
 	if request.ApiServerUrl != "" {
+		request.ApiServerUrl = strings.TrimSpace(request.ApiServerUrl)
+		request.ApiServerUrl = strings.TrimSuffix(request.ApiServerUrl, "/")
 		server.ApiServerUrl = request.ApiServerUrl
 	}
 	if request.AccessKey != "" {
@@ -828,6 +835,7 @@ func (r *RemoteService) UpdateRemoteApiServerConfig(id int, request *remote_sche
 		AccessKey:            server.AccessKey,
 		AccessSecret:         server.AccessSecret,
 		EnableSignatureCheck: server.EnableSignatureCheck,
+		ClientId:             server.ClientId,
 	}, nil
 
 }
@@ -1006,10 +1014,10 @@ func (r *RemoteService) StartService() error {
 		logger.Errorf("failed to load msg servers: %v", err)
 		return err
 	}
-	RMTT.DEBUG = logger.GetLogger()
-	RMTT.ERROR = logger.GetLogger()
-	RMTT.INFO = logger.GetLogger()
-	RMTT.WARN = logger.GetLogger()
+	RMTT.DEBUG = logger.GetDebugLogger()
+	RMTT.ERROR = logger.GetErrorLogger()
+	RMTT.INFO = logger.GetInfoLogger()
+	RMTT.WARN = logger.GetWarnLogger()
 
 	opts := RMTT.NewClientOptions()
 	for _, server := range r.msgServers {
