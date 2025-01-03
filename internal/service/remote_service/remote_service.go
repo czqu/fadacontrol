@@ -229,7 +229,7 @@ func (r *RemoteService) ProtoHandler(data, sessionId []byte) {
 				//todo
 				logger.Warn(err)
 			}
-			r.co.LockWindows(false)
+			r.co.LockWindows(true)
 		}
 	case rmtt_msg.RmttMsgType_ShutdownMsgType:
 		{
