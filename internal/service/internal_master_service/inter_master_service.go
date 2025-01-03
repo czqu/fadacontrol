@@ -15,6 +15,7 @@ import (
 	"github.com/google/uuid"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/keepalive"
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/anypb"
@@ -49,7 +50,7 @@ func (s *InternalMasterService) Start() error {
 
 	s.slaveWorkDir = filepath.Dir(path)
 	s.slavePath = path
-	logger.Info("slave program path", s.slavePath)
+	logger.Info("slave program path: ", s.slavePath)
 	logger.Sync()
 	s.startOnce.Do(func() {
 
@@ -105,6 +106,12 @@ func (r *rpcClient) Close() {
 	r.statusLock.Lock()
 	defer r.statusLock.Unlock()
 	if r.status != Disconnected {
+		activeRpcClientMapLock.Lock()
+		delete(activeRpcClientMap, r.Id)
+		activeRpcClientMapLock.Unlock()
+		usernameClientMapLock.Lock()
+		delete(usernameClientMap, r.Username)
+		usernameClientMapLock.Unlock()
 		select {
 		case r.SendChan <- &schema.InternalCommand{
 			CommandType: schema.ExitCommandType,
@@ -112,8 +119,9 @@ func (r *rpcClient) Close() {
 		}:
 			logger.Info("send exit command")
 		default:
-			logger.Warn("Command channel is full")
+			logger.Info("Command channel is full")
 		}
+		logger.Warn("close rpc client")
 		close(r.SendChan)
 	}
 
@@ -229,9 +237,6 @@ func (s *internalRpcServer) RegisterInternalCommand(stream internal_command.Exec
 	client.Connect()
 	defer func() {
 		client.Close()
-		activeRpcClientMapLock.Lock()
-		delete(activeRpcClientMap, clientId)
-		activeRpcClientMapLock.Unlock()
 
 	}()
 	if !ok {
@@ -246,6 +251,7 @@ func (s *internalRpcServer) RegisterInternalCommand(stream internal_command.Exec
 		defer func() {
 			logger.Debug("stop sending internal command thread")
 			cancel()
+			client.Close()
 		}()
 		for ic := range client.SendChan {
 			switch ic.CommandType {
@@ -312,6 +318,18 @@ func (s *InternalMasterService) StartServer() error {
 	grpcServer := grpc.NewServer(
 		grpc.UnaryInterceptor(goroutine.UnaryServerInterceptor),
 		grpc.StreamInterceptor(goroutine.StreamServerInterceptor),
+		grpc.KeepaliveParams(keepalive.ServerParameters{
+			MaxConnectionIdle:     0,
+			MaxConnectionAge:      0,
+			MaxConnectionAgeGrace: 0,
+			Time:                  1 * time.Minute,
+			Timeout:               20 * time.Second,
+		}),
+		grpc.KeepaliveEnforcementPolicy(
+			keepalive.EnforcementPolicy{
+				MinTime:             5 * time.Second,
+				PermitWithoutStream: true,
+			}),
 	)
 
 	_conf := utils.GetValueFromContext(s.ctx, constants.ConfKey, conf.NewDefaultConf())
