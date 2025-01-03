@@ -136,8 +136,8 @@ func networkMonitorCallback(callerContext, row, notificationType uintptr) uintpt
 	return 0
 }
 func GetLogReporterOPtions(region version.ProductRegion) *_log.SentryOptions {
-	enableReport, _ := GetRemoteConfig("log_report_enable", region, true)
-	reportLevel, _ := GetRemoteConfig("log_report_min_level", region, "info")
+	enableReport, _ := GetRemoteConfig("log_report_enable", region, false)
+	reportLevel, _ := GetRemoteConfig("log_report_min_level", region, "fatal")
 	profilesSampleRate, _ := GetRemoteConfig("log_report_sentry_profiles_sample_rate", region, 0.2)
 	tracesSampleRate, _ := GetRemoteConfig("log_report_sentry_traces_sample_rate", region, 0.2)
 

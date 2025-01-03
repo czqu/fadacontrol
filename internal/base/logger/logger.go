@@ -81,6 +81,9 @@ func InitLogReporter(options *_log.SentryOptions) {
 	if logger == nil {
 		return
 	}
+	if options == nil || options.Enable == false {
+		return
+	}
 	logger.LogReporter = _log.NewSentryReporter(options)
 	logger.reportLevel = str2Loglevel(strings.ToLower(options.Level))
 
@@ -190,7 +193,9 @@ func (l *Logger) ReportFatalMsg(msg string) {
 	if l.LogReporter == nil {
 		l.LogReporter = _log.NewSentryReporter(_log.NewDefaultSentryOptions())
 	}
-	(l.LogReporter).ReportEvent(msg, _log.FatalLevel)
+	if l.LogReporter != nil {
+		(l.LogReporter).ReportEvent(msg, _log.FatalLevel)
+	}
 
 }
 func (l *Logger) ReportException(err error) {
