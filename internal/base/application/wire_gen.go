@@ -18,6 +18,7 @@ import (
 	"fadacontrol/internal/router/admin_router"
 	"fadacontrol/internal/router/common_router"
 	"fadacontrol/internal/service/auth_service"
+	"fadacontrol/internal/service/bluetooth_service"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/credential_provider_service"
 	"fadacontrol/internal/service/custom_command_service"
@@ -35,13 +36,16 @@ import (
 // Injectors from wire.go:
 
 func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (*DesktopServiceApp, error) {
-	profilingBootstrap := bootstrap.NewProfilingBootstrap(ctx)
-	internalMasterService := internal_master_service.NewInternalMasterService(ctx)
-	controlPCService := control_pc.NewControlPCService(internalMasterService)
 	gormDB, err := data.NewDB(db)
 	if err != nil {
 		return nil, err
 	}
+	internalMasterService := internal_master_service.NewInternalMasterService(ctx)
+	controlPCService := control_pc.NewControlPCService(internalMasterService)
+	credentialProviderService := credential_provider_service.NewCredentialProviderService(gormDB)
+	unLockService := unlock.NewUnLockService(credentialProviderService)
+	bluetoothService := bluetooth_service.NewBluetoothService(ctx, gormDB, controlPCService, unLockService)
+	profilingBootstrap := bootstrap.NewProfilingBootstrap(ctx)
 	adapter, err := data.NewAdapterByDB(gormDB)
 	if err != nil {
 		return nil, err
@@ -51,8 +55,6 @@ func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (
 		return nil, err
 	}
 	dataInitBootstrap := bootstrap.NewDataInitBootstrap(ctx, adapter, enforcer, gormDB)
-	credentialProviderService := credential_provider_service.NewCredentialProviderService(gormDB)
-	unLockService := unlock.NewUnLockService(credentialProviderService)
 	remoteService := remote_service.NewRemoteService(controlPCService, unLockService, ctx, gormDB)
 	remoteConnectBootstrap := bootstrap.NewRemoteConnectBootstrap(ctx, gormDB, remoteService)
 	dataData := data.NewData(gormDB)
@@ -78,7 +80,7 @@ func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (
 	discoverController := admin_controller.NewDiscoverController(discoverService)
 	adminRouter := admin_router.NewAdminRouter(debugController, httpController, systemController, jwtMiddleware, remoteController, unlockController, controlPCController, discoverController, authController)
 	httpBootstrap := bootstrap.NewHttpBootstrap(jwtService, ctx, httpService, commonRouter, adminRouter)
-	desktopMasterServiceBootstrap := bootstrap.NewDesktopMasterServiceBootstrap(profilingBootstrap, controlPCService, dataInitBootstrap, credentialProviderService, remoteConnectBootstrap, internalMasterService, ctx, dataData, loggerLogger, discoverBootstrap, httpBootstrap)
+	desktopMasterServiceBootstrap := bootstrap.NewDesktopMasterServiceBootstrap(bluetoothService, profilingBootstrap, controlPCService, dataInitBootstrap, credentialProviderService, remoteConnectBootstrap, internalMasterService, ctx, dataData, loggerLogger, discoverBootstrap, httpBootstrap)
 	desktopServiceApp := NewDesktopServiceApp(ctx, db, desktopMasterServiceBootstrap)
 	return desktopServiceApp, nil
 }

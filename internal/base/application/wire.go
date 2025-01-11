@@ -15,6 +15,7 @@ import (
 	"fadacontrol/internal/router/admin_router"
 	"fadacontrol/internal/router/common_router"
 	"fadacontrol/internal/service/auth_service"
+	"fadacontrol/internal/service/bluetooth_service"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/credential_provider_service"
 	"fadacontrol/internal/service/custom_command_service"
@@ -40,6 +41,7 @@ func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (
 		bootstrap.NewDataInitBootstrap, data.NewAdapterByDB, data.NewEnforcer, common_controller.NewAuthController,
 		middleware.NewJwtMiddleware, jwt_service.NewJwtService, auth_service.NewAuthService, user_service.NewUserService, discovery_service.NewDiscoverService,
 		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap, update_service.NewUpdateService, common_controller.NewDebugController,
+		bluetooth_service.NewBluetoothService,
 	)
 	return &DesktopServiceApp{ctx: ctx, db: db}, nil
 }
