@@ -12,13 +12,14 @@ import (
 	"fadacontrol/pkg/goroutine"
 	"fadacontrol/pkg/secure"
 	"fadacontrol/pkg/utils"
+	"os"
+	"sync"
+	"time"
+
 	"github.com/casbin/casbin/v2"
 	gormadapter "github.com/casbin/gorm-adapter/v3"
 	"github.com/google/uuid"
 	"gorm.io/gorm"
-	"os"
-	"sync"
-	"time"
 )
 
 type DataInitBootstrap struct {
@@ -48,6 +49,7 @@ func (d *DataInitBootstrap) Start() error {
 	d.initRemoteConfig()
 	d.initUdpConfig()
 	d.initCasbinConfig()
+	d.initBluetoothConfig()
 	return nil
 }
 func (d *DataInitBootstrap) initLogReport() {
@@ -249,6 +251,21 @@ func (d *DataInitBootstrap) initUdpConfig() {
 		d._db.Create(&config)
 	}
 
+}
+func (d *DataInitBootstrap) initBluetoothConfig() {
+	err := d._db.AutoMigrate(&entity.BluetoothConfig{})
+	if err != nil {
+		logger.Errorf("failed to migrate database")
+		return
+	}
+	var count int64
+	d._db.Model(&entity.BluetoothConfig{}).Count(&count)
+	if count == 0 {
+		config := entity.BluetoothConfig{
+			Enabled: false,
+		}
+		d._db.Create(&config)
+	}
 }
 func (d *DataInitBootstrap) initCasbinConfig() {
 	_, err := d.enforcer.AddPolicy("root", "*", "*")

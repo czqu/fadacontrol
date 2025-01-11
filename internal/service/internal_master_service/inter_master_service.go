@@ -12,13 +12,6 @@ import (
 	"fadacontrol/pkg/sys"
 	"fadacontrol/pkg/utils"
 	"fmt"
-	"github.com/google/uuid"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/codes"
-	"google.golang.org/grpc/keepalive"
-	"google.golang.org/grpc/metadata"
-	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/anypb"
 	"net"
 	"os"
 	"path/filepath"
@@ -26,6 +19,14 @@ import (
 	"sync"
 	"time"
 	_ "time"
+
+	"github.com/google/uuid"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/keepalive"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/status"
+	"google.golang.org/protobuf/types/known/anypb"
 )
 
 type InternalMasterService struct {
@@ -310,7 +311,11 @@ func (s *InternalMasterService) StartServer() error {
 	host := "127.0.0.1"
 	addr := host + ":" + strconv.Itoa(port)
 	listener, err := net.Listen("tcp", addr)
-	defer listener.Close()
+	defer func() {
+		if listener != nil {
+			listener.Close()
+		}
+	}()
 	if err != nil {
 		logger.Errorf("failed to listen: %v", err)
 		return err

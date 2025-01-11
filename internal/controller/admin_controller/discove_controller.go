@@ -3,8 +3,9 @@ package admin_controller
 import (
 	"fadacontrol/internal/controller"
 	"fadacontrol/internal/service/discovery_service"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type DiscoverController struct {
@@ -55,6 +56,7 @@ func (d *DiscoverController) PatchDiscoverServiceConfig(c *gin.Context) {
 	err := d.di.PatchDiscoverServiceConfig(data)
 	if err != nil {
 		c.Error(err)
+		return
 	}
 	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
 

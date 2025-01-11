@@ -6,6 +6,7 @@ import (
 	"fadacontrol/internal/base/constants"
 	"fadacontrol/internal/base/data"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/internal/service/bluetooth_service"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/credential_provider_service"
 	"fadacontrol/internal/service/internal_master_service"
@@ -33,10 +34,11 @@ type DesktopMasterServiceBootstrap struct {
 	startOnce sync.Once
 	stopOnce  sync.Once
 	cancel    context.CancelFunc
+	ble       *bluetooth_service.BluetoothService
 }
 
-func NewDesktopMasterServiceBootstrap(pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, master *internal_master_service.InternalMasterService, _context context.Context, _db *data.Data, lo *logger.Logger, d *DiscoverBootstrap, http_ *HttpBootstrap) *DesktopMasterServiceBootstrap {
-	return &DesktopMasterServiceBootstrap{pf: pf, _co: _co, di: di, cp: cp, rcb: rcb, master: master, ctx: _context, _db: _db, lo: lo, discover: d, _http: http_}
+func NewDesktopMasterServiceBootstrap(ble *bluetooth_service.BluetoothService, pf *ProfilingBootstrap, _co *control_pc.ControlPCService, di *DataInitBootstrap, cp *credential_provider_service.CredentialProviderService, rcb *RemoteConnectBootstrap, master *internal_master_service.InternalMasterService, _context context.Context, _db *data.Data, lo *logger.Logger, d *DiscoverBootstrap, http_ *HttpBootstrap) *DesktopMasterServiceBootstrap {
+	return &DesktopMasterServiceBootstrap{ble: ble, pf: pf, _co: _co, di: di, cp: cp, rcb: rcb, master: master, ctx: _context, _db: _db, lo: lo, discover: d, _http: http_}
 }
 func (r *DesktopMasterServiceBootstrap) Start() {
 	r.startOnce.Do(func() {

@@ -15,6 +15,7 @@ import (
 	"fadacontrol/internal/router/admin_router"
 	"fadacontrol/internal/router/common_router"
 	"fadacontrol/internal/service/auth_service"
+	"fadacontrol/internal/service/bluetooth_service"
 	"fadacontrol/internal/service/control_pc"
 	"fadacontrol/internal/service/credential_provider_service"
 	"fadacontrol/internal/service/custom_command_service"
@@ -27,6 +28,7 @@ import (
 	"fadacontrol/internal/service/unlock"
 	"fadacontrol/internal/service/update_service"
 	"fadacontrol/internal/service/user_service"
+
 	"github.com/google/wire"
 )
 
@@ -36,10 +38,11 @@ func initDesktopServiceApplication(ctx context.Context, db *conf.DatabaseConf) (
 		control_pc.NewControlPCService, data.NewData, common_controller.NewControlPCController, common_controller.NewUnlockController,
 		common_controller.NewCustomCommandController, internal_master_service.NewInternalMasterService,
 		custom_command_service.NewCustomCommandService, remote_service.NewRemoteService,
-		admin_controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, admin_controller.NewDiscoverController, credential_provider_service.NewCredentialProviderService,
+		admin_controller.NewRemoteController, bootstrap.NewRemoteConnectBootstrap, admin_controller.NewDiscoverController, admin_controller.NewBluetoothController, credential_provider_service.NewCredentialProviderService,
 		bootstrap.NewDataInitBootstrap, data.NewAdapterByDB, data.NewEnforcer, common_controller.NewAuthController,
 		middleware.NewJwtMiddleware, jwt_service.NewJwtService, auth_service.NewAuthService, user_service.NewUserService, discovery_service.NewDiscoverService,
 		common_controller.NewSystemController, admin_controller.NewHttpController, http_service.NewHttpService, bootstrap.NewProfilingBootstrap, update_service.NewUpdateService, common_controller.NewDebugController,
+		bluetooth_service.NewBluetoothService,
 	)
 	return &DesktopServiceApp{ctx: ctx, db: db}, nil
 }

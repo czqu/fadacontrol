@@ -7,8 +7,9 @@ import (
 	"fadacontrol/internal/controller/admin_controller"
 	"fadacontrol/internal/controller/common_controller"
 	"fadacontrol/internal/schema"
-	"github.com/gin-gonic/gin"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
 type AdminRouter struct {
@@ -23,10 +24,11 @@ type AdminRouter struct {
 	_sys        *common_controller.SystemController
 	_http       *admin_controller.HttpController
 	_de         *common_controller.DebugController
+	_bc         *admin_controller.BluetoothController
 }
 
-func NewAdminRouter(_de *common_controller.DebugController, _http *admin_controller.HttpController, sys *common_controller.SystemController, jwt *middleware.JwtMiddleware, rc *admin_controller.RemoteController, u *common_controller.UnlockController, o *common_controller.ControlPCController, di *admin_controller.DiscoverController, auth *common_controller.AuthController) *AdminRouter {
-	return &AdminRouter{router: gin.Default(), u: u, o: o, rc: rc, di: di, auth: auth, jwt: jwt, _sys: sys, _http: _http, _de: _de}
+func NewAdminRouter(_bc *admin_controller.BluetoothController, _de *common_controller.DebugController, _http *admin_controller.HttpController, sys *common_controller.SystemController, jwt *middleware.JwtMiddleware, rc *admin_controller.RemoteController, u *common_controller.UnlockController, o *common_controller.ControlPCController, di *admin_controller.DiscoverController, auth *common_controller.AuthController) *AdminRouter {
+	return &AdminRouter{router: gin.Default(), _bc: _bc, u: u, o: o, rc: rc, di: di, auth: auth, jwt: jwt, _sys: sys, _http: _http, _de: _de}
 }
 
 var swagHandler gin.HandlerFunc
@@ -66,6 +68,10 @@ func (d *AdminRouter) Register() {
 		apiv1.GET("/discovery/config", d.di.GetDiscoverServiceConfig)
 		apiv1.PATCH("/discovery/config", d.di.PatchDiscoverServiceConfig)
 		apiv1.POST("/discovery/restart", d.di.RestartDiscoverService)
+
+		apiv1.GET("/bluetooth/config", d._bc.GetBluetoothConfig)
+		apiv1.PATCH("/bluetooth/config", d._bc.PatchBluetoothConfig)
+		apiv1.POST("/bluetooth/restart", d._bc.RestartBluetoothService)
 
 		apiv1.GET("/remote/config", d.rc.GetRemoteConnectConfig)
 		apiv1.PATCH("/remote/config", d.rc.PatchRemoteConnectConfig)
