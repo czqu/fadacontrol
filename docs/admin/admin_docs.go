@@ -20,6 +20,129 @@ const docTemplateadmin = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/bluetooth/config": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "GetBluetoothConfig",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Bluetooth"
+                ],
+                "summary": "GetBluetoothConfig",
+                "responses": {
+                    "200": {
+                        "description": "Success",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "PatchBluetoothConfig",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Bluetooth"
+                ],
+                "summary": "PatchBluetoothConfig",
+                "parameters": [
+                    {
+                        "description": "Bluetooth Config",
+                        "name": "data",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated configuration.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request parameters.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
+        "/bluetooth/restart": {
+            "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "RestartBluetoothService",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Bluetooth"
+                ],
+                "summary": "RestartBluetoothService",
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated configuration.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid request parameters.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
         "/control-pc/{action}/": {
             "post": {
                 "security": [
@@ -890,7 +1013,7 @@ const docTemplateadmin = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/remote_schema.RemoteConnectConfigRequest"
+                            "$ref": "#/definitions/remote_schema.RemoteConfigRequest"
                         }
                     }
                 ],
@@ -939,7 +1062,8 @@ const docTemplateadmin = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/remote_schema.RemoteConnectConfigRequest"
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 ],
@@ -1088,25 +1212,13 @@ const docTemplateadmin = `{
                 }
             }
         },
-        "remote_schema.RemoteConnectConfigRequest": {
+        "remote_schema.RemoteConfigRequest": {
             "type": "object",
             "properties": {
-                "api_server_url": {
-                    "type": "string"
-                },
-                "client_id": {
-                    "type": "string"
+                "api_server_id": {
+                    "type": "integer"
                 },
                 "enable": {
-                    "type": "boolean"
-                },
-                "msg_server_urls": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                },
-                "time_stamp_check": {
                     "type": "boolean"
                 }
             }

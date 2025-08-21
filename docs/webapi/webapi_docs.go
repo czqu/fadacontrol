@@ -117,6 +117,105 @@ const docTemplatewebapi = `{
                 }
             }
         },
+        "/info/check_update": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Check if there are any updates available for the system. This endpoint returns the latest available update details, including the version, update URL, and release notes.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Check for System Updates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "en",
+                        "description": "Language for the update information (default: en)",
+                        "name": "lang",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved update information.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
+        "/info/language": {
+            "get": {
+                "description": "Get the system language.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Get System Language",
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved system language.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Set the system language.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Set System Language",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "en",
+                        "description": "Language for the update information (default: en)",
+                        "name": "lang",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successfully retrieved system language.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
         "/interface": {
             "get": {
                 "security": [
@@ -348,9 +447,24 @@ const docTemplatewebapi = `{
                     "application/json"
                 ],
                 "summary": "Ping",
+                "parameters": [
+                    {
+                        "enum": [
+                            "ws",
+                            "pairing"
+                        ],
+                        "type": "string",
+                        "description": "type",
+                        "name": "type",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "success"
+                    },
+                    "500": {
+                        "description": "error"
                     }
                 }
             }
@@ -391,6 +505,37 @@ const docTemplatewebapi = `{
                     },
                     "400": {
                         "description": "Invalid request parameters.",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/schema.ResponseData"
+                        }
+                    }
+                }
+            }
+        },
+        "/power-saving/status": {
+            "get": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
+                "description": "Get the current status of power saving mode.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "System"
+                ],
+                "summary": "Get Power Saving Mode Status",
+                "responses": {
+                    "200": {
+                        "description": "Power saving mode status retrieved successfully.",
                         "schema": {
                             "$ref": "#/definitions/schema.ResponseData"
                         }

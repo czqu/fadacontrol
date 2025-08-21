@@ -7,10 +7,11 @@ import (
 	"fadacontrol/internal/schema"
 	"fadacontrol/internal/schema/remote_schema"
 	"fadacontrol/internal/service/remote_service"
-	"github.com/gin-gonic/gin"
-	"gorm.io/gorm"
 	"net/http"
 	"strconv"
+
+	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type RemoteController struct {
@@ -48,7 +49,7 @@ func (o *RemoteController) GetRemoteConfig(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param config body remote_schema.RemoteConnectConfigRequest true "New configuration settings"
+// @Param config body remote_schema.RemoteConfigRequest true "New configuration settings"
 // @Success 200 {object} schema.ResponseData "Successfully updated configuration."
 // @Failure 400 {object} schema.ResponseData "Invalid request parameters."
 // @Failure 500 {object} schema.ResponseData "Internal Server Error"
@@ -73,7 +74,7 @@ func (o *RemoteController) UpdateRemoteConfig(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param config body remote_schema.RemoteConnectConfigRequest true "Partial configuration settings"
+// @Param config body map[string]interface{} true "Partial configuration settings"
 // @Success 200 {object} schema.ResponseData "Successfully updated configuration."
 // @Failure 400 {object} schema.ResponseData "Invalid request parameters."
 // @Failure 500 {object} schema.ResponseData "Internal Server Error"

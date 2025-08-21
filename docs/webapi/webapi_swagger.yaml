@@ -104,6 +104,72 @@ paths:
       summary: Get Software Info
       tags:
       - System
+  /info/check_update:
+    get:
+      description: Check if there are any updates available for the system. This endpoint
+        returns the latest available update details, including the version, update
+        URL, and release notes.
+      parameters:
+      - default: en
+        description: 'Language for the update information (default: en)'
+        in: query
+        name: lang
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved update information.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Check for System Updates
+      tags:
+      - System
+  /info/language:
+    get:
+      description: Get the system language.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved system language.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      summary: Get System Language
+      tags:
+      - System
+    patch:
+      description: Set the system language.
+      parameters:
+      - default: en
+        description: 'Language for the update information (default: en)'
+        in: query
+        name: lang
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully retrieved system language.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      summary: Set System Language
+      tags:
+      - System
   /interface:
     get:
       consumes:
@@ -251,11 +317,21 @@ paths:
       - System
   /ping:
     get:
+      parameters:
+      - description: type
+        enum:
+        - ws
+        - pairing
+        in: query
+        name: type
+        type: string
       produces:
       - application/json
       responses:
         "200":
           description: success
+        "500":
+          description: error
       summary: Ping
   /power-saving:
     post:
@@ -289,6 +365,25 @@ paths:
       security:
       - ApiKeyAuth: []
       summary: Set Power Saving Mode
+      tags:
+      - System
+  /power-saving/status:
+    get:
+      description: Get the current status of power saving mode.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Power saving mode status retrieved successfully.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: Get Power Saving Mode Status
       tags:
       - System
   /unlock:

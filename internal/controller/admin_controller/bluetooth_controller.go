@@ -22,8 +22,8 @@ func NewBluetoothController(bt *bluetooth_service.BluetoothService) *BluetoothCo
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Success 200 {object} schema.BluetoothSchema "Success"
-// @Failure 500 {object} controller.ErrorResponse "Internal Server Error"
+// @Success 200 {object} schema.ResponseData "Success"
+// @Failure 500 {object} schema.ResponseData "Internal Server Error"
 // @Router /bluetooth/config [get]
 func (b *BluetoothController) GetBluetoothConfig(c *gin.Context) {
 	ret, err := b.bt.GetBluetoothConfig()
@@ -42,7 +42,7 @@ func (b *BluetoothController) GetBluetoothConfig(c *gin.Context) {
 // @Accept json
 // @Produce json
 // @Security ApiKeyAuth
-// @Param data body schema.BluetoothSchema true "Bluetooth Config"
+// @Param data body schema.ResponseData true "Bluetooth Config"
 // @Success 200 {object} schema.ResponseData "Successfully updated configuration."
 // @Failure 400 {object} schema.ResponseData "Invalid request parameters."
 // @Failure 500 {object} schema.ResponseData "Internal Server Error"

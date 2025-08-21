@@ -2,7 +2,7 @@ name: build for develop
 
 on:
   push:
-    branches: develop
+
 
 jobs:
   build:
@@ -31,7 +31,7 @@ jobs:
           bash  build-windows.sh 4.1.0.7 ${{secrets.ME_MAIL}}  windows
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: artifacts-files
           path: ./**/*

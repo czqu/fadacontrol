@@ -9,19 +9,11 @@ definitions:
       port:
         type: integer
     type: object
-  remote_schema.RemoteConnectConfigRequest:
+  remote_schema.RemoteConfigRequest:
     properties:
-      api_server_url:
-        type: string
-      client_id:
-        type: string
+      api_server_id:
+        type: integer
       enable:
-        type: boolean
-      msg_server_urls:
-        items:
-          type: string
-        type: array
-      time_stamp_check:
         type: boolean
     type: object
   schema.DiscoverSchema:
@@ -70,6 +62,83 @@ info:
   title: Remote Unlock Module Admin API documentation
   version: "1.0"
 paths:
+  /bluetooth/config:
+    get:
+      consumes:
+      - application/json
+      description: GetBluetoothConfig
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Success
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: GetBluetoothConfig
+      tags:
+      - Bluetooth
+    patch:
+      consumes:
+      - application/json
+      description: PatchBluetoothConfig
+      parameters:
+      - description: Bluetooth Config
+        in: body
+        name: data
+        required: true
+        schema:
+          $ref: '#/definitions/schema.ResponseData'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated configuration.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "400":
+          description: Invalid request parameters.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: PatchBluetoothConfig
+      tags:
+      - Bluetooth
+  /bluetooth/restart:
+    post:
+      consumes:
+      - application/json
+      description: RestartBluetoothService
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Successfully updated configuration.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "400":
+          description: Invalid request parameters.
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/schema.ResponseData'
+      security:
+      - ApiKeyAuth: []
+      summary: RestartBluetoothService
+      tags:
+      - Bluetooth
   /control-pc/{action}/:
     post:
       consumes:
@@ -629,7 +698,8 @@ paths:
         name: config
         required: true
         schema:
-          $ref: '#/definitions/remote_schema.RemoteConnectConfigRequest'
+          additionalProperties: true
+          type: object
       produces:
       - application/json
       responses:
@@ -661,7 +731,7 @@ paths:
         name: config
         required: true
         schema:
-          $ref: '#/definitions/remote_schema.RemoteConnectConfigRequest'
+          $ref: '#/definitions/remote_schema.RemoteConfigRequest'
       produces:
       - application/json
       responses:
