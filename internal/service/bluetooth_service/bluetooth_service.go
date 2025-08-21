@@ -63,28 +63,40 @@ func (r *BluetoothService) StartService() error {
 	var err error
 	r.listener, err = bluetooth.Listen(serviceClassId, config)
 	if err != nil {
-		logger.Errorf("Failed to listen: %v", err)
-		return err
-	}
-	defer r.listener.Close()
-	for {
-		logger.Infof("Waiting for a ble connection...")
-		conn, err := r.listener.Accept()
-		if err != nil {
+		select {
+		case <-r.bluetoothCtx.Done():
+			logger.Infof("Listener is closing...")
+			return nil // 或者 break，取决于你的函数设计
+		default:
+			// 如果不是主动关闭，而是其他未知错误，那么打印错误并返回
 			logger.Errorf("Failed to accept connection: %v", err)
 			return err
 		}
-		select {
-		case <-r.bluetoothCtx.Done():
-			return nil
-		default:
-		}
-
-		goroutine.RecoverGO(
-			func() {
-				r.handleConnection(conn)
-			})
 	}
+	goroutine.RecoverGO(func() {
+		for {
+			logger.Infof("Waiting for a ble connection...")
+			conn, err := r.listener.Accept()
+
+			select {
+			case <-r.bluetoothCtx.Done():
+				r.listener.Close()
+				return
+			default:
+				if err != nil {
+					logger.Errorf("Failed to accept connection: %v", err)
+					return
+				}
+			}
+
+			goroutine.RecoverGO(
+				func() {
+					r.handleConnection(conn)
+				})
+		}
+	})
+	return nil
+
 }
 
 // sendPacket 是一个辅助函数，用于将 Protobuf 消息封包（长度头+数据）并发送
@@ -218,8 +230,10 @@ func (r *BluetoothService) StopService() error {
 		r.bluetoothCtxCancel()
 		r.bluetoothCtxLock.Unlock()
 	}
-	return r.listener.Close()
-
+	if r.listener != nil {
+		return r.listener.Close()
+	}
+	return nil
 }
 
 func (r *BluetoothService) GetBluetoothConfig() (*bluetooth_schema.BluetoothSchema, error) {
@@ -250,6 +264,7 @@ func (r *BluetoothService) RestartBoothService() error {
 		return nil
 	}
 	r.StopService()
+	time.Sleep(1 * time.Second)
 	return r.StartService()
 }
 

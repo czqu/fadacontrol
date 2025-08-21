@@ -862,10 +862,10 @@ func (r *RemoteService) loadConfig() error {
 		return err
 	}
 	r.enable = config.Enable
-	if !config.Enable {
-		return fmt.Errorf("remote service is disabled")
-	}
 
+	if !r.enable {
+		return nil
+	}
 	serverId := config.DefaultRemoteServerId
 	server := entity.RemoteServer{}
 	if err := r.db.First(&server, serverId).Error; err != nil {

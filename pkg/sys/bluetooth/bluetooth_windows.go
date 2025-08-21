@@ -8,6 +8,7 @@ import "C"
 import (
 	"errors"
 	"net"
+	"syscall"
 	"time"
 	"unsafe"
 )
@@ -39,14 +40,18 @@ type Config struct {
 func (l *Ble) Accept() (net.Conn, error) {
 	clientSocket := C.Accept(l.socket)
 	if int(C.isInvalidSocket(clientSocket)) == 1 {
-		return nil, errors.New("failed to accept bluetooth connection")
+		errno := syscall.Errno(C.WSAGetLastError())
+		errStr := errno.Error()
+		return nil, errors.New("failed to accept bluetooth connection:  " + errStr)
 	}
 	return NewBTConn(clientSocket), nil
 }
 
 func (l *Ble) Close() error {
 	if C.closesocket(l.socket) == C.SOCKET_ERROR {
-		return errors.New("failed to close bluetooth socket")
+		errno := syscall.Errno(C.WSAGetLastError())
+		errStr := errno.Error()
+		return errors.New("failed to close bluetooth socket: " + errStr)
 	}
 	return nil
 }
@@ -70,7 +75,9 @@ func Listen(serviceClassId GUID, config *Config) (net.Listener, error) {
 
 	socket := C.Listen(&cServiceClassId, cServiceInstanceName, cComment)
 	if int(C.isInvalidSocket(socket)) == 1 {
-		return nil, errors.New("failed to listen on bluetooth socket")
+		errno := syscall.Errno(C.WSAGetLastError())
+		errStr := errno.Error()
+		return nil, errors.New("failed to listen on bluetooth socket: " + errStr)
 	}
 
 	return &Ble{socket: socket}, nil
@@ -79,14 +86,18 @@ func Listen(serviceClassId GUID, config *Config) (net.Listener, error) {
 func (bt *BTConn) Read(b []byte) (n int, err error) {
 	ret := C.recv(bt.socket, (*C.char)(unsafe.Pointer(&b[0])), C.int(len(b)), 0)
 	if ret == C.SOCKET_ERROR {
-		return 0, errors.New("failed to read from bluetooth connection")
+		errno := syscall.Errno(C.WSAGetLastError())
+		errStr := errno.Error()
+		return 0, errors.New("failed to read from bluetooth connection: " + errStr)
 	}
 	return int(ret), nil
 }
 
 func (bt *BTConn) Close() error {
 	if C.closesocket(bt.socket) == C.SOCKET_ERROR {
-		return errors.New("failed to close bluetooth socket")
+		errno := syscall.Errno(C.WSAGetLastError())
+		errStr := errno.Error()
+		return errors.New("failed to close bluetooth socket " + errStr)
 	}
 	return nil
 }
@@ -94,7 +105,9 @@ func (bt *BTConn) Close() error {
 func (bt *BTConn) Write(b []byte) (n int, err error) {
 	ret := C.send(bt.socket, (*C.char)(unsafe.Pointer(&b[0])), C.int(len(b)), 0)
 	if ret == C.SOCKET_ERROR {
-		return 0, errors.New("failed to write to bluetooth connection")
+		errno := syscall.Errno(C.WSAGetLastError())
+		errStr := errno.Error()
+		return 0, errors.New("failed to write to bluetooth connection: " + errStr)
 	}
 	return int(ret), nil
 }
@@ -143,7 +156,9 @@ func (bt *BTConn) setDeadline(t time.Time, typ byte) error {
 
 	ret := C.setsockopt(bt.socket, C.SOL_SOCKET, opt, (*C.char)(unsafe.Pointer(&tv)), C.int(unsafe.Sizeof(tv)))
 	if ret == C.SOCKET_ERROR {
-		return errors.New("failed to set deadline")
+		errno := syscall.Errno(C.WSAGetLastError())
+		errStr := errno.Error()
+		return errors.New("failed to set deadline: " + errStr)
 	}
 	return nil
 }

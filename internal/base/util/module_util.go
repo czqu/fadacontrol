@@ -24,7 +24,7 @@ func (p ProductModule) String() string {
 }
 
 var (
-	SupportModulesCache map[string]bool
+	SupportModulesCache map[string]bool = make(map[string]bool)
 	SupportModulesLock  sync.RWMutex
 )
 

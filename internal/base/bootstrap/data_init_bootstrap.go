@@ -65,7 +65,15 @@ func (d *DataInitBootstrap) initSupportModules() {
 	if err != nil {
 		logger.Errorf("failed to get modules %v", err)
 	}
+	for _, module := range modules {
+		util.SupportModulesLock.Lock()
+		util.SupportModulesCache[module.ModuleName] = true
+		util.SupportModulesLock.Unlock()
+	}
 	if len(modules) == 0 {
+		util.SupportModulesLock.Lock()
+		util.SupportModulesCache[util.BluetoothUnlockModule.String()] = true
+		util.SupportModulesLock.Unlock()
 		d._db.Create(&entity.SupportModule{
 			ModuleName: util.BluetoothUnlockModule.String(),
 		})
