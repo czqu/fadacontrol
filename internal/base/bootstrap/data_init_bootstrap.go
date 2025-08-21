@@ -93,11 +93,7 @@ func (d *DataInitBootstrap) initLogReport() {
 	}
 	opt.UserId = sentryConfig.UserId
 	opt.Enable = sentryConfig.Enable
-	if opt.Enable {
-		logger.InitLogReporter(opt)
-	} else {
-		logger.InitLogReporter(opt)
-	}
+	logger.InitLogReporter(opt)
 
 }
 func (d *DataInitBootstrap) initSysConfig() {
