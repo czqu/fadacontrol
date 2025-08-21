@@ -15,9 +15,10 @@ import (
 	"fadacontrol/pkg/syncer"
 	"fadacontrol/pkg/sys"
 	"fadacontrol/pkg/utils"
-	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
+
+	"github.com/gin-gonic/gin"
 )
 
 type SystemController struct {
@@ -219,4 +220,12 @@ func (s *SystemController) SetLanguage(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, controller.GetGinSuccess(c))
+}
+func (s *SystemController) GetSupportModules(c *gin.Context) {
+	modules, err := s._up.GetSupportModules()
+	if err != nil {
+		c.Error(err)
+		return
+	}
+	c.JSON(http.StatusOK, controller.GetGinSuccessWithData(c, modules))
 }

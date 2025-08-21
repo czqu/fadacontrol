@@ -4,13 +4,15 @@ import (
 	"encoding/json"
 	"fadacontrol/internal/base/conf"
 	"fadacontrol/internal/base/logger"
+	"fadacontrol/internal/base/util"
 	"fadacontrol/internal/base/version"
 	"fadacontrol/internal/entity"
 	"fadacontrol/internal/schema"
 	"fadacontrol/pkg/utils"
-	"gorm.io/gorm"
 	"strconv"
 	"time"
+
+	"gorm.io/gorm"
 )
 
 type UpdateService struct {
@@ -81,6 +83,9 @@ func (u *UpdateService) CheckUpdate(lang string) (*schema.UpdateInfoClientResp, 
 		region = version.GetRegionFromCode(config.Region)
 	}
 
+	if region == version.RegionDev {
+		region = version.RegionGlobal
+	}
 	url = url + version.ProductName + "/" + region.String() + "/" + productLang.String() + "/" + "info.json"
 
 	resp, err := client.Get(url)
@@ -152,4 +157,47 @@ func (u *UpdateService) ShouldUpdateEdition(info *schema.UpdateInfoResponse) ver
 		}
 	}
 
+}
+
+func (u *UpdateService) GetSupportModules() (schema.SupportModule, error) {
+	supportModules := schema.SupportModule{}
+	supportModules.ModuleName = make([]string, 0)
+	util.SupportModulesLock.RLock()
+	for k := range util.SupportModulesCache {
+		supportModules.ModuleName = append(supportModules.ModuleName, k)
+	}
+	util.SupportModulesLock.RUnlock()
+
+	config := entity.SysConfig{}
+
+	region := version.RegionGlobal
+	if err := u._db.First(&config).Error; err != nil {
+		logger.Errorf("failed to get config %v", err)
+	} else {
+		region = version.GetRegionFromCode(config.Region)
+	}
+
+	remoteSupportModules, err := utils.GetRemoteConfig("supported_modules", region, []string{})
+	if err == nil {
+		if _, ok := remoteSupportModules.([]interface{}); ok {
+			util.SupportModulesLock.Lock()
+			util.SupportModulesCache = make(map[string]bool)
+			for _, v := range remoteSupportModules.([]interface{}) {
+				if key, ok := v.(string); ok {
+					util.SupportModulesCache[key] = true
+				}
+
+			}
+			util.SupportModulesLock.Unlock()
+			util.SupportModulesLock.RLock()
+			supportModules.ModuleName = []string{}
+			for k := range util.SupportModulesCache {
+				supportModules.ModuleName = append(supportModules.ModuleName, k)
+			}
+			util.SupportModulesLock.RUnlock()
+
+		}
+
+	}
+	return supportModules, err
 }

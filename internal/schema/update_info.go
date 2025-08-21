@@ -29,3 +29,6 @@ type UpdateInfoClientResp struct {
 	ReleaseNote []string `json:"release_note"`
 	Rev         string   `json:"rev"`
 }
+type SupportModule struct {
+	ModuleName []string `json:"supported_modules"`
+}

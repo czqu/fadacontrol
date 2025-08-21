@@ -9,11 +9,13 @@ type ProductRegion int16
 const (
 	RegionGlobal ProductRegion = iota
 	RegionCN
+	RegionDev = 116
 )
 
 var regionNameMap = map[ProductRegion]string{
 	RegionGlobal: "global",
 	RegionCN:     "cn",
+	RegionDev:    "dev",
 }
 
 type ProductEdition string
@@ -35,10 +37,12 @@ func (p ProductRegion) String() string {
 }
 func GetRegionFromCode(code int) ProductRegion {
 	switch code {
-	case 1:
+	case int(RegionCN):
 		return RegionCN
 	default:
 		return RegionGlobal
+	case int(RegionDev):
+		return RegionDev
 	}
 }
 

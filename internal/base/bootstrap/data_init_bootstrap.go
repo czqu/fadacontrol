@@ -67,7 +67,7 @@ func (d *DataInitBootstrap) initLogReport() {
 		logger.Fatal("failed to migrate database")
 		return
 	}
-	opt := utils.GetLogReporterOPtions(region)
+	opt := utils.GetLogReporterOptions(region)
 	defer func() {
 		_conf := utils.GetValueFromContext(d.ctx, constants.ConfKey, conf.NewDefaultConf())
 		_conf.LogReporterOpt = opt

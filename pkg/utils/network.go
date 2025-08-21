@@ -6,7 +6,6 @@ import (
 	_log "fadacontrol/internal/base/log"
 	"fadacontrol/internal/base/version"
 	"fmt"
-	"golang.org/x/sys/windows"
 	"net"
 	"strconv"
 	"strings"
@@ -14,6 +13,8 @@ import (
 	"syscall"
 	"time"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 type Interface struct {
@@ -135,7 +136,7 @@ func networkMonitorCallback(callerContext, row, notificationType uintptr) uintpt
 
 	return 0
 }
-func GetLogReporterOPtions(region version.ProductRegion) *_log.SentryOptions {
+func GetLogReporterOptions(region version.ProductRegion) *_log.SentryOptions {
 	enableReport, _ := GetRemoteConfig("log_report_enable", region, true)
 	reportLevel, _ := GetRemoteConfig("log_report_min_level", region, "info")
 	profilesSampleRate, _ := GetRemoteConfig("log_report_sentry_profiles_sample_rate", region, 0.2)
