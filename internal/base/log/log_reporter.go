@@ -2,10 +2,11 @@ package log
 
 import (
 	"fadacontrol/internal/base/version"
-	"github.com/getsentry/sentry-go"
 	"os"
 	"sync"
 	"time"
+
+	"github.com/getsentry/sentry-go"
 )
 
 type LogReporter interface {
@@ -37,11 +38,11 @@ func NewSentryReporter(options *SentryOptions) *SentryReporter {
 	defer sentryInitLock.Unlock()
 	ss := &SentryReporter{userId: options.UserId}
 	err := sentry.Init(sentry.ClientOptions{
-		Dsn:                "https://82431285059e21675920c08d0e172643@o4508488989605888.ingest.us.sentry.io/4508489034825728",
-		Debug:              false,
-		EnableTracing:      true,
-		TracesSampleRate:   options.TracesSampleRate,
-		ProfilesSampleRate: options.ProfilesSampleRate,
+		Dsn:              "https://82431285059e21675920c08d0e172643@o4508488989605888.ingest.us.sentry.io/4508489034825728",
+		Debug:            false,
+		EnableTracing:    true,
+		TracesSampleRate: options.TracesSampleRate,
+		//	ProfilesSampleRate: options.ProfilesSampleRate,
 	})
 	defer sentry.Flush(2 * time.Second)
 
