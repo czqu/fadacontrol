@@ -16,6 +16,7 @@ var IgnoredPaths = []string{
 	"/api/v1/ping",
 	"/api/v1/unlock",
 	"/api/v1/login",
+	"/admin/api/v1/support-modules",
 	"/admin/api/v1/ping",
 	"/admin/api/v1/unlock",
 	"/admin/api/v1/login",
